@@ -3,17 +3,35 @@
  * (FRM-7 to FRM-9), and the one data line under the views (FRM-10, H2). Owner: lane D.
  *
  * Other lanes draw on the picture only through `drawHooks` (rule 4 in SPEC 9.4): add a function
- * and it runs after every paint, in the picture's own coordinates. Never edit this file for it.
+ * and it runs after every paint, in the picture's own CSS pixels. Never edit this file for it.
  *
- * PHASE 0 STUB: a plain asinh stretch in the detector's colour, simple Two dates and Difference,
- * and "Not built yet" for Swipe, Stack and Trail. The badge reads "Placeholder" whenever the
- * pictures are the phase 0 placeholder.
+ * The picture is square. The field's grid covers at most what the exposures cover: a wider field
+ * size shows them in its middle at the right scale, with the rest empty and outlined, so nothing
+ * is filled in (H6). Pixels are drawn with hard edges, one square per grid pixel.
+ *
+ * Pointer: a drag inside the picture pans the field (FRM-12) and the patch on the sky follows; a
+ * tap without dragging goes to `onTap`; the wheel changes the field size one step per notch, and
+ * the sky stays still (FRM-6).
  */
-import { S, pic, type Mode } from './state.ts';
-import { cleanupSteps } from '../core/picture.ts';
+import { FOVS, S, pic, type Mode } from './state.ts';
+import { cleanupSteps, type PicSettings } from '../core/picture.ts';
 import { formatDate } from '../core/astro.ts';
-import { wcsPix2Sky, wcsSky2Pix } from '../core/real.ts';
+import { colourMatch, wcsPix2Sky, wcsSky2Pix } from '../core/real.ts';
+import { groupFrames } from '../core/blink.ts';
 import type { Det, Field, Group } from '../core/types.ts';
+import {
+  colourImage,
+  differenceImage,
+  differencePicture,
+  flipImage,
+  groupPicture,
+  lookFor,
+  stackImage,
+  stackPicture,
+  trailImage,
+  twoDatesImage,
+  type Look,
+} from './paint.ts';
 
 /** The picture on screen, for draw hooks and taps. */
 export interface PictureView {
@@ -42,6 +60,10 @@ export interface PictureView {
   values: Float32Array | null;
   /** The clean-up steps in force, in words (H8); empty when the picture is as recorded. */
   processed: string[];
+  /** Added by lane D: the reference picture (the earlier date in Two dates and Swipe). */
+  ref?: Group | null;
+  /** Added by lane D: the covered square on the canvas, CSS pixels (the field's grid). */
+  inner?: { x: number; y: number; size: number };
 }
 
 /** Draws over the picture after each paint. The context is in CSS pixels; save and restore. */
@@ -52,17 +74,20 @@ export const drawHooks = new Set<DrawHook>();
 
 /** What the date badge says. */
 export interface Hud {
-  /** The window's letter: `A`, `B`, `C`… */
+  /** The window's letter: `A`, `B`, `C`… ('' when the view has no single date). */
   letter: string;
   /** Explore: the month ("Mar 2026"). Measure: date and time. */
   title: string;
   /** Plain lines under it (Measure adds pass, detector, wavelength and colour match). */
   lines: string[];
+  /** Added by lane D: a line that says something is missing or simulated (drawn in amber). */
+  warn?: string;
 }
 
 const tapFns = new Set<(p: { x: number; y: number; ra: number; dec: number }) => void>();
 let queued = false;
 let view: PictureView | null = null;
+let panning: { dx: number; dy: number } | null = null;
 
 /**
  * Repaints the picture and its labels on the next animation frame. Call it after changing
@@ -77,6 +102,17 @@ export function draw(): void {
   });
 }
 
+/** Paints now, in this task (the tour and tests use it to read the picture at once). */
+export function drawNow(): void {
+  queued = false;
+  paint();
+}
+
+/** The picture on screen as hooks see it; null before the first paint. */
+export function currentView(): Readonly<PictureView> | null {
+  return view;
+}
+
 /**
  * Calls `fn` when the user taps the picture without dragging (the task's "Tap it", selecting a
  * source in Measure).
@@ -89,18 +125,152 @@ export function onTap(
   return () => tapFns.delete(fn);
 }
 
+// ----- Words ------------------------------------------------------------------------------------
+
+/** "QR3", "DR1 deep". */
+function release(r: string): string {
+  return r === 'simulated'
+    ? 'simulated'
+    : r
+        .replace(/^spherex_/, '')
+        .replace('_', ' ')
+        .replace(/^\w+/, (m) => m.toUpperCase());
+}
+
+function framesOf(field: Field, groups: readonly (Group | null | undefined)[]) {
+  const out = [];
+  for (const g of groups) for (const i of g?.frames ?? []) {
+    const f = field.frames[i];
+    if (f) out.push(f);
+  }
+  return out;
+}
+
+function lamRange(lams: number[]): string {
+  const ok = lams.filter(Number.isFinite);
+  if (!ok.length) return '';
+  const lo = Math.min(...ok);
+  const hi = Math.max(...ok);
+  return hi - lo < 0.005 ? `${lo.toFixed(2)} µm` : `${lo.toFixed(2)}–${hi.toFixed(2)} µm`;
+}
+
+function dayRange(a: number, b: number): string {
+  if (!Number.isFinite(a)) return 'no date';
+  const da = formatDate(a, 'day');
+  const db = formatDate(b, 'day');
+  return da === db || !Number.isFinite(b) ? da : `${da} to ${db}`;
+}
+
+/** The pass or month a window is, in words: "Survey pass 2", "Month 5 (May 2025)". */
+export function passName(field: Field | null, window: number): string {
+  return field?.monthly ? `Month ${window + 1}` : `Survey pass ${window + 1}`;
+}
+
+/** The groups the view on screen shows, for the badge and the data line. */
+function shownGroups(): Group[] {
+  const g = S.groups[S.epoch];
+  if (!g) return [];
+  if (S.mode === 'two' || S.mode === 'swipe') {
+    const [a, b] = pair();
+    return [a, b].filter((x): x is Group => !!x);
+  }
+  if (S.mode === 'stack' || S.mode === 'trail') {
+    return S.mode === 'stack' ? [...S.groups] : S.groups.slice(0, S.epoch + 1);
+  }
+  return [g];
+}
+
+/** The two dates compared: the reference (earlier, red) and the date on screen (later, cyan). */
+export function pair(): [Group | null, Group | null] {
+  const groups = S.groups;
+  if (!groups.length) return [null, null];
+  let ref = Math.min(S.ref, groups.length - 1);
+  let cur = S.epoch;
+  if (cur === ref) cur = ref === groups.length - 1 ? 0 : groups.length - 1;
+  if (cur < ref) [ref, cur] = [cur, ref];
+  return [groups[ref] ?? null, groups[cur] ?? null];
+}
+
 /** What the date badge says now; null when there is no picture. */
 export function hud(): Hud | null {
   const g = S.groups[S.epoch];
-  if (!g || !S.field) return null;
-  const lines = S.field.simulated
-    ? ['Placeholder: made-up pictures (phase 0)']
-    : [`Blends ${g.frames.length} shots`];
-  return {
-    letter: g.letter,
-    title: formatDate(g.mjd, S.level === 'measure' ? 'time' : 'month'),
-    lines,
-  };
+  const field = S.field;
+  if (!g || !field) return null;
+  const measure = S.level === 'measure';
+  const sim = field.simulated ? 'Simulated: made-up pictures for practice' : undefined;
+  if (S.color) {
+    const mix = pic().mix;
+    const ch = (c: string) =>
+      mix
+        .map((m, i) => (m === c ? `D${i + 1}` : ''))
+        .filter(Boolean)
+        .join(' ');
+    return {
+      letter: g.letter,
+      title: formatDate(g.mjd, measure ? 'time' : 'month'),
+      lines: [`Color: red ${ch('r') || 'none'} · green ${ch('g') || 'none'} · blue ${ch('b') || 'none'}`],
+      warn: sim,
+    };
+  }
+  if (S.mode === 'two') {
+    const [a, b] = pair();
+    return {
+      letter: '',
+      title: 'Two dates in one picture',
+      lines: [
+        `Red: ${a ? formatDate(a.mjd, 'month') : '–'} · Cyan: ${b ? formatDate(b.mjd, 'month') : '–'}`,
+        'White did not change',
+      ],
+      warn: sim,
+    };
+  }
+  if (S.mode === 'stack') {
+    const st = stackNow();
+    const count = st?.frames ?? 0;
+    const lines = [st?.label ?? 'All dates added up'];
+    if (st?.result) {
+      const [c1, c2] = st.result.controls;
+      lines.push(`Checks: ${c1.label.toLowerCase()}, ${c2.label.toLowerCase()}`);
+    }
+    return { letter: '', title: `Stack of ${count} exposure${count === 1 ? '' : 's'}`, lines, warn: sim };
+  }
+  if (!g.frames.length) {
+    return {
+      letter: g.letter,
+      title: formatDate(g.mjd0, measure ? 'time' : 'month'),
+      lines: [measure ? passName(field, g.window) : ''].filter(Boolean),
+      warn: `No D${g.det} exposure on this date: nothing is filled in`,
+    };
+  }
+  const frames = framesOf(field, [g]);
+  if (!measure) {
+    const n = frames.length;
+    const mixed = frames.some((f) => !colourMatch(f, frames[0] ?? f));
+    const lines =
+      S.mode === 'diff'
+        ? ['This date minus the typical sky']
+        : S.mode === 'trail'
+          ? ['Earlier dates fade behind it']
+          : [n > 1 ? `Blends ${n} shots${mixed ? ' in slightly different colours' : ''}` : 'One shot'];
+    return { letter: g.letter, title: formatDate(g.mjd, 'month'), lines, warn: sim };
+  }
+  const f = frames[0];
+  const lines = [passName(field, g.window)];
+  if (frames.length > 1) lines.push(`D${g.det}, ${lamRange(frames.map((x) => x.lam))}, ${frames.length} shots`);
+  else if (f) lines.push(`D${g.det}, ${f.lam.toFixed(2)} µm`);
+  const ref = S.groups[Math.min(S.ref, S.groups.length - 1)];
+  const refFrame = ref ? framesOf(field, [ref])[0] : undefined;
+  if (f && refFrame && ref !== g) {
+    lines.push(
+      colourMatch(f, refFrame)
+        ? `Same colour as the reference (${refFrame.lam.toFixed(2)} µm)`
+        : `Different colour: ${f.lam.toFixed(2)} vs ${refFrame.lam.toFixed(2)} µm`,
+    );
+  } else if (f && ref === g) {
+    lines.push('This is the reference date');
+  }
+  if (S.mode === 'diff') lines.push('Minus the median of all dates');
+  return { letter: g.letter, title: formatDate(g.mjd, 'time'), lines, warn: sim };
 }
 
 /**
@@ -109,194 +279,399 @@ export function hud(): Hud | null {
  */
 export function exif(): string {
   const f = S.field;
-  if (!f) return S.source === 'loading' ? 'Loading pictures…' : 'No pictures here';
-  if (f.simulated) {
-    return `Simulated placeholder · ${f.windows} made-up dates · ${f.frames.length} pictures · D1–D6`;
+  if (!f || !S.groups.length) {
+    if (S.source === 'loading') return 'Loading real SPHEREx exposures…';
+    return S.source === 'simulated'
+      ? 'Simulated: no practice pictures in this build'
+      : 'No pictures here: nothing is shown as data';
   }
-  return `Real SPHEREx data, ${f.releases.join(', ')} · ${f.frames.length} exposures`;
+  const groups = shownGroups();
+  const frames = framesOf(f, groups);
+  const releases = [...new Set(frames.map((x) => release(x.release)))].join(' + ');
+  const det = S.color ? 'D1–D6' : `D${S.det}`;
+  const parts: string[] = [];
+  if (f.simulated) parts.push('Simulated pictures for practice, not real data');
+  else if (S.source === 'live') parts.push(`Real SPHEREx data, fetched live${releases ? `, ${releases}` : ''}`);
+  else parts.push(`Real SPHEREx data${releases ? `, ${releases}` : ''}`);
+  const mjds = frames.map((x) => x.mjd).filter(Number.isFinite);
+  const count = frames.length;
+  if (S.mode === 'two' && groups.length === 2) {
+    parts.push(
+      `${groups.map((g) => formatDate(g.mjd, 'month')).join(' and ')}, ${count} exposure${count === 1 ? '' : 's'}`,
+    );
+  } else if (mjds.length) {
+    parts.push(`${dayRange(Math.min(...mjds), Math.max(...mjds))}, ${count} exposure${count === 1 ? '' : 's'}`);
+  } else {
+    parts.push(`no D${S.det} exposure on this date`);
+  }
+  const lams = lamRange(frames.map((x) => x.lam));
+  parts.push(lams && !S.color ? `${det} ${lams}` : det);
+  const covered = (f.n * f.scale) / 60;
+  if (covered < S.fov - 0.05) parts.push(`exposures cover the middle ${covered.toFixed(1)}′`);
+  const steps = S.original ? [] : cleanupSteps(pic());
+  if (steps.length) parts.push(`Processed: ${steps.join(', ')}`);
+  return parts.join(' · ');
 }
 
-// ----- Phase 0 painting -------------------------------------------------------------------------
+// ----- Painting ---------------------------------------------------------------------------------
 
-function ensureCanvas(): HTMLCanvasElement | null {
+interface Parts {
+  host: HTMLElement;
+  canvas: HTMLCanvasElement;
+  edge: HTMLElement;
+  badge: HTMLElement;
+  scale: HTMLElement;
+  divider: HTMLElement;
+}
+let parts: Parts | null = null;
+
+function ensure(): Parts | null {
+  if (parts?.host.isConnected) return parts;
   const host = document.getElementById('frame-pic');
   if (!host) return null;
-  let canvas = host.querySelector<HTMLCanvasElement>('canvas[data-picture]');
-  if (!canvas) {
-    host.style.cssText =
-      'position:relative;aspect-ratio:1;border-radius:var(--r-window);overflow:hidden;background:#000';
-    canvas = document.createElement('canvas');
-    canvas.dataset.picture = '';
-    canvas.style.cssText = 'display:block;width:100%;height:100%;image-rendering:pixelated';
-    host.prepend(canvas);
-    watchTaps(canvas);
-    for (const name of ['badge', 'placeholder', 'scale']) {
-      const el = document.createElement('div');
-      el.dataset[name] = '';
-      host.append(el);
-    }
-    new ResizeObserver(draw).observe(host);
-  }
-  return canvas;
+  host.classList.add('window', 'pic');
+  const canvas = document.createElement('canvas');
+  canvas.className = 'pic-canvas';
+  canvas.dataset.picture = '';
+  const make = (cls: string) => {
+    const el = document.createElement('div');
+    el.className = cls;
+    return el;
+  };
+  const edge = make('pic-edge');
+  const badge = make('pic-badge window-badge');
+  const scale = make('pic-scale');
+  const divider = make('pic-divider');
+  divider.hidden = true;
+  divider.setAttribute('role', 'slider');
+  divider.setAttribute('aria-label', 'Swipe between the two dates');
+  divider.tabIndex = 0;
+  edge.setAttribute('aria-hidden', 'true');
+  host.prepend(canvas, edge, badge, scale, divider);
+  parts = { host, canvas, edge, badge, scale, divider };
+  watchPointer(canvas);
+  watchDivider(divider);
+  new ResizeObserver(() => draw()).observe(host);
+  return parts;
+}
+
+let stackCache: ReturnType<typeof stackPicture> | null = null;
+function stackNow() {
+  const field = S.field;
+  if (!field || S.mode !== 'stack') return null;
+  stackCache = stackPicture(field, S.groups, S.det, S.set?.data.catalogue ?? null, pic());
+  return stackCache;
 }
 
 function paint(): void {
-  const canvas = ensureCanvas();
-  const ctx = canvas?.getContext('2d');
-  if (!canvas || !ctx) return;
-  const size = canvas.clientWidth || 1;
-  const field = S.field;
-  const n = field?.n ?? 1;
-  const k = size / n;
-  canvas.width = Math.round(size * devicePixelRatio);
-  canvas.height = canvas.width;
-  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  const p = ensure();
+  if (!p) return;
+  const { canvas, host } = p;
+  const size = Math.round(host.clientWidth) || 1;
+  const dpr = devicePixelRatio || 1;
+  const px = Math.round(size * dpr);
+  if (canvas.width !== px) {
+    canvas.width = px;
+    canvas.height = px;
+  }
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, size, size);
 
+  const field = S.field;
   const group = S.groups[S.epoch] ?? null;
+  const settings = pic();
+  const n = field?.n ?? 1;
+  // Field pixels across the whole picture: the field size, even where the grid stops short.
+  const across = field ? Math.max(n, (S.fov * 60) / field.scale) : 1;
+  const k = size / across;
+  const o = (size - n * k) / 2;
   let values: Float32Array | null = null;
+
   if (field && group) {
-    const img = new ImageData(n, n);
-    const hue = detectorHue(S.det);
-    if (S.mode === 'two') {
-      const later = S.groups[S.ref === S.epoch ? S.groups.length - 1 : S.epoch];
-      const a = mean(field, S.groups[S.ref]);
-      const b = mean(field, later);
-      for (let i = 0; i < n * n; i++) {
-        const r = stretch(a[i] ?? 0, field);
-        const c = stretch(b[i] ?? 0, field);
-        img.data.set([255 * r, 255 * c, 255 * c, 255], i * 4);
-      }
-    } else {
-      values = mean(field, group);
-      if (S.mode === 'diff') {
-        const all = S.groups.map((g) => mean(field, g));
-        values = values.map((v, i) => v - all.reduce((s, p) => s + (p[i] ?? 0), 0) / all.length);
-      }
-      for (let i = 0; i < n * n; i++) {
-        const v = values[i] ?? 0;
-        if (S.mode === 'diff') {
-          const t = 128 + 127 * Math.tanh(v / 80);
-          img.data.set([t, t, t, 255], i * 4);
-        } else {
-          const t = stretch(v, field);
-          img.data.set([hue[0] * t, hue[1] * t, hue[2] * t, 255], i * 4);
-        }
+    const look = lookFor(field, S.groups, Math.min(S.ref, S.groups.length - 1), settings, S.det);
+    const img = imageFor(field, group, look, settings);
+    if (img) {
+      values = img.values;
+      blit(ctx, img.data, o, k, n);
+      if (img.right) {
+        // Swipe: the date on screen right of the divider, the reference left of it.
+        const cut = Math.round(size * S.swipe);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(cut, 0, size - cut, size);
+        ctx.clip();
+        blit(ctx, img.right, o, k, n);
+        ctx.restore();
       }
     }
-    const tmp = new OffscreenCanvas(n, n);
-    tmp.getContext('2d')?.putImageData(img, 0, 0);
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(tmp, 0, 0, size, size);
+    if (o > 0.5) {
+      // The exposures stop here: outline what they cover, leave the rest empty (H6).
+      ctx.save();
+      ctx.strokeStyle = cssVar('--st-ink-3');
+      ctx.setLineDash([4, 4]);
+      ctx.strokeRect(o + 0.5, o + 0.5, n * k - 1, n * k - 1);
+      ctx.restore();
+    }
   }
 
   view = {
     size,
     n,
     k,
-    toPic: (x, y) => ({ x: (x + 0.5) * k, y: (y + 0.5) * k }),
-    toField: (px, py) => ({ x: px / k - 0.5, y: py / k - 0.5 }),
+    toPic: (x, y) => ({ x: o + (x + 0.5) * k, y: o + (y + 0.5) * k }),
+    toField: (cx, cy) => ({ x: (cx - o) / k - 0.5, y: (cy - o) / k - 0.5 }),
     skyToPic: (ra, dec) => {
       if (!field) return null;
-      const p = wcsSky2Pix(field.wcs, ra, dec);
-      return { x: (p.x + 0.5) * k, y: (p.y + 0.5) * k };
+      const q = wcsSky2Pix(field.wcs, ra, dec);
+      return { x: o + (q.x + 0.5) * k, y: o + (q.y + 0.5) * k };
     },
-    picToSky: (px, py) => (field ? wcsPix2Sky(field.wcs, px / k - 0.5, py / k - 0.5) : null),
+    picToSky: (cx, cy) => (field ? wcsPix2Sky(field.wcs, (cx - o) / k - 0.5, (cy - o) / k - 0.5) : null),
     field,
     group,
-    mjd: group ? group.mjd : null,
+    mjd: group && Number.isFinite(group.mjd) ? group.mjd : null,
     det: S.det,
     mode: S.mode,
     values,
-    processed: S.original ? [] : cleanupSteps(pic()),
+    processed: S.original ? [] : cleanupSteps(settings),
+    ref: pair()[0],
+    inner: { x: o, y: o, size: n * k },
   };
-  for (const hook of drawHooks) {
-    ctx.save();
-    try {
-      hook(ctx, view);
-    } catch (err) {
-      console.error('render: a draw hook failed', err);
+  if (field && group) {
+    for (const hook of drawHooks) {
+      ctx.save();
+      try {
+        hook(ctx, view);
+      } catch (err) {
+        console.error('render: a draw hook failed', err);
+      }
+      ctx.restore();
     }
-    ctx.restore();
   }
-  labels(canvas.parentElement, size, k);
+  labels(p, size, k, field);
 }
 
-/** The picture's own labels: date badge, the placeholder tag, scale bar and north/east. */
-function labels(host: HTMLElement | null, size: number, k: number): void {
-  if (!host) return;
-  const badge = host.querySelector<HTMLElement>('[data-badge]');
-  const tag = host.querySelector<HTMLElement>('[data-placeholder]');
-  const scale = host.querySelector<HTMLElement>('[data-scale]');
+interface Painted {
+  data: ImageData;
+  /** Swipe: the picture right of the divider. */
+  right?: ImageData;
+  values: Float32Array | null;
+}
+
+function imageFor(field: Field, group: Group, look: Look, p: PicSettings): Painted | null {
+  if (S.color) return colourPainted(field, group, p);
+  switch (S.mode) {
+    case 'two': {
+      const [a, b] = pair();
+      if (!a || !b) return null;
+      return { data: twoDatesImage(field, a, b, look, p), values: null };
+    }
+    case 'diff':
+      return {
+        data: differenceImage(field, S.groups, S.epoch, look, p),
+        values: differencePicture(field, S.groups, S.epoch, p),
+      };
+    case 'swipe': {
+      const [a, b] = pair();
+      if (!a || !b) return null;
+      return {
+        data: flipImage(field, a, look, p),
+        right: flipImage(field, b, look, p),
+        values: groupPicture(field, b, p),
+      };
+    }
+    case 'stack': {
+      const st = stackNow();
+      if (!st) return null;
+      return { data: stackImage(field, st, look, p), values: st.pix };
+    }
+    case 'trail':
+      return { data: trailImage(field, S.groups, S.epoch, look, p), values: groupPicture(field, group, p) };
+    default:
+      return { data: flipImage(field, group, look, p), values: groupPicture(field, group, p) };
+  }
+}
+
+/** Color: each detector's picture of the same date, through its own look. */
+function colourPainted(field: Field, group: Group, p: PicSettings): Painted {
+  const by = group.visit === null ? 'window' : 'visit';
+  const byDet = [1, 2, 3, 4, 5, 6].map((d) => {
+    const gs = groupFrames(field, d, by);
+    const g = gs.find((x) => x.window === group.window && x.visit === group.visit);
+    if (!g) return null;
+    return { group: g, look: lookFor(field, gs, 0, p, d) };
+  });
+  return { data: colourImage(field, byDet, p), values: null };
+}
+
+let scratch: OffscreenCanvas | null = null;
+function blit(ctx: CanvasRenderingContext2D, img: ImageData, o: number, k: number, n: number): void {
+  if (!scratch || scratch.width !== img.width || scratch.height !== img.height) {
+    scratch = new OffscreenCanvas(img.width, img.height);
+  }
+  scratch.getContext('2d')?.putImageData(img, 0, 0);
+  ctx.drawImage(scratch, o, o, n * k, n * k);
+}
+
+function cssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#fff';
+}
+
+/** The picture's own labels: date badge, the pass tint at the edge, scale bar and north/east. */
+function labels(p: Parts, size: number, k: number, field: Field | null): void {
   const h = hud();
-  if (badge) {
-    badge.className = 'window-badge';
-    badge.hidden = !h;
-    badge.style.cssText = 'position:absolute;top:8px;left:8px;pointer-events:none';
-    badge.innerHTML = h
-      ? `<b style="font:var(--text-control)">${h.letter} · ${h.title}</b><br>${h.lines.join('<br>')}`
+  const g = S.groups[S.epoch];
+  p.badge.hidden = !h;
+  if (h) {
+    const tile = h.letter
+      ? `<span class="pic-letter" style="--tint:var(--p${((g?.window ?? 0) % 4) + 1})">${h.letter}</span>`
       : '';
-    if (!h) badge.textContent = '';
+    const warn = h.warn ? `<span class="pic-warn">${esc(h.warn)}</span>` : '';
+    p.badge.innerHTML = `${warn}<span class="pic-title">${tile}<b>${esc(h.title)}</b></span>${h.lines
+      .map((l) => `<span>${esc(l)}</span>`)
+      .join('')}`;
   }
-  if (tag) {
-    tag.hidden = !S.field?.simulated;
-    tag.className = 'window-badge';
-    tag.style.cssText =
-      'position:absolute;top:8px;right:8px;color:var(--st-accent-2);font:var(--text-control);pointer-events:none';
-    tag.textContent =
-      S.mode === 'swipe' || S.mode === 'stack' || S.mode === 'trail'
-        ? `Placeholder · ${S.mode} view not built yet`
-        : 'Placeholder';
-  }
-  if (scale) {
-    const arcminPx = (60 / 6.15) * k;
-    scale.style.cssText = `position:absolute;left:10px;bottom:10px;width:${arcminPx}px;border-bottom:1.5px solid var(--st-ink);color:var(--st-ink);font:var(--text-scale);padding-bottom:3px;pointer-events:none`;
-    // North up, east left: an L of two arrows, lettered N and E, just right of the scale bar.
-    scale.innerHTML = `1 arcmin<svg viewBox="0 0 30 30" width="30" height="30" aria-label="North up, east left"
-      style="position:absolute;left:calc(100% + 12px);bottom:-1px;overflow:visible;stroke:currentColor;fill:none;stroke-width:1.5">
-      <path d="M24 28V8M24 28H4"/><text x="21" y="5" fill="currentColor" stroke="none">N</text>
-      <text x="-6" y="31" fill="currentColor" stroke="none">E</text></svg>`;
-    scale.hidden = !S.field;
+  // The edge takes the tint of the pass on screen while the pictures flip (DESIGN "Data windows").
+  const tinted = !!g && !S.color && (S.mode === 'flip' || S.mode === 'trail');
+  p.edge.hidden = !tinted;
+  if (tinted && g) p.edge.style.setProperty('--tint', `var(--p${(g.window % 4) + 1})`);
+
+  p.divider.hidden = !(field && S.mode === 'swipe' && S.groups.length > 1);
+  p.divider.style.left = `${S.swipe * 100}%`;
+  p.divider.setAttribute('aria-valuenow', String(Math.round(S.swipe * 100)));
+
+  p.scale.hidden = !field;
+  if (field) {
+    // A round length between about 40 and 120 px: 1′, 2′, 5′ or 10′ (or 30″ in a 3′ field).
+    const perArcmin = (60 / field.scale) * k;
+    const choices = [0.5, 1, 2, 5, 10];
+    const len = choices.find((c) => c * perArcmin >= 40) ?? 10;
+    const text = len < 1 ? '30 arcsec' : `${len} arcmin`;
+    p.scale.innerHTML = `<span class="pic-bar" style="width:${Math.round(len * perArcmin)}px">${text}</span>
+      <svg class="pic-ne" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="North is up, east is left">
+        <path d="M26 30V9M26 30H6"/><text x="22.5" y="6">N</text><text x="-1" y="33">E</text></svg>`;
   }
 }
 
-function mean(field: Field, group: Group | undefined): Float32Array {
-  const out = new Float32Array(field.n * field.n);
-  const frames = group?.frames ?? [];
-  for (const i of frames) {
-    const f = field.frames[i];
-    if (!f) continue;
-    for (let p = 0; p < out.length; p++) out[p] = (out[p] ?? 0) + (f.pix[p] ?? 0) / frames.length;
-  }
-  return out;
+function esc(s: string): string {
+  return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
 }
 
-function stretch(v: number, field: Field): number {
-  const sigma = field.noise[S.det - 1] ?? 5;
-  return Math.max(0, Math.min(1, Math.asinh(Math.max(0, v - 30) / (2 * sigma)) / Math.asinh(150)));
+// ----- Pointer: pan, tap, wheel -----------------------------------------------------------------
+
+/** Set by frame.ts: what a finished drag inside the picture does with the new centre. */
+let panHandler: ((ra: number, dec: number) => void) | null = null;
+let panPreview: ((ra: number, dec: number) => void) | null = null;
+let wheelHandler: ((steps: number) => void) | null = null;
+
+/** Lane D wiring: frame.ts hands the picture what pans and the wheel do. */
+export function setPointerActions(a: {
+  pan: (ra: number, dec: number) => void;
+  preview: (ra: number, dec: number) => void;
+  wheel: (steps: number) => void;
+}): void {
+  panHandler = a.pan;
+  panPreview = a.preview;
+  wheelHandler = a.wheel;
 }
 
-function detectorHue(det: Det): [number, number, number] {
-  const hex = getComputedStyle(document.documentElement).getPropertyValue(`--d${det}`).trim();
-  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
-  return m
-    ? [parseInt(m[1] ?? 'ff', 16), parseInt(m[2] ?? 'ff', 16), parseInt(m[3] ?? 'ff', 16)]
-    : [255, 255, 255];
+/** The sky position the picture centre would have after dragging by (dx, dy) CSS pixels. */
+function centreAfter(dx: number, dy: number): { ra: number; dec: number } | null {
+  const f = S.field;
+  if (!f || !view) return null;
+  const c = (f.n - 1) / 2;
+  return wcsPix2Sky(f.wcs, c - dx / view.k, c - dy / view.k);
 }
 
-function watchTaps(canvas: HTMLCanvasElement): void {
-  let down: { x: number; y: number } | null = null;
-  canvas.addEventListener('pointerdown', (e) => (down = { x: e.clientX, y: e.clientY }));
-  canvas.addEventListener('pointerup', (e) => {
-    if (!down || !view || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4) return;
+function watchPointer(canvas: HTMLCanvasElement): void {
+  let down: { x: number; y: number; id: number } | null = null;
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    down = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!down || e.pointerId !== down.id) return;
+    const dx = e.clientX - down.x;
+    const dy = e.clientY - down.y;
+    if (!panning && Math.hypot(dx, dy) <= 4) return;
+    if (!S.field) return;
+    panning = { dx, dy };
+    canvas.classList.add('panning');
+    canvas.style.translate = `${dx}px ${dy}px`;
+    const c = centreAfter(dx, dy);
+    if (c) panPreview?.(c.ra, c.dec);
+  });
+  const end = (e: PointerEvent) => {
+    if (!down || e.pointerId !== down.id) return;
+    const was = panning;
     down = null;
+    panning = null;
+    canvas.classList.remove('panning');
+    canvas.style.translate = '';
+    if (was) {
+      const c = centreAfter(was.dx, was.dy);
+      if (c && e.type === 'pointerup') panHandler?.(c.ra, c.dec);
+      return;
+    }
+    if (e.type !== 'pointerup' || !view) return;
     const r = canvas.getBoundingClientRect();
-    const px = e.clientX - r.left;
-    const py = e.clientY - r.top;
-    const f = view.toField(px, py);
-    const sky = view.picToSky(px, py);
+    const cx = e.clientX - r.left;
+    const cy = e.clientY - r.top;
+    const f = view.toField(cx, cy);
+    const sky = view.picToSky(cx, cy);
     if (!sky) return;
     for (const fn of tapFns) fn({ x: f.x, y: f.y, ra: sky.ra, dec: sky.dec });
+  };
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', end);
+
+  // The wheel over the picture changes the field size, one step per notch; the sky stays still.
+  let last = 0;
+  let pending = 0;
+  canvas.parentElement?.addEventListener(
+    'wheel',
+    (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      pending += e.deltaY;
+      const now = performance.now();
+      if (now - last < 180 || Math.abs(pending) < 4) return;
+      last = now;
+      const steps = pending > 0 ? 1 : -1;
+      pending = 0;
+      wheelHandler?.(steps);
+    },
+    { passive: false },
+  );
+}
+
+function watchDivider(divider: HTMLElement): void {
+  const host = () => divider.parentElement?.getBoundingClientRect();
+  divider.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    divider.setPointerCapture(e.pointerId);
   });
+  divider.addEventListener('pointermove', (e) => {
+    const r = host();
+    if (!r || !divider.hasPointerCapture(e.pointerId)) return;
+    S.swipe = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    draw();
+  });
+  divider.addEventListener('keydown', (e) => {
+    const d = e.key === 'ArrowLeft' ? -0.05 : e.key === 'ArrowRight' ? 0.05 : 0;
+    if (!d) return;
+    e.preventDefault();
+    S.swipe = Math.max(0, Math.min(1, S.swipe + d));
+    draw();
+  });
+}
+
+/** The next field size up or down from the one on screen (for the wheel and the buttons). */
+export function nextFov(steps: number): (typeof FOVS)[number] {
+  const i = FOVS.indexOf(S.fov) + steps;
+  return FOVS[Math.max(0, Math.min(FOVS.length - 1, i))] ?? S.fov;
 }

@@ -1,92 +1,168 @@
 /**
  * The frame card's insides: the header (name, source line, field size, picture tools, Measure,
- * close), the views, the data line and Measure's explanation line (FRM-5 to FRM-12).
- * Owner: lane D. Lane F places the card and owns #frame-grip; lane H fills #frame-task; lane E
- * fills #pic-tools and #frame-legend.
+ * close), the loading line and cover, the views, the data line and Measure's explanation line
+ * (FRM-5 to FRM-12). Owner: lane D. Lane F places the card, drags and sizes it and owns
+ * #frame-grip; lane H fills #frame-task; lane E fills #pic-tools and #frame-legend.
  *
  * It answers the bus: `aim` loads a spot, `band` shows a detector.
- *
- * PHASE 0 STUB: the header, views and lines work on the placeholder. No dragging inside the
- * picture, no wheel over it, no loading line, no cover.
  */
 import { FOVS, S, VIEWS, watch, type Mode } from './state.ts';
-import { draw, exif } from './render.ts';
-import { aimAt, groupsFor, loadTarget, setFov } from './load.ts';
-import { setEpoch } from './playback.ts';
+import { draw, exif, nextFov, setPointerActions } from './render.ts';
+import {
+  aimAt,
+  lamInBand,
+  liveNote,
+  loadTarget,
+  noPictures,
+  onPreview,
+  panTo,
+  previewPatch,
+  regroup,
+  setFov,
+  showDetector,
+  stepNote,
+  announce,
+} from './load.ts';
 import { on } from '../shell/bus.ts';
 import { icon, type IconName } from '../shell/icons.ts';
 import { hideFrame } from '../shell/shell.ts';
 import { setLevel } from '../explore/game.ts';
 import { BAND_EDGES } from '../core/instrument.ts';
+import { TARGETS } from '../core/targets.ts';
+import { SCENARIOS } from '../core/field.ts';
+import { startStrip } from './strip.ts';
 
-const VIEW_NAMES: Record<Mode, [string, IconName]> = {
-  flip: ['Flip', 'flip'],
-  swipe: ['Swipe', 'swipe'],
-  two: ['Two dates', 'two'],
-  diff: ['Difference', 'diff'],
-  stack: ['Stack', 'stack'],
-  trail: ['Trail', 'trail'],
+const VIEW_NAMES: Record<Mode, [string, IconName, string]> = {
+  flip: ['Flip', 'flip', 'Show the dates one after another'],
+  swipe: ['Swipe', 'swipe', 'Drag the line to compare the reference date with this one'],
+  two: ['Two dates', 'two', 'Two dates in one picture: red is earlier, cyan is later'],
+  diff: ['Difference', 'diff', 'Only what is brighter or fainter than usual'],
+  stack: ['Stack', 'stack', 'Every date added up, to see what is too faint for one'],
+  trail: ['Trail', 'trail', 'Earlier dates stay as a fading trail'],
 };
 
-const SOURCE_LINE: Record<string, string> = {
-  real: '<span style="color:var(--good)">●</span> Real data',
-  live: '<span style="color:var(--good)">●</span> Real data, fetched live',
-  simulated: '<span style="color:var(--warn)">◌</span> Simulated: placeholder',
-  none: 'No pictures here',
-  loading: 'Loading',
+/** What each view shows, in Measure's explanation line. */
+const EXPLAIN: Record<Mode, string> = {
+  flip: 'Each frame is one SPHEREx visit, scaled to the reference brightness. Stars stay put; anything that shifts between visits is moving.',
+  swipe: 'Left of the line is the reference date, right of it the date on screen. Drag the line across anything that looks different.',
+  two: 'The reference date is red and the date on screen is cyan. What did not change is white or grey; a red and cyan pair is something that moved.',
+  diff: 'This date minus the median of all dates. White is where something is now, dark where it usually sits; grey did not change.',
+  stack: 'Every exposure in this detector added up, so faint things build up and the noise averages down. Along a catalogue motion when the target has one.',
+  trail: 'The date on screen in colour, earlier dates as a fading pale trail, so a mover draws its own path.',
+};
+
+const SOURCE: Record<string, { cls: string; text: string; tip: string }> = {
+  real: {
+    cls: 'real',
+    text: 'Real data',
+    tip: 'Real exposures from NASA’s SPHEREx telescope, from NASA’s archive (IRSA)',
+  },
+  live: {
+    cls: 'real',
+    text: 'Real data, fetched live',
+    tip: 'Real exposures fetched from NASA’s archive (IRSA) for this spot just now',
+  },
+  simulated: {
+    cls: 'sim',
+    text: 'Simulated',
+    tip: 'Made-up pictures for practice. They are never mixed with real results',
+  },
+  none: { cls: 'none', text: 'No pictures here', tip: 'There are no real pictures of this spot in the frame' },
+  loading: { cls: 'loading', text: 'Loading…', tip: 'Real exposures of this spot are on their way' },
 };
 
 /** Fills the frame and answers `aim` and `band`. Called once by main.ts. */
 export function startFrame(): void {
   on('aim', (m) => {
-    if (m.target) void loadTarget(m.target);
+    if (m.target) void loadTarget(m.target, { fov: m.fov });
     else void aimAt(m.ra, m.dec, m.fov);
   });
   on('band', (m) => {
-    S.det = m.det;
     S.color = false;
-    S.lam = ((BAND_EDGES[m.det - 1] ?? 0.75) + (BAND_EDGES[m.det] ?? 5)) / 2;
-    S.groups = groupsFor(S.field, S.det);
-    setEpoch(Math.min(S.epoch, Math.max(0, S.groups.length - 1)));
+    showDetector(m.det, lamInBand(m.det, BAND_EDGES));
   });
-  watch(['label', 'source', 'fov', 'level', 'tools'], header);
-  watch(['level', 'mode'], views);
-  watch(['field', 'groups', 'epoch', 'mode', 'det', 'level', 'source'], () => {
-    lines();
-    draw();
+  setPointerActions({
+    pan: (ra, dec) => panTo(ra, dec),
+    preview: (ra, dec) => previewPatch(ra, dec),
+    wheel: (steps) => void setFov(nextFov(steps)),
   });
+  watch(['label', 'source', 'fov', 'level', 'tools', 'target'], header);
+  watch(['level', 'mode', 'groups', 'source', 'field'], views);
+  watch(['level', 'sameColour'], () => regroup());
+  let combined = S.pic.combinePass;
+  watch(['pic'], () => {
+    // "Combine each pass" changes what one step is in Measure: a pass or a visit.
+    if (S.pic.combinePass === combined) return;
+    combined = S.pic.combinePass;
+    if (S.level === 'measure') regroup();
+  });
+  watch(['level'], () => {
+    if (!VIEWS[S.level].includes(S.mode)) S.mode = 'flip';
+  });
+  watch(
+    [
+      'field',
+      'groups',
+      'epoch',
+      'ref',
+      'mode',
+      'det',
+      'level',
+      'source',
+      'load',
+      'pic',
+      'original',
+      'color',
+      'fov',
+      'sameColour',
+      'swipe',
+    ],
+    () => {
+      lines();
+      cover();
+      draw();
+    },
+  );
+  watch(['fov', 'ra', 'dec', 'label', 'source'], () => announce());
+  onPreview(showPreview);
   header();
   views();
   lines();
+  cover();
+  startStrip();
 }
+
+// ----- Header -----------------------------------------------------------------------------------
 
 function header(): void {
   const head = document.getElementById('frame-head');
   if (!head) return;
   const measure = S.level === 'measure';
-  head.style.cssText = 'display:flex;align-items:center;gap:4px;min-width:0';
+  const src = SOURCE[S.source] ?? SOURCE.none;
+  const i = FOVS.indexOf(S.fov);
+  head.className = 'frame-head';
+  head.dataset.drag = '';
   head.innerHTML = `
-    <div style="flex:1;min-width:0">
-      <h2 style="margin:0;font:var(--text-title);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></h2>
-      <p style="margin:0;color:var(--ink-2);font:var(--text-label);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${SOURCE_LINE[S.source] ?? ''}</p>
+    <div class="frame-name">
+      <h2 class="frame-title"></h2>
+      <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span></p>
     </div>
-    <button class="icon-btn sm" data-fov="-1" aria-label="Smaller field" data-tip="Smaller field" data-guide="fov-smaller">${icon('minus')}</button>
-    <span style="font:var(--text-label);color:var(--ink-2)">${S.fov}′</span>
-    <button class="icon-btn sm" data-fov="1" aria-label="Larger field" data-tip="Larger field" data-guide="fov-larger">${icon('plus')}</button>
-    ${measure ? `<button class="icon-btn sm" data-tools aria-pressed="${S.tools}" aria-label="Picture tools" data-tip="Picture tools" data-guide="tools-button">${icon('sliders')}</button>` : ''}
-    <button class="btn text" data-measure aria-pressed="${measure}" data-guide="measure">${icon('chart')}Measure</button>
-    <button class="icon-btn sm" data-hide aria-label="Hide the frame" data-tip="Hide the frame" data-guide="frame-hide">${icon('close')}</button>`;
-  const title = head.querySelector('h2');
+    <div class="frame-actions">
+      <button class="icon-btn sm" data-fov="-1" aria-label="Smaller field" data-tip="Smaller field (${FOVS[Math.max(0, i - 1)]}′)" data-guide="fov-smaller" ${i <= 0 ? 'disabled' : ''}>${icon('minus')}</button>
+      <span class="frame-fov term" tabindex="0" data-tip="Field size: the frame shows ${S.fov} arcminutes of sky. The wheel over the picture changes it too">${S.fov}′</span>
+      <button class="icon-btn sm" data-fov="1" aria-label="Larger field" data-tip="Larger field (${FOVS[Math.min(FOVS.length - 1, i + 1)]}′)" data-guide="fov-larger" ${i >= FOVS.length - 1 ? 'disabled' : ''}>${icon('plus')}</button>
+      ${measure ? `<button class="icon-btn sm" data-tools aria-pressed="${S.tools}" aria-label="Picture tools" data-tip="Picture tools" data-guide="tools-button">${icon('sliders')}</button>` : ''}
+      <button class="btn text frame-measure" data-measure aria-pressed="${measure}" data-guide="measure" data-tip="${measure ? 'Back to the simple view' : 'Measure: numbers, charts and all six views'}">${icon('chart')}<span>Measure</span></button>
+      <button class="icon-btn sm" data-hide aria-label="Hide the frame" data-tip="Hide the frame" data-guide="frame-hide">${icon('close')}</button>
+    </div>`;
+  const title = head.querySelector<HTMLElement>('.frame-title');
   if (title) {
     title.textContent = S.label;
-    title.title = S.label;
+    // One line; the whole name in the tooltip (O-I10).
+    title.dataset.tip = S.label;
   }
-  head.querySelectorAll<HTMLElement>('[data-fov]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const i = FOVS.indexOf(S.fov) + Number(b.dataset.fov);
-      const next = FOVS[Math.max(0, Math.min(FOVS.length - 1, i))];
-      if (next !== undefined) void setFov(next);
-    }),
+  head.querySelectorAll<HTMLButtonElement>('[data-fov]').forEach((b) =>
+    b.addEventListener('click', () => void setFov(nextFov(Number(b.dataset.fov)))),
   );
   head.querySelector('[data-tools]')?.addEventListener('click', () => (S.tools = !S.tools));
   head
@@ -95,33 +171,138 @@ function header(): void {
   head.querySelector('[data-hide]')?.addEventListener('click', () => hideFrame(true));
 }
 
+// ----- Views ------------------------------------------------------------------------------------
+
 function views(): void {
   const box = document.getElementById('frame-views');
   if (!box) return;
-  box.className = 'seg';
+  const off = !S.field || S.groups.length === 0;
+  box.className = `seg frame-views${S.level === 'measure' ? ' six' : ''}`;
   box.setAttribute('role', 'group');
   box.setAttribute('aria-label', 'View');
   box.innerHTML = VIEWS[S.level]
     .map((m) => {
-      const [label, name] = VIEW_NAMES[m];
-      return `<button data-mode="${m}" data-guide="view-${m}" aria-pressed="${S.mode === m}">${icon(name)}${label}</button>`;
+      const [label, name, tip] = VIEW_NAMES[m];
+      return `<button data-mode="${m}" data-guide="view-${m}" aria-pressed="${S.mode === m}" data-tip="${tip}" ${off ? 'disabled' : ''}>${icon(name)}<span>${label}</span></button>`;
     })
     .join('');
-  box
-    .querySelectorAll<HTMLElement>('[data-mode]')
-    .forEach((b) => b.addEventListener('click', () => (S.mode = b.dataset.mode as Mode)));
+  box.querySelectorAll<HTMLElement>('[data-mode]').forEach((b) =>
+    b.addEventListener('click', () => {
+      S.mode = b.dataset.mode as Mode;
+    }),
+  );
 }
+
+// ----- Lines ------------------------------------------------------------------------------------
 
 function lines(): void {
   const ex = document.getElementById('frame-exif');
   if (ex) {
-    ex.style.cssText = 'margin:0;color:var(--ink-2);font:var(--text-label)';
-    ex.textContent = exif();
+    ex.className = 'frame-exif';
+    const text = exif();
+    const extra = [stepNote, liveNote].filter(Boolean).join(' · ');
+    ex.textContent = extra ? `${text} · ${extra}` : text;
   }
   const explain = document.getElementById('frame-explain');
   if (explain) {
-    explain.hidden = S.level !== 'measure';
-    explain.style.cssText = 'margin:0;font:var(--text-label)';
-    explain.textContent = `Placeholder (phase 0): what the ${VIEW_NAMES[S.mode][0]} view shows.`;
+    explain.className = 'frame-explain';
+    explain.hidden = S.level !== 'measure' || !S.field;
+    explain.textContent = EXPLAIN[S.mode];
   }
+  const load = document.getElementById('frame-load');
+  if (load) {
+    // The line keeps its height whether or not it has words, so the frame never grows (O-I5).
+    load.className = 'frame-load';
+    const busy = S.source === 'loading' && S.load;
+    load.textContent = busy ? 'Loading this spot. The sky keeps working meanwhile.' : stepNote ? `${stepNote}.` : '';
+  }
+}
+
+// ----- Cover: busy, preview, and "no pictures here" ----------------------------------------------
+
+let previewCanvas: OffscreenCanvas | null = null;
+let coverTimer = 0;
+
+function showPreview(c: OffscreenCanvas | null): void {
+  previewCanvas = c;
+  cover();
+}
+
+function cover(): void {
+  const el = document.getElementById('frame-cover');
+  if (!el) return;
+  el.className = 'frame-cover';
+  const loading = S.source === 'loading' && S.load;
+  const none = !loading && (!S.field || !S.groups.length);
+  if (!loading && !none) {
+    el.hidden = true;
+    el.innerHTML = '';
+    previewCanvas = null;
+    return;
+  }
+  if (loading && S.load) {
+    const l = S.load;
+    const known = l.total !== null && l.done !== null && l.total > 0;
+    const pct = known ? Math.round((100 * (l.done ?? 0)) / (l.total ?? 1)) : 0;
+    let box = el.querySelector<HTMLElement>('.cover-busy');
+    if (!box) {
+      el.innerHTML = `<canvas class="cover-preview" hidden></canvas>
+        <span class="cover-tag window-badge" hidden>Preview from the sky map (all dates averaged)</span>
+        <div class="cover-busy" role="status" aria-live="polite">
+          <p class="cover-what"></p>
+          <p class="cover-more">This can take a few minutes. You can keep exploring the sky meanwhile.</p>
+          <div class="cover-bar"><span></span></div>
+        </div>`;
+      box = el.querySelector<HTMLElement>('.cover-busy');
+    }
+    const what = el.querySelector('.cover-what');
+    if (what) what.textContent = l.what;
+    const bar = el.querySelector<HTMLElement>('.cover-bar');
+    bar?.classList.toggle('known', known);
+    bar?.style.setProperty('--done', `${pct}%`);
+    const pc = el.querySelector<HTMLCanvasElement>('.cover-preview');
+    const tag = el.querySelector<HTMLElement>('.cover-tag');
+    if (pc && previewCanvas) {
+      pc.width = previewCanvas.width;
+      pc.height = previewCanvas.height;
+      pc.getContext('2d')?.drawImage(previewCanvas, 0, 0);
+      pc.hidden = false;
+      if (tag) tag.hidden = false;
+    }
+    // The cover shows only if the wait lasts (GEN-4): 0.25 s.
+    if (el.hidden) {
+      clearTimeout(coverTimer);
+      const wait = Math.max(0, 250 - (performance.now() - l.since));
+      coverTimer = window.setTimeout(() => {
+        if (S.source === 'loading') el.hidden = false;
+      }, wait);
+    }
+    return;
+  }
+  // No pictures (FRM-11): say so, say why, offer the five test targets and the practice.
+  clearTimeout(coverTimer);
+  previewCanvas = null;
+  const why =
+    noPictures ??
+    (S.source === 'simulated'
+      ? { why: 'The practice simulation has no pictures in this build.', more: null }
+      : { why: 'There are no pictures of this spot in the frame.', more: null });
+  el.hidden = false;
+  el.innerHTML = `<div class="cover-none">
+      <p class="cover-head">No real pictures here</p>
+      <p class="cover-why"></p>
+      <p class="cover-why more" ${why.more ? '' : 'hidden'}></p>
+      <p class="cover-label">Real SPHEREx pictures you can open now</p>
+      <ul class="cover-targets">${TARGETS.map(
+        (t) => `<li><button class="link" data-target="${t.key}">${t.name}</button></li>`,
+      ).join('')}</ul>
+      <button class="btn cover-practice" data-practice ${SCENARIOS['warm-up'] ? '' : 'hidden'}><span class="pill warn">Simulated</span>Practice on made-up pictures</button>
+    </div>`;
+  const [w, m] = el.querySelectorAll<HTMLElement>('.cover-why');
+  if (w) w.textContent = why.why;
+  if (m && why.more) m.textContent = why.more;
+  el.querySelectorAll<HTMLElement>('[data-target]').forEach((b) =>
+    b.addEventListener('click', () => void loadTarget(b.dataset.target ?? '')),
+  );
+  el.querySelector('[data-practice]')?.addEventListener('click', () => void loadTarget('warm-up'));
 }
