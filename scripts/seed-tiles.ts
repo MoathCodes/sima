@@ -66,7 +66,7 @@ async function download(url: string): Promise<Buffer> {
   const file = join(CACHE, url.replace(/^https:\/\/[^/]+\//, ''));
   if (existsSync(file)) return readFileSync(file);
   let last: unknown;
-  for (let attempt = 0; attempt < 4; attempt++) {
+  for (let attempt = 0; attempt < 8; attempt++) {
     try {
       const res = await fetch(url, {
         headers: { 'User-Agent': UA },
@@ -79,7 +79,7 @@ async function download(url: string): Promise<Buffer> {
       return body;
     } catch (err) {
       last = err;
-      await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+      await new Promise((r) => setTimeout(r, 2500 * (attempt + 1)));
     }
   }
   throw new Error(`could not fetch ${url}: ${String(last)}`);
