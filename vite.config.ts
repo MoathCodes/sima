@@ -58,7 +58,8 @@ function listening(host: string, port: number): Promise<boolean> {
 
 /** Uses a running live service, or starts scripts/live.py and waits for it to listen. */
 async function startLive(): Promise<Live> {
-  if (process.env.SIMA_LIVE === 'off') return { up: false, why: 'off (SIMA_LIVE=off)', child: null };
+  if (process.env.SIMA_LIVE === 'off')
+    return { up: false, why: 'off (SIMA_LIVE=off)', child: null };
   if (await listening(LIVE_HOST, LIVE_PORT)) {
     return { up: true, why: `using the one already on ${LIVE_HOST}:${LIVE_PORT}`, child: null };
   }
@@ -128,7 +129,9 @@ function liveService(live: Live): Plugin {
 
 export default defineConfig(async ({ command, isPreview }) => {
   const dev = command === 'serve' && !isPreview;
-  const live: Live = dev ? await startLive() : { up: false, why: 'not the dev server', child: null };
+  const live: Live = dev
+    ? await startLive()
+    : { up: false, why: 'not the dev server', child: null };
 
   if (dev) {
     // Vite reads VITE_* variables from process.env after this function returns.
