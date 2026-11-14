@@ -180,11 +180,11 @@ function legend(): void {
     if (L.catwise && cat.catwise.rows.length)
       items.push('<span class="lg-sym lg-square"></span>CatWISE2020 sources, moved to this date');
     if (L.path && S.field.target)
-      items.push('<span class="lg-sym lg-path"></span>Predicted path, from the catalogue motion');
+      items.push('<span class="lg-sym lg-path"></span>Path from the catalogue motion');
     if (L.flags) items.push('<span class="lg-sym lg-flag"></span>Flagged or missing pixels');
     if (current().marks && search().result?.candidates.length)
-      items.push('<span class="lg-sym lg-cand"></span>Candidates to check (Find changes)');
-    if (S.selected) items.push('<span class="lg-sym lg-sel"></span>What Measure is about');
+      items.push('<span class="lg-sym lg-cand"></span>Candidates to check');
+    if (S.selected) items.push('<span class="lg-sym lg-sel"></span>In Measure');
   }
   box.hidden = !items.length;
   box.className = 'lg';
