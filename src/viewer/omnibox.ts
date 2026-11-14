@@ -44,6 +44,8 @@ export interface SearchSource {
 const MAX_ROWS = 8;
 const sources = new Set<SearchSource>();
 let rows: SearchHit[] = [];
+/** The text `rows` were found for. */
+let rowsFor = '';
 let active = 0;
 let asking: AbortController | null = null;
 
@@ -75,6 +77,13 @@ export function startSearch(): void {
   input.addEventListener('input', () => {
     clearTimeout(timer);
     const text = input.value.trim();
+    // Rows for an older text must not be chosen by a quick Enter: drop them now.
+    if (text !== rowsFor) {
+      rows = [];
+      rowsFor = text;
+      close(list, input);
+      list.replaceChildren(); // not even during the fade-out
+    }
     timer = window.setTimeout(() => void ask(text, list, input), text ? 120 : 0);
   });
   input.addEventListener('focus', () => {
@@ -192,7 +201,7 @@ async function ask(
     [coordinates, targets, ...sources].map(async (source) => {
       try {
         const hits = await source.search(query, ctl.signal);
-        return { source, hits: [...hits].sort((a, b) => b.score - a.score) };
+        return { source, hits: [...hits] }; // each source gives its best first
       } catch (err) {
         if (!ctl.signal.aborted) console.error(`search: the "${source.name}" source failed`, err);
         return { source, hits: [] };
@@ -214,6 +223,7 @@ async function ask(
     if (hits.length) shown.push({ source: g.source, hits });
   }
   rows = shown.flatMap((g) => g.hits);
+  rowsFor = query;
   active = 0;
   render(list, input, shown, query);
   const first = rows[0];

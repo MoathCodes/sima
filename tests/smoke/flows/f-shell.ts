@@ -85,6 +85,7 @@ export const flows: Flow[] = [
         name: 'Escape in search closes the suggestions first',
         async run(page) {
           await page.keyboard.press('/');
+          await page.locator(`${guide('search')} input`).fill(''); // it keeps the last search
           await page.keyboard.type('vega');
           await page
             .locator(`${guide('search-results')} [role="option"]`)
@@ -214,7 +215,17 @@ export const flows: Flow[] = [
           await page.keyboard.press('Escape');
           await page.goto(link);
           await page.waitForSelector('html[data-ready]', { state: 'attached' });
-          await page.waitForTimeout(300);
+          // The view and the date apply once the pictures are in.
+          await page
+            .waitForFunction(
+              (want) => {
+                const S = (window as unknown as { sima: { S: Record<string, unknown> } }).sima.S;
+                return Object.entries(want).every(([k, v]) => S[k] === v);
+              },
+              before,
+              { timeout: 10000 },
+            )
+            .catch(() => undefined);
           for (const [k, v] of Object.entries(before)) {
             const now = await state<unknown>(page, k);
             expect(now === v, `${k} to be ${String(v)} after the link, not ${String(now)}`);

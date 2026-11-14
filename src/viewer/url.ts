@@ -7,13 +7,13 @@
  * YYYY-MM-DD in UTC), `pic` (picture settings, core/picture.ts `encodePic`) and `embed=1`.
  * A parameter or value that is not understood is named in a note, never ignored silently.
  */
-import { S, VIEWS, nearestFov, watch, type Mode } from './state.ts';
+import { S, VIEWS, type Mode } from './state.ts';
 import { aimAt, loadTarget } from './load.ts';
 import { pause, setEpoch } from './playback.ts';
 import { decodePic, encodePic } from '../core/picture.ts';
 import { TARGETS } from '../core/targets.ts';
 import { SCENARIOS } from '../core/field.ts';
-import { emit } from '../shell/bus.ts';
+import { emit, on } from '../shell/bus.ts';
 import { toast } from '../shell/toast.ts';
 import { setLevel } from '../explore/game.ts';
 import type { Det, Group } from '../core/types.ts';
@@ -112,32 +112,15 @@ export function readLink(search: string): Link {
 }
 
 /**
- * Opens what a link asks for: the target, else the coordinates, else Barnard's Star; then the
- * field size, view, detector, picture settings and date. Anything that could not be applied is
- * named in one note. Called once by main.ts, after the other parts have started.
+ * Opens what a link asks for: the target, else the coordinates, else Barnard's Star, at the
+ * link's field size. The picture settings apply at once; the view, detector and date apply once
+ * the frame has finished loading (the first `patch` message that is not "loading"). Anything
+ * that could not be applied is named in one note. Called once by main.ts, after the other parts
+ * have started. It does not wait for the pictures: a live spot can take minutes.
  */
 export async function startUrl(link: Link): Promise<void> {
   S.embed = link.embed;
   const notes = [...link.unknown];
-
-  if (link.target) await loadTarget(link.target);
-  else if (link.ra !== null && link.dec !== null) {
-    await aimAt(link.ra, link.dec, link.fov ?? undefined);
-  } else await loadTarget('barnard');
-
-  if (link.target && link.fov !== null && nearestFov(link.fov) !== S.fov) {
-    emit('aim', { ra: S.ra, dec: S.dec, fov: link.fov, target: link.target });
-    await idle();
-  }
-
-  if (link.view) {
-    if (!VIEWS[S.level].includes(link.view)) setLevel('measure');
-    S.mode = link.view;
-  }
-
-  if (link.det === 'color')
-    notes.push('det=color (the Color view cannot be opened from a link yet)');
-  else if (link.det !== null && link.det !== S.det) emit('band', { det: link.det });
 
   if (link.pic) {
     const { pic, unknown } = decodePic(link.pic);
@@ -145,7 +128,37 @@ export async function startUrl(link: Link): Promise<void> {
     S.picLinked = true;
     if (unknown.length) notes.push(`pic (${unknown.join(', ')})`);
   }
+  if (link.det === 'color') {
+    notes.push('det=color (the Color view cannot be opened from a link yet)');
+  }
 
+  const later = link.view !== null || typeof link.det === 'number' || link.date !== null;
+  if (!later) say(notes);
+  else {
+    const stop = on('patch', (p) => {
+      if (p.source === 'loading') return;
+      stop();
+      // Let the frame finish this round of changes (its groups) before choosing a picture.
+      setTimeout(() => {
+        applyLoaded(link, notes);
+        say(notes);
+      }, 0);
+    });
+  }
+
+  if (link.target) void loadTarget(link.target, { fov: link.fov ?? undefined });
+  else if (link.ra !== null && link.dec !== null) {
+    void aimAt(link.ra, link.dec, link.fov ?? undefined);
+  } else void loadTarget('barnard');
+}
+
+/** The parts of a link that need the pictures: view, detector, date. */
+function applyLoaded(link: Link, notes: string[]): void {
+  if (link.view) {
+    if (!VIEWS[S.level].includes(link.view)) setLevel('measure');
+    S.mode = link.view;
+  }
+  if (typeof link.det === 'number' && link.det !== S.det) emit('band', { det: link.det });
   if (link.date) {
     const i = groupOn(S.groups, link.date);
     if (i === null) notes.push(`date=${link.date} (this patch has no picture from that day)`);
@@ -154,7 +167,10 @@ export async function startUrl(link: Link): Promise<void> {
       setEpoch(i);
     }
   }
+}
 
+/** One note for everything in the link that was left out. */
+function say(notes: string[]): void {
   if (notes.length) {
     toast(`Not understood in the link, so left out: ${notes.join('; ')}.`, { ms: 12000 });
   }
@@ -222,24 +238,4 @@ function dayToMjd(day: string): number | null {
   const t = Date.parse(`${day}T00:00:00Z`);
   if (!Number.isFinite(t) || new Date(t).toISOString().slice(0, 10) !== day) return null;
   return t / 86400000 + MJD_UNIX;
-}
-
-/** Resolves once the frame has finished loading (or after two minutes). */
-function idle(): Promise<void> {
-  return new Promise((done) => {
-    const finished = () => S.load === null && S.source !== 'loading';
-    let stop = () => {};
-    const timer = setTimeout(() => {
-      stop();
-      done();
-    }, 120000);
-    const check = () => {
-      if (!finished()) return;
-      clearTimeout(timer);
-      stop();
-      done();
-    };
-    stop = watch(['load', 'source', 'groups'], check);
-    queueMicrotask(check);
-  });
 }
