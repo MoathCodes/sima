@@ -17,6 +17,7 @@ import {
   nameOf,
   noteSentence,
   otherNames,
+  spherexNote,
   stopNote,
   tidy,
   twoFigures,
@@ -144,4 +145,37 @@ test('cutouts: HEALPix cells of bright stars match the tiles checked on 14 Novem
   assert.deepEqual(cellOf(37.95456, 89.26411, 3), { order: 3, npix: 63, col: 484, row: 474 });
   assert.equal(orderFor(0.5 / 112), 5);
   assert.equal(orderFor(4 / 112), 2);
+});
+
+test('H9: the "In SPHEREx" note is made for the place only from named facts', () => {
+  const named = (q: string) => {
+    const p = top(q);
+    assert.ok(p, q);
+    return spherexNote(cat, p);
+  };
+  // A cloud: the ice wavelengths, with the SPHEREx team's page as their source.
+  const cloud = cat.places.find((p) => p.kind === 'dark-nebula' && !p.inSpherex);
+  assert.ok(cloud);
+  const ice = spherexNote(cat, cloud);
+  assert.match(ice?.text ?? '', /3\.05 µm.*4\.27 µm/);
+  assert.match(ice?.source?.url ?? '', /^https:\/\/spherex\.caltech\.edu\//);
+  // A star: its SIMBAD motion in SPHEREx pixels (6.15″), no claim of a SPHEREx measurement.
+  const star = cat.places.find(
+    (p) => p.kind === 'star' && !p.inSpherex && p.properMotion && p.sources.properMotion,
+  );
+  assert.ok(star?.properMotion);
+  const pm = Math.hypot(star.properMotion.ra, star.properMotion.dec) / 1000;
+  const note = spherexNote(cat, star)?.text ?? '';
+  assert.match(note, /^SIMBAD lists /);
+  assert.ok(note.includes(`${pm.toFixed(pm < 0.1 ? 3 : 2)}″ a year`), note);
+  assert.equal(note.includes('pixels a year'), pm / 6.15 >= 0.3);
+  // Nothing sourced to add: the kind's general thing to try stays (Sombrero, a galaxy).
+  assert.equal(
+    named('m104')?.text,
+    'Slide the wavelength from short to long and compare how it looks.',
+  );
+  // The catalogue's own note wins.
+  const own = cat.places.find((p) => p.inSpherex);
+  assert.ok(own);
+  assert.equal(spherexNote(cat, own)?.fromCatalogue, true);
 });

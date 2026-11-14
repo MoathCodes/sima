@@ -10,6 +10,7 @@
  * memory. The only words added are plain explanations of a value (what a magnitude means to the
  * eye, what a galaxy shape code stands for).
  */
+import { PIXEL_ARCSEC } from '../core/instrument.ts';
 import type { Place, PlaceKind, PlaceSource, PlacesCatalogue } from '../data/schema.ts';
 import type { Say, TourStop } from '../data/tours.ts';
 
@@ -372,13 +373,61 @@ const TRY: Partial<Record<PlaceKind, string>> = {
   star: 'Slide the wavelength and compare how bright it looks.',
 };
 
+/** Where the ice wavelengths below come from (H9): the SPHEREx team's page on ices. */
+export const ICE_SOURCE: PlaceSource = {
+  name: 'SPHEREx mission, Caltech',
+  url: 'https://spherex.caltech.edu/page/the-origin-of-water-in-planetary-systems',
+};
+/** Clouds, where the SPHEREx team looks for ices. */
+const ICE_KINDS: ReadonlySet<PlaceKind> = new Set([
+  'dark-nebula',
+  'emission-nebula',
+  'reflection-nebula',
+]);
+/** Kinds whose catalogue motion is the star's own. */
+const STAR_KINDS: ReadonlySet<PlaceKind> = new Set([
+  'star',
+  'variable-star',
+  'brown-dwarf',
+  'fast-star',
+  'nearby-star',
+]);
+
+/** A "what to try" note, and the source of any fact it states that the card does not list. */
+export interface SpherexNote {
+  text: string;
+  fromCatalogue: boolean;
+  source?: PlaceSource;
+}
+
 /**
  * The "In SPHEREx" note: the catalogue's own note when it has one (it says where it comes from
- * and that it is not a SPHEREx measurement), else a thing to try.
+ * and that it is not a SPHEREx measurement); else a thing to try, made for this place only from
+ * named facts: its catalogue motion in SPHEREx pixels (stars), or the wavelengths where the
+ * SPHEREx team looks for ices (clouds). Otherwise the kind's general thing to try.
  */
-export function spherexNote(p: Place): { text: string; fromCatalogue: boolean } | null {
+export function spherexNote(cat: PlacesCatalogue, p: Place): SpherexNote | null {
   if (p.inSpherex) return { text: tidy(p.inSpherex), fromCatalogue: true };
   const t = TRY[p.kind];
+  if (ICE_KINDS.has(p.kind)) {
+    return {
+      text:
+        'The SPHEREx team looks for ices in clouds of gas and dust by how they absorb the light of stars behind them: water ice near 3.05 µm, carbon dioxide ice near 4.27 µm. ' +
+        'Set the wavelength to each and compare the stars seen through the cloud with those around it.',
+      fromCatalogue: false,
+      source: ICE_SOURCE,
+    };
+  }
+  if (p.properMotion && STAR_KINDS.has(p.kind)) {
+    const motion = Math.hypot(p.properMotion.ra, p.properMotion.dec) / 1000; // arcsec a year
+    const px = motion / PIXEL_ARCSEC;
+    const lead = `${sourceWords(cat, p, 'properMotion') || 'The catalogue'} lists ${motion.toFixed(motion < 0.1 ? 3 : 2)}″ a year of motion`;
+    const text =
+      px >= 0.3
+        ? `${lead}: about ${px.toFixed(1)} SPHEREx pixels a year. Play the dates and watch it shift against the stars around it.`
+        : `${lead}: under a third of a SPHEREx pixel (${PIXEL_ARCSEC}″) a year, so it should look still when you play the dates.${t ? ` ${t}` : ''}`;
+    return { text, fromCatalogue: false };
+  }
   return t ? { text: t, fromCatalogue: false } : null;
 }
 

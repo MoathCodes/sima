@@ -575,14 +575,26 @@ export function openCard(
     body.append(dl);
   }
 
-  const note = spherexNote(p);
+  const note = spherexNote(cat, p);
   if (note) {
+    const text = el('p', {}, note.text);
+    if (note.source) {
+      text.append(
+        ' Source: ',
+        el(
+          'a.link',
+          { href: note.source.url, target: '_blank', rel: 'noopener' },
+          note.source.name,
+        ),
+        '.',
+      );
+    }
     body.append(
       el(
         'div.pl-spherex',
         {},
         el('p.group-label', {}, note.fromCatalogue ? 'In SPHEREx' : 'In SPHEREx: what to try'),
-        el('p', {}, note.text),
+        text,
       ),
     );
   }
