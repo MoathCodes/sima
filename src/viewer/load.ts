@@ -13,14 +13,24 @@ import { S, nearestFov, pic, type Fov, type LoadState } from './state.ts';
 import { draw } from './render.ts';
 import { pause, play, reducedMotion } from './playback.ts';
 import { emit, type PatchSource } from '../shell/bus.ts';
-import { buildRealField, decodeFrames, fieldGrid } from '../core/real.ts';
+import { decodeFrames, fieldGrid } from '../core/real.ts';
+import { buildField, measure, usePatch } from '../core/work.ts';
 import { groupFrames, sameColourOnly } from '../core/blink.ts';
 import { detectorOf } from '../core/instrument.ts';
 import { TARGETS, targetByKey } from '../core/targets.ts';
 import { SCENARIOS } from '../core/field.ts';
 import { simulate } from '../core/frames.ts';
 import { formatCoords, separation } from '../core/astro.ts';
-import type { Det, Field, Group, LiveStatus, RealSet, Target, TargetData } from '../core/types.ts';
+import type {
+  Det,
+  Field,
+  Group,
+  LiveStatus,
+  Measurement,
+  RealSet,
+  Target,
+  TargetData,
+} from '../core/types.ts';
 
 /** The live service's address (`/api/patch` in dev), or '' when there is none (FRM-11). */
 export const LIVE_API: string = (import.meta.env.VITE_LIVE_API ?? '').replace(/\/$/, '');
@@ -117,7 +127,7 @@ async function loadShipped(target: Target, fov?: number): Promise<void> {
     const set = await fetchSet(base, target.key, 'shipped', signal);
     if (!current(id)) return;
     const own = fov === undefined ? nearestFov(set.data.fov) : S.fov;
-    show(set, target, centreOf(set.data), own, 'real');
+    await show(set, target, centreOf(set.data), own, 'real');
   } catch (err) {
     if (!current(id) || signal.aborted) return;
     console.warn('load: shipped data failed', err);
@@ -145,6 +155,7 @@ async function loadPractice(key: string, fov?: number): Promise<void> {
   S.field = field;
   S.load = null;
   S.source = 'simulated';
+  usePatch(`practice|${key}`, field, null);
   if (!field.frames.length) {
     noPictures = {
       why: 'The practice simulation is not ready in this build.',
@@ -325,8 +336,7 @@ async function showLive(
     if (!current(id)) return false;
     stepNote = step === 'first' ? 'First look' : '';
     const keepEpoch = S.groups[S.epoch]?.mjd ?? null;
-    show(set, null, { ra: S.ra, dec: S.dec }, S.fov, 'live', keepEpoch);
-    return true;
+    return await show(set, null, { ra: S.ra, dec: S.dec }, S.fov, 'live', keepEpoch);
   } catch (err) {
     if (!current(id) || signal.aborted) return false;
     console.warn(`load: live ${step} set failed`, err);
@@ -357,7 +367,7 @@ export async function setFov(fov: Fov): Promise<void> {
     }
     S.fov = fov;
     const keep = S.groups[S.epoch]?.mjd ?? null;
-    show(set, S.field?.target ?? null, { ra: S.ra, dec: S.dec }, fov, S.source, keep);
+    await show(set, S.field?.target ?? null, { ra: S.ra, dec: S.dec }, fov, S.source, keep);
     return;
   }
   if (S.source === 'loading' && !S.target) return aimAt(S.ra, S.dec, fov);
@@ -384,7 +394,7 @@ export function panTo(ra: number, dec: number): void {
     return;
   }
   const keep = S.groups[S.epoch]?.mjd ?? null;
-  show(set, S.field.target, { ra, dec }, S.fov, S.source, keep);
+  void show(set, S.field.target, { ra, dec }, S.fov, S.source, keep);
 }
 
 /** Tells the sky where the patch is while the user drags inside the picture (no reload). */
@@ -398,20 +408,52 @@ export function previewPatch(ra: number, dec: number): void {
 
 // ----- Showing a set ----------------------------------------------------------------------------
 
-/** Puts a decoded set on screen at a centre and field size, and plays it. */
-function show(
+let showSeq = 0;
+let showAbort: AbortController | null = null;
+
+/**
+ * Puts a decoded set on screen at a centre and field size, and plays it. The field is built off
+ * the page's thread (core/work.ts `buildField`); while it builds, the pictures already on screen
+ * stay. A newer call, or a newer load, drops this one's result.
+ *
+ * @returns True when this call's field is on screen.
+ */
+async function show(
   set: RealSet,
   target: Target | null,
   centre: { ra: number; dec: number },
   fov: Fov,
   source: PatchSource,
   keepMjd: number | null = null,
-): void {
+): Promise<boolean> {
+  const mine = ++showSeq;
+  const loadId = seq;
+  showAbort?.abort();
+  showAbort = new AbortController();
   // The grid never reaches beyond what the exposures cover; a larger field shows them in its
   // middle with the rest empty (render.ts), so nothing is filled in (H6).
-  const covered = set.data.size * 60;
-  const gridFov = Math.min(fov, covered);
-  const field = buildRealField(set, { ra: centre.ra, dec: centre.dec, fov: gridFov, target });
+  const gridFov = Math.min(fov, set.data.size * 60);
+  let field: Field;
+  try {
+    field = await buildField(
+      set,
+      { ra: centre.ra, dec: centre.dec, fov: gridFov, target },
+      { signal: showAbort.signal },
+    );
+  } catch (err) {
+    if (mine !== showSeq || !current(loadId) || (err as DOMException)?.name === 'AbortError') {
+      return false;
+    }
+    console.warn('load: building the field failed', err);
+    clearData('none');
+    noPictures = {
+      why: `The exposures could not be put on the frame's grid (${errText(err)}).`,
+      more: null,
+    };
+    announce();
+    return false;
+  }
+  if (mine !== showSeq || !current(loadId)) return false;
   S.ra = centre.ra;
   S.dec = centre.dec;
   S.fov = fov;
@@ -419,6 +461,7 @@ function show(
   S.field = field;
   S.load = null;
   S.source = source;
+  usePatch(`${set.key}|${centre.ra.toFixed(5)}|${centre.dec.toFixed(5)}|${gridFov}`, field, set);
   if (!field.frames.length) {
     noPictures = {
       why: 'The exposures arrived but could not be read in this build.',
@@ -426,6 +469,31 @@ function show(
     };
   }
   finishShow(keepMjd);
+  // Measure the target in the background, so Measure has its numbers when it opens.
+  if (target) setTimeout(() => void targetMeasurements()?.catch(() => undefined), 0);
+  return true;
+}
+
+let measuredSet: RealSet | null = null;
+let measuredTarget: Target | null = null;
+let measured: Promise<Measurement[]> | null = null;
+
+/**
+ * The patch's test target measured on every exposure (core/work.ts `measure`, off the page's
+ * thread), started once per patch and shared by everyone who asks (lane E's Measure, the guide).
+ *
+ * @returns The measurements, in time order; null when the patch has no target or no real data.
+ */
+export function targetMeasurements(): Promise<Measurement[]> | null {
+  const set = S.set;
+  const target = S.field?.target ?? null;
+  if (!set || !target) return null;
+  if (set !== measuredSet || target !== measuredTarget || !measured) {
+    measuredSet = set;
+    measuredTarget = target;
+    measured = measure(set, target);
+  }
+  return measured;
 }
 
 /** After S.field is set: the flip-book, the bus, the first paint, and playing. */

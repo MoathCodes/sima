@@ -4,7 +4,7 @@
  *
  * Everything here works on the field's grid (n × n, north up, east left, µJy per pixel) and goes
  * through the science core: `blend` and `difference` (core/blink.ts), `cleanUp` and `combine`
- * (core/filters.ts), `stackAlong` (core/stack.ts), and `limits`, `makeLut`, `toRgba`
+ * (core/filters.ts), `stack` (core/work.ts, off the page's thread), and `limits`, `makeLut`, `toRgba`
  * (core/display.ts). No page access except building ImageData.
  *
  * Methods borrowed from other fields (SPEC 7.4): brightness matching (radiology), two dates in
@@ -14,7 +14,8 @@
 import { blend, difference } from '../core/blink.ts';
 import { cleanUp, combine } from '../core/filters.ts';
 import { limits, makeLut, toRgba, LUT_SIZE, type Range } from '../core/display.ts';
-import { stackAlong, type StackResult } from '../core/stack.ts';
+import type { StackResult } from '../core/stack.ts';
+import { stack } from '../core/work.ts';
 import type { PicSettings } from '../core/picture.ts';
 import type { CatalogueTrack, Det, Field, Group } from '../core/types.ts';
 
@@ -319,21 +320,50 @@ export interface StackView {
   result: StackResult | null;
 }
 
+const stacking = new Map<string, Promise<void>>();
+
+/**
+ * Stack: every exposure of the detector added up. Along the target's motion it runs off the
+ * page's thread (core/work.ts `stack`, on the patch given to `usePatch`): until it is ready this
+ * returns null and `ready` is called once it is (the caller redraws). Without a motion the dates
+ * are combined here (cheap).
+ */
 export function stackPicture(
   field: Field,
   groups: readonly Group[],
   det: Det,
   track: CatalogueTrack | null,
   p: PicSettings,
-): StackView {
+  ready: () => void,
+): StackView | null {
   const c = cacheOf(field);
-  const key = `stack|${det}|${groups.map(groupKey).join(';')}|${track ? `${track.pmra},${track.pmdec}` : 'fixed'}|${p.combineBy}`;
-  return remember(c.other as Map<string, StackView>, key, () => {
-    const moving = track && Math.hypot(track.pmra, track.pmdec) > 0;
-    if (moving) {
-      const result = stackAlong(field, det, track, p.combineBy);
-      return { pix: result.along.pix, label: result.along.label, frames: result.frames, result };
+  const cache = c.other as Map<string, StackView>;
+  const moving = !!track && Math.hypot(track.pmra, track.pmdec) > 0;
+  const key = `stack|${det}|${moving && track ? `${track.pmra},${track.pmdec}` : groups.map(groupKey).join(';')}|${p.combineBy}`;
+  if (moving && track) {
+    const hit = cache.get(key);
+    if (hit) return hit;
+    if (!stacking.has(key)) {
+      const job = stack(det, track, p.combineBy)
+        .then((result) => {
+          cache.set(key, {
+            pix: result.along.pix,
+            label: result.along.label,
+            frames: result.frames,
+            result,
+          });
+          ready();
+        })
+        .catch((err: unknown) => {
+          if ((err as DOMException)?.name !== 'AbortError')
+            console.warn('paint: stacking failed', err);
+        })
+        .finally(() => stacking.delete(key));
+      stacking.set(key, job);
     }
+    return null;
+  }
+  return remember(cache, key, () => {
     const pics = groups.filter((g) => g.frames.length).map((g) => groupPicture(field, g, p));
     const frames = groups.reduce((s, g) => s + g.frames.length, 0);
     return {

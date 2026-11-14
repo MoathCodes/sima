@@ -241,9 +241,16 @@ export function hud(): Hud | null {
   }
   if (S.mode === 'stack') {
     const st = stackNow();
-    const count = st?.frames ?? 0;
-    const lines = [st?.label ?? 'All dates added up'];
-    if (st?.result) {
+    if (!st)
+      return {
+        letter: '',
+        title: 'Stacking every exposure…',
+        lines: ['Along the catalogue motion'],
+        warn: sim,
+      };
+    const count = st.frames;
+    const lines = [st.label];
+    if (st.result) {
       const [c1, c2] = st.result.controls;
       lines.push(`Checks: ${c1.label.toLowerCase()}, ${c2.label.toLowerCase()}`);
     }
@@ -388,7 +395,7 @@ let stackCache: ReturnType<typeof stackPicture> | null = null;
 function stackNow() {
   const field = S.field;
   if (!field || S.mode !== 'stack') return null;
-  stackCache = stackPicture(field, S.groups, S.det, S.set?.data.catalogue ?? null, pic());
+  stackCache = stackPicture(field, S.groups, S.det, S.set?.data.catalogue ?? null, pic(), draw);
   return stackCache;
 }
 
@@ -482,7 +489,37 @@ function paint(): void {
     }
   }
   labels(p, size, k, field);
+  if (field && group) warmNext(field);
 }
+
+let warmTimer = 0;
+/**
+ * Prepares the next two pictures while the page is idle, so the next step is a cache hit and
+ * stays under 50 ms (SPEC 11.2) even on R Draconis's 119-pixel grids.
+ */
+function warmNext(field: Field): void {
+  if (S.mode !== 'flip' && S.mode !== 'trail' && S.mode !== 'diff') return;
+  cancelIdle(warmTimer);
+  warmTimer = idle(() => {
+    if (S.field !== field) return;
+    const settings = pic();
+    const look = lookFor(field, S.groups, Math.min(S.ref, S.groups.length - 1), settings, S.det);
+    for (const d of [1, -1, 2]) {
+      const i = (S.epoch + d + S.groups.length) % S.groups.length;
+      const g = S.groups[i];
+      if (!g) continue;
+      if (S.mode === 'diff') differenceImage(field, S.groups, i, look, settings);
+      else flipImage(field, g, look, settings);
+    }
+  });
+}
+
+const idle = (fn: () => void): number =>
+  typeof requestIdleCallback === 'function'
+    ? requestIdleCallback(fn, { timeout: 300 })
+    : window.setTimeout(fn, 30);
+const cancelIdle = (id: number): void =>
+  typeof cancelIdleCallback === 'function' ? cancelIdleCallback(id) : clearTimeout(id);
 
 interface Painted {
   data: ImageData;
