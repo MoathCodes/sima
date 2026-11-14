@@ -70,7 +70,11 @@ export const flows: Flow[] = [
       keyStep('Enter', 'Enter does not skip the step'),
       onStep(1),
       pressStep('play', 'Press Play'),
-      expect('The pictures flip', `window.sima.S.playing === true`),
+      // Step 2 pauses the pictures again, so the flip may already be over when this looks.
+      expect(
+        'The pictures flip',
+        `window.sima.S.playing === true || !!document.querySelector('#tour .tour-card')?.textContent?.includes('Step 2 of 8')`,
+      ),
       onStep(2),
       ringsPart('dates'),
       keyStep('ArrowRight', 'Step to the next date'),
