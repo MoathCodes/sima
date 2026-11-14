@@ -90,29 +90,6 @@
   font: var(--text-label);
 }
 
-/* ----- "More" chips -------------------------------------------------------------------------- */
-.chip-more {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  height: 30px;
-  padding: 0 8px 0 12px;
-  border: 0;
-  border-radius: var(--r-pill);
-  background: var(--card);
-  color: var(--ink);
-  font: var(--text-control);
-  box-shadow: var(--lift);
-}
-.chip-more:hover,
-.chip-more[aria-expanded='true'] {
-  background: var(--card-2);
-}
-.chip-more .icon {
-  width: 16px;
-  height: 16px;
-}
-
 /* ----- Top right actions -------------------------------------------------------------------- */
 #actions {
   display: flex;

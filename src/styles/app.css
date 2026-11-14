@@ -877,14 +877,6 @@ samp {
   overflow: clip;
   overflow-clip-margin: 16px;
 }
-/* "More", after the last chip that fits (layout.ts sets left and top). */
-#chips-more {
-  position: absolute;
-  height: 30px;
-}
-#chips-menu {
-  width: 220px;
-}
 #actions {
   position: fixed;
   top: var(--top);
@@ -1034,10 +1026,10 @@ samp {
   top: 112px; /* under the chips row (68 to 98px) */
   left: calc(var(--gutter) + 58px);
   z-index: var(--z-card);
-  width: var(--left-col-width, 360px); /* layout.ts: the room left of the frame, at most 360px */
+  width: 360px; /* lane G's places/room.ts narrows it to keep clear of the frame */
 }
 #places-list {
-  bottom: calc(var(--bar-bottom) + var(--bar-h) + 14px);
+  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-h) - 14px);
 }
 #place-card {
   max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-h) - 14px);
@@ -1110,12 +1102,10 @@ samp {
   #sky-click,
   #sky-loading,
   #frame-show,
-  #chips-more,
   #search-results,
   #sky-layers,
   #places-menu,
   #guide-menu,
-  #chips-menu,
   #toasts > *,
   .dialog
 ) {
@@ -1124,8 +1114,8 @@ samp {
   transition-timing-function: linear, var(--ease-out), linear, linear;
   transition-behavior: allow-discrete;
 }
-:is(#tools, #places-list, #place-card, #frame-show, #chips-more, #toasts > *)[hidden],
-:is(#search-results, #sky-layers, #places-menu, #guide-menu, #chips-menu):not(:popover-open),
+:is(#tools, #places-list, #place-card, #frame-show, #toasts > *)[hidden],
+:is(#search-results, #sky-layers, #places-menu, #guide-menu):not(:popover-open),
 .dialog:not([open]) {
   opacity: 0;
   translate: 0 var(--settle);
@@ -1138,8 +1128,8 @@ samp {
   opacity: 0;
 }
 @starting-style {
-  :is(#tools, #places-list, #place-card, #frame-show, #chips-more, #toasts > *):not([hidden]),
-  :is(#search-results, #sky-layers, #places-menu, #guide-menu, #chips-menu):popover-open,
+  :is(#tools, #places-list, #place-card, #frame-show, #toasts > *):not([hidden]),
+  :is(#search-results, #sky-layers, #places-menu, #guide-menu):popover-open,
   .dialog[open] {
     opacity: 0;
     translate: 0 var(--settle);
@@ -1167,13 +1157,11 @@ samp {
     #places-list,
     #place-card,
     #frame-show,
-    #chips-more,
     #toasts > *,
     #search-results,
     #sky-layers,
     #places-menu,
     #guide-menu,
-    #chips-menu,
     .dialog
   ) {
     translate: none !important;

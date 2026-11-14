@@ -66,19 +66,9 @@
         data-guide="search-results"
       ></div>
       <!-- Lane G: chips: Stars, Nearby, Changing, Clusters, Nebulae, Galaxies, Tours, Surprise me.
-           Each chip is a direct child of #chips. Chips that do not fit beside the frame are made
-           inert by lane F and offered in the "More" menu below. -->
+           Lane F sets the row's max-width to the room beside the frame; lane G hides the chips
+           that do not fit and offers them in its own "More" menu. -->
       <nav id="chips" data-card="chips" data-guide="chips" aria-label="Kinds of places"></nav>
-      <!-- Lane F: "More", after the last chip that fits, and its menu of the chips that do not. -->
-      <div id="chips-more" data-card="chips-more" hidden></div>
-      <div
-        id="chips-menu"
-        class="popover"
-        popover
-        data-overlay="chips-menu"
-        data-guide="chips-menu"
-        aria-label="More kinds of places"
-      ></div>
     </div>
     <!-- Lane F: the top row, right: Guide, Places, Share, About. -->
     <nav id="actions" class="card" data-card="actions" data-guide="actions" aria-label="Page"></nav>

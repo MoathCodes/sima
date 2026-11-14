@@ -8,14 +8,14 @@
  *   glide: one movement at a time. When Measure closes, it fades out first and the frame glides
  *   back. With reduced motion the frame does not slide; it fades in at its new place (GEN-5).
  * - The picture tools hang under the chips row, left of the frame.
- * - The chips row gets the room left of the nearest card. Chips that do not fit leave the row
- *   (and the tab order) and are offered in a "More" menu, so nothing focusable is clipped.
- * - The left column (welcome card, places list, place card, picture tools) holds one card at a
- *   time where they would overlap: the card opened last stays, the other closes.
+ * - The chips row gets the room left of the nearest card, as its max-width; lane G hides the
+ *   chips that do not fit and offers them in its "More" menu.
+ * - The welcome card and the picture tools share the left column: where they would overlap, the
+ *   one opened last stays and the other closes. (Lane G's places/room.ts does the same for the
+ *   places list and card.)
  *
  * Nothing here runs in embed mode (the cards are in the page flow) or under 700 px (O-W3).
  */
-import { icon } from './icons.ts';
 import { keepClear } from '../sky/markers.ts';
 
 /** The frame's box, as remembered. CSS pixels. */
@@ -39,9 +39,9 @@ const ABOVE_BAR = 14;
 const MIN_WIDTH = 300;
 const TOOLS_WIDTH = 320;
 const TOOLS_MIN = 280;
-const LIST_WIDTH = 360;
 /** The column at the left that holds one card at a time. */
-const LEFT_COLUMN = ['welcome', 'places-list', 'place-card', 'tools'];
+/** Left-column cards that lane G's places/room.ts does not already keep apart. */
+const LEFT_COLUMN = ['welcome', 'tools'];
 
 const DEFAULT_BOX: FrameBox = { right: GUTTER, top: FRAME_TOP, width: 500 };
 
@@ -211,9 +211,6 @@ function placeTools(frameLeft: number, frameRight: number, limit: number): void 
   }
   // On :root, not on the panel: lane E rewrites the panel's own style when it draws.
   const root = document.documentElement;
-  // The places list and card (left column) keep clear of the frame: as wide as the room allows.
-  const listLeft = RAIL_RIGHT + 2;
-  set(root, '--left-col-width', `${clamp(frameLeft - GAP - listLeft, 260, LIST_WIDTH)}px`);
   set(root, '--tools-left', `${left}px`);
   set(root, '--tools-width', `${width}px`);
 }
@@ -352,22 +349,17 @@ function saveBox(): void {
   }
 }
 
-// ----- The chips row and its "More" menu -----------------------------------------------------
+// ----- The chips row ---------------------------------------------------------------------------
 
 /**
  * The chips row gets the room left of the nearest card in its band (the frame, when Measure
- * pushes it left, or the frame at 1366). Chips past that room are made inert (out of the tab
- * order and the pointer's reach) and listed in the "More" menu, which presses the real chip.
+ * pushes it left, or the frame at 1366), as its `max-width`. Lane G hides the chips that do not
+ * fit in that room and offers them in its own "More" menu.
  */
 function startChips(): void {
   const chips = byId('chips');
-  const more = byId('chips-more');
-  const menu = byId('chips-menu');
-  if (!chips || !more || !menu) return;
-  more.innerHTML = `<button class="chip-more" popovertarget="chips-menu" aria-label="More kinds of places" data-guide="chips-more">More${icon('chevron-down')}</button>`;
-
+  if (!chips) return;
   let queued = false;
-  let moreWidth = 84;
   const fit = () => {
     queued = false;
     if (off()) return;
@@ -380,48 +372,7 @@ function startChips(): void {
         right = Math.min(right, r.left - GAP);
       }
     }
-    const room = Math.max(0, Math.floor(right - row.left));
-    const all = [...chips.children] as HTMLElement[];
-    if (!more.hidden) moreWidth = more.offsetWidth || moreWidth;
-    // Lay the chips out in one line, from their own widths: first in the whole room, then, if
-    // some do not fit, in the room left beside "More".
-    // `used` is where the last chip that fits ends.
-    let used = 0;
-    const lay = (limit: number) => {
-      let x = 0;
-      used = 0;
-      return all.filter((c) => {
-        x += c.offsetWidth;
-        const out = x > limit;
-        if (!out) used = x;
-        x += 6;
-        return out;
-      });
-    };
-    let hidden = lay(room);
-    if (hidden.length) hidden = lay(Math.max(0, room - moreWidth - 6));
-    set(chips, 'maxWidth', `${used}px`);
-    hide(more, hidden.length === 0 || room < moreWidth);
-    for (const c of all) if (c.inert !== hidden.includes(c)) c.inert = hidden.includes(c);
-    set(chips, 'visibility', all.length && hidden.length === all.length ? 'hidden' : '');
-    // Offsets are from #top-left, the chips' and the button's positioned parent.
-    const last = all.filter((c) => !hidden.includes(c)).at(-1);
-    set(more, 'left', `${last ? last.offsetLeft + last.offsetWidth + 6 : chips.offsetLeft}px`);
-    set(more, 'top', `${chips.offsetTop}px`);
-    menu.replaceChildren(
-      ...hidden.map((chip) => {
-        const item = document.createElement('button');
-        item.className = 'menu-item';
-        item.innerHTML = chip.innerHTML;
-        item.removeAttribute('data-guide');
-        item.querySelectorAll('[data-guide]').forEach((n) => n.removeAttribute('data-guide'));
-        item.addEventListener('click', () => {
-          menu.hidePopover();
-          chip.click();
-        });
-        return item;
-      }),
-    );
+    set(chips, 'maxWidth', `${Math.max(0, Math.floor(right - row.left))}px`);
   };
   const later = () => {
     if (!queued) {
@@ -429,11 +380,6 @@ function startChips(): void {
       requestAnimationFrame(fit);
     }
   };
-  menu.addEventListener('toggle', () => {
-    const r = more.getBoundingClientRect();
-    set(menu, 'left', `${r.left}px`);
-    set(menu, 'top', `${r.bottom + 6}px`);
-  });
   const sizes = new ResizeObserver(later);
   for (const id of ['frame', 'measure', 'tools', 'places-list', 'place-card', 'welcome']) {
     const el = byId(id);
@@ -441,10 +387,9 @@ function startChips(): void {
   }
   new MutationObserver((records) => {
     const card = (n: Node) => n instanceof Element && n.matches('[data-card]:not(#top-left *)');
-    if (records.some((r) => card(r.target) || r.target === chips)) later();
+    if (records.some((r) => card(r.target))) later();
   }).observe(document.body, {
     subtree: true,
-    childList: true,
     attributes: true,
     attributeFilter: ['hidden', 'style'],
   });

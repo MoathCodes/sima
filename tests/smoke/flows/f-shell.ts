@@ -183,11 +183,21 @@ export const flows: Flow[] = [
     steps: [
       ownWay,
       pressStep('view-two', 'Show Two dates'),
-      keyStep('Space', 'Pause'),
+      {
+        name: 'Pause',
+        async run(page) {
+          // Focus off the view button, so Space reaches the page and not the button.
+          await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+          if (await state<boolean>(page, 'playing')) await page.keyboard.press('Space');
+          expect(!(await state<boolean>(page, 'playing')), 'the pictures to stop');
+        },
+      },
       keyStep('ArrowRight', 'Step to the next date'),
       {
         name: 'Open Share, open its link, and get the same view',
         async run(page) {
+          await press(page, 'share-button');
+          // What the link was made from: the state while Share is open.
           const before = {
             target: await state<string>(page, 'target'),
             fov: await state<number>(page, 'fov'),
@@ -195,7 +205,6 @@ export const flows: Flow[] = [
             mode: await state<string>(page, 'mode'),
             epoch: await state<number>(page, 'epoch'),
           };
-          await press(page, 'share-button');
           const link = await page.locator(guide('share-link')).inputValue();
           for (const k of ['target=', 'fov=', 'det=', 'view=', 'date='])
             expect(link.includes(k), `the link to hold ${k}`);
