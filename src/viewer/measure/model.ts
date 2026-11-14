@@ -310,7 +310,7 @@ export function moverLine(c: Candidate, det: number, targetValues = ''): string 
   const cat = c.known?.cat === 'gaia' ? 'Gaia DR3' : c.known?.cat === 'catwise' ? 'CatWISE2020' : c.known ? named || 'the target’s catalogue' : '';
   return (
     `<b>${term('Measured', 'Fitted from the positions Sima measured on the pixels of this detector: a weighted straight line, east and north, against time.')}: ${num(c.motion.total, 2)} ± ${num(c.motion.totalErr, 2)}″/yr</b>` +
-    ` from ${c.path?.length ?? 0} positions in D${det}, the solid line.` +
+    ` from ${c.path?.length ?? 0} position${c.path?.length === 1 ? '' : 's'} in D${det}, the solid line.` +
     (c.known?.pmTotal != null ? ` ${term('Catalogue', `${cat}: ${c.known.id}.`)}: ${num(c.known.pmTotal, 2)}″/yr (${esc(cat)}).` : c.known ? ` ${esc(cat)} gives no motion for it.` : ' No Gaia DR3 or CatWISE2020 source here, so nothing to compare with.')
   );
 }
@@ -331,7 +331,7 @@ export function targetStats(t: Target, fit: MotionFit | null, visits: number, co
     { name: 'RA', tip: ok ? `Right ascension, measured from the pixels (fitted position at ${num(ok.ep, 1)}): the sky’s longitude.` : `Right ascension from the catalogue at ${t.ep}: the sky’s longitude.`, value: ra, from: ok ? 'measured' : 'catalogue' },
     { name: 'Dec', tip: 'Declination: the sky’s latitude, from −90° to +90°.', value: dec, from: ok ? 'measured' : 'catalogue' },
     { name: 'Visits', tip: 'Survey passes with pictures of this spot. SPHEREx sees each spot a few times within days (a visit), about every six months.', value: String(visits), from: 'measured' },
-    { name: 'Catalogue values from', tip: t.values, value: from.length > 22 ? `${from.slice(0, 21)}…` : from, from: 'catalogue' },
+    { name: 'Catalogue values from', tip: t.values, value: from, from: 'catalogue' },
   ];
   if (t.plx !== null) {
     rows.push({ name: 'Parallax (catalogue)', tip: 'How much the star shifts as Earth goes round the Sun. Bigger is closer. SPHEREx’s few passes cannot measure it, so this is the catalogue’s.', value: `${num(t.plx, 0)} mas`, from: 'catalogue' });

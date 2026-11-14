@@ -5,7 +5,8 @@
  */
 import { blend } from '../../core/blink.ts';
 import { combine } from '../../core/filters.ts';
-import { limits, makeLut, toRgba } from '../../core/display.ts';
+import { limits, makeLut, toRgba, type Range } from '../../core/display.ts';
+import type { PicSettings } from '../../core/picture.ts';
 import { wcsSky2Pix } from '../../core/real.ts';
 import { median } from '../../core/stats.ts';
 import type { Det, Field, Group } from '../../core/types.ts';
@@ -60,6 +61,25 @@ export function triplet(field: Field, det: Det, window: number): Triplet | null 
 }
 
 /**
+ * Colour tables by look and detector. A table is 16,384 colours; Measure repaints its cutouts on
+ * every date of the flip-book, so making one each time held the page (TLS-8). Histogram
+ * equalisation depends on the cutout's own pixels, so it is never kept.
+ */
+const luts = new Map<string, Uint8ClampedArray>();
+
+function lutFor(p: PicSettings, det: Det, cut: Float32Array, range: Range): Uint8ClampedArray {
+  if (p.stretch === 'equal') return makeLut(p, det, cut, range);
+  const key = `${p.stretch}|${p.brightness}|${p.contrast}|${p.cmap}|${p.invert}|${det}`;
+  let lut = luts.get(key);
+  if (!lut) {
+    if (luts.size >= 24) luts.delete(luts.keys().next().value!);
+    lut = makeLut(p, det);
+    luts.set(key, lut);
+  }
+  return lut;
+}
+
+/**
  * Paints a square cutout of `pix` around a sky position into a canvas, `half` pixels each side,
  * with the picture settings in force (the difference with a symmetric grey scale).
  */
@@ -93,7 +113,8 @@ export function paintCutout(
   const range = opts.diff
     ? { lo: -6 * sigma, hi: 6 * sigma }
     : limits(cut, p, { sky: Number.isFinite(sky) ? sky : 0, sigma });
-  const lut = makeLut(opts.diff ? { ...p, cmap: 'mono', stretch: 'linear', invert: false } : p, det, cut, range);
+  const look = opts.diff ? { ...p, cmap: 'mono' as const, stretch: 'linear' as const, invert: false } : p;
+  const lut = lutFor(look, det, cut, range);
   const rgba = toRgba(cut, range, lut);
   canvas.width = side;
   canvas.height = side;

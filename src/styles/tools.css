@@ -227,11 +227,9 @@
 .ms-stats .ms-group {
   grid-column: 1 / -1;
   padding-top: 6px;
-  overflow: hidden;
   color: var(--ink-3);
   font: var(--text-group);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere; /* the catalogue's full name, never cut off (H4) */
 }
 .ms-stats dt,
 .ms-stats dd {

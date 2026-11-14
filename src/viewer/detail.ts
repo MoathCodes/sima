@@ -212,6 +212,7 @@ function skeleton(p: HTMLElement): void {
     const t = (e.target as HTMLElement).closest<HTMLElement>('[data-do]');
     if (!t) return;
     if (t.dataset.do === 'det') emit('band', { det: Number(t.dataset.det) });
+    if (t.dataset.do === 'tab') selectTab(t.dataset.tab as MeasureTab);
     if (t.dataset.do === 'csv') exportCsv();
     if (t.dataset.do === 'all-at-once') {
       spectrumAll = !spectrumAll;
@@ -548,6 +549,9 @@ function underText(tab: MeasureTab, h: Headline): string {
   if (tab === 'folded') {
     // The period is a catalogue value: say which one (H4); without one nothing is folded (H9).
     const t = field.target;
+    const other = curveDets().filter((d) => d !== S.det);
+    if (t?.period && res.target && !curve?.shown && other.length)
+      parts.push(`<p class="ms-note">Not measured in D${S.det}; measured in ${other.map((d) => `D${d}`).join(', ')}. ${showDet(other[0]!)}</p>`);
     parts.push(
       t?.period
         ? `<p class="ms-note">Folded on the catalogue period of ${esc(num(t.period, 1))} days${t.periodFrom ? ` (${esc(t.periodFrom)})` : ''}. Each cycle is drawn twice, so it reads across the join.</p>`
@@ -569,11 +573,34 @@ function underText(tab: MeasureTab, h: Headline): string {
   const mover = moverOf(sel);
   if (tab === 'path' && mover) parts.push(`<p class="ms-note">${moverLine(mover, searchDet(), field.target?.values)}</p>`);
   if (tab === 'exposure') parts.push('<p class="ms-note">The exposures behind the picture on screen, as NASA’s archive gives them.</p>');
+  // An empty chart other than the headline's points back to the one that has the measurement.
+  if (tab !== h.chart && !h.pending && h.value !== 'Not measured' && emptyTab(tab)) {
+    const name = TABS.find(([k]) => k === h.chart)?.[1] ?? '';
+    parts.push(`<p class="ms-note">The measurement is under <button type="button" class="link" data-do="tab" data-tab="${h.chart}">${esc(name)}</button>.</p>`);
+  }
   if (hasNumbers()) parts.push('<p class="ms-note"><button type="button" class="link" data-do="csv">Download these numbers (CSV)</button></p>');
   if (sel.kind !== 'target' && field.target) {
     parts.push(`<p class="ms-note"><button type="button" class="link" data-do="target">Back to ${esc(field.target.name)}</button> · <button type="button" class="link" data-do="picture">The picture on screen</button></p>`);
   }
   return parts.join('');
+}
+
+/** True when a target's chart on this tab has nothing measured to draw. */
+function emptyTab(tab: MeasureTab): boolean {
+  if (S.selected?.kind !== 'target' || !res.target) return false;
+  const c = curveFor();
+  switch (tab) {
+    case 'path':
+      return !res.target.fit.ok;
+    case 'spectrum':
+      return res.target.spectrum.filter((x) => Number.isFinite(x.flux) && !x.weak).length < 3;
+    case 'brightness':
+      return !c?.shown;
+    case 'folded':
+      return !S.field?.target?.period || !c?.shown;
+    default:
+      return false;
+  }
 }
 
 function hasNumbers(): boolean {
