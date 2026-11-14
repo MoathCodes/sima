@@ -7,36 +7,38 @@
 <style>
   .path .mlist .m:nth-child(n+5) { } 
   @media (max-width: 699px) {
-    body { --dy: -150px; }
     .msheet { height: 54vh; }
-    .offscreen { top: 102px !important; left: auto !important; right: 12px; }
     .nextcard { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; padding: 12px; border-radius: 18px; background: var(--fill-1); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .08); }
     .nextcard .thumb { width: 64px; height: 64px; border-radius: 12px; }
     .nextcard .name { font: 600 17px/1.2 var(--font); margin: 4px 0 2px; }
-    .nextcard .line { font-size: 13px; color: var(--on-glass-2); }
+    .nextcard .line { font-size: 14px; color: var(--on-glass-2); }
     .nextcard .btn { grid-column: 1 / -1; height: 48px; width: 100%; }
     .shelf-m { display: flex; gap: 4px; overflow: hidden; margin: 2px -4px 0; }
     .shelf-m .skill { width: 58px; }
   }
+  :root { --gcx: calc(50% + 194px); --gcy: calc(50% - 50px); --gd: min(800px, calc(100vh - 250px)); }
+  @media (max-width: 1500px) { :root { --gd: min(560px, calc(100vh - 230px)); --gcy: calc(50% - 60px); } }
+  @media (max-width: 699px) { :root { --gcx: 50%; --gcy: 240px; --gd: calc(100vw - 96px); } }
 </style>
 </head>
 <body style="--dy-m:-150px">
-<div class="sky" style="background-image:url(img/sky-milkyway-1900.jpg)"></div>
+<div class="space"></div>
+<!-- The globe: the real shipped SPHEREx sky (2.00 µm, D3) in Aladin Lite's SIN view, centred on Barnard's Star (rendered 15 Nov 2026). -->
+<div class="globe" role="img" aria-label="The whole sky as a globe, centred on Barnard's Star"></div>
 
-<div class="at sky-label d-only" style="--x:880;--y:222">Vega</div>
-<div class="at sky-label d-only" style="--x:713;--y:473">Altair</div>
-<div class="at sky-label d-only" style="--x:674;--y:118">Deneb</div>
-<div class="at sky-label d-only" style="--x:1128;--y:786">Antares</div>
+<div class="gat sky-label d-only" style="--px:521;--py:264">Vega</div>
+<div class="gat sky-label d-only" style="--px:319;--py:551">Altair</div>
+<div class="gat sky-label d-only" style="--px:324;--py:201">Deneb</div>
+<div class="gat sky-label d-only" style="--px:802;--py:907">Antares</div>
 
 <!-- Mission beacons: done ones keep a quiet ring; others point off screen in their real direction. -->
-<div class="at beacon done" style="--x:948;--y:515">
-  <div class="ring" style="border-color:var(--skill);box-shadow:0 0 0 6px rgb(255 217 138 / .12),0 0 22px rgb(255 217 138 / .35)"></div>
+<div class="gat beacon done" style="--px:600;--py:600">
+  <div class="ring" style="border-color:var(--skill);box-shadow:0 0 0 6px rgb(255 255 255 / .12),0 0 22px rgb(255 255 255 / .35)"></div>
   <div class="tag glass-thin">Barnard's Star <small>Done · Blink</small></div>
 </div>
-<div class="offscreen glass-thin" style="left:calc(50% + 300 * var(--k));top:76px"><svg class="icon" style="transform:rotate(-80deg)"><use href="icons.svg#arrow"/></svg>R Draconis · The breather</div>
-<div class="offscreen glass-thin d-only" style="right:16px;top:calc(50% - 16px)">WISE 0855 · The ghost<svg class="icon"><use href="icons.svg#arrow"/></svg></div>
-<div class="offscreen glass-thin d-only" style="left:410px;bottom:150px"><svg class="icon" style="transform:rotate(150deg)"><use href="icons.svg#arrow"/></svg>Epsilon Indi B · The recipe</div>
-
+<div class="gat beacon" style="--px:686;--py:69"><div class="ring" style="width:28px;height:28px;left:-14px;top:-14px"></div><div class="tag glass-thin" style="left:22px;top:-15px">R Draconis <small>The breather · next</small></div></div>
+<div class="gat beacon d-only" style="--px:311;--py:1113"><div class="ring" style="width:28px;height:28px;left:-14px;top:-14px;border-color:var(--on-glass-2);box-shadow:none"></div><div class="tag glass-thin" style="left:auto;right:22px;top:-15px">Epsilon Indi B <small>The recipe</small></div></div>
+<div class="limb-tag glass-thin d-only" style="left:calc(var(--gcx) + var(--gd) / 2 + 14px);top:calc(var(--gcy) - 16px)">WISE 0855 · The ghost · on the far side<svg class="icon"><use href="icons.svg#arrow"/></svg></div>
 <header class="top">
   <div class="glass brand"><span class="wordmark"><span class="ar">سيما</span><span class="la">Sima</span></span></div>
   <div class="glass-thin find d-only"><svg class="icon"><use href="icons.svg#search"/></svg>Find a star, galaxy or nebula<span class="kbd">/</span></div>

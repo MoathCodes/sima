@@ -4,17 +4,23 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sima v2: first run after the intro</title>
 <link rel="stylesheet" href="glass.css"><link rel="stylesheet" href="discover.css">
+<style>:root { --gcx: calc(50% + 330px); --gcy: 50%; --gd: min(880px, calc(100vh - 140px)); }
+@media (max-width: 1500px) { :root { --gcx: calc(50% + 250px); --gd: min(640px, calc(100vh - 120px)); } }
+@media (max-width: 699px) { :root { --gcx: 50%; --gcy: 250px; --gd: calc(100vw - 48px); } .limb-tag { display: none; } }
+</style>
 </head>
 <body>
 <!-- Background: the real app's sky map at a wide view, centred on Barnard's Star, where the intro lands (captured 15 Nov 2026). -->
-<div class="sky" style="background-image:url(img/sky-milkyway-1900.jpg)"></div>
+<div class="space"></div>
+<!-- The globe: the real shipped SPHEREx sky (2.00 µm, D3) in Aladin Lite's SIN view, centred on Barnard's Star (rendered 15 Nov 2026). -->
+<div class="globe" role="img" aria-label="The whole sky as a globe, centred on Barnard's Star"></div>
 
-<div class="at sky-label d-only" style="--x:880;--y:222">Vega</div>
-<div class="at sky-label d-only" style="--x:713;--y:473">Altair</div>
-<div class="at sky-label d-only" style="--x:674;--y:118">Deneb</div>
-<div class="at sky-label d-only" style="--x:1128;--y:786">Antares</div>
+<div class="gat sky-label d-only" style="--px:521;--py:264">Vega</div>
+<div class="gat sky-label d-only" style="--px:319;--py:551">Altair</div>
+<div class="gat sky-label d-only" style="--px:324;--py:201">Deneb</div>
+<div class="gat sky-label d-only" style="--px:802;--py:907">Antares</div>
 
-<div class="at beacon" style="--x:948;--y:515">
+<div class="gat beacon" style="--px:600;--py:600">
   <div class="ring"></div>
   <div class="tag glass-thin">Barnard's Star <small>Your first mission</small></div>
 </div>
@@ -39,5 +45,6 @@
 </section>
 
 <div class="sky-note glass-thin"><b>Average of all dates:</b> moving things blur here · SPHEREx 2.00 µm</div>
+<div class="limb-tag glass-thin d-only" style="left:calc(var(--gcx) + var(--gd) / 2 - 150px);top:calc(var(--gcy) - var(--gd) / 2 + 10px)">Drag to turn the sky</div>
 </body>
 </html>

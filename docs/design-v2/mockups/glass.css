@@ -3,10 +3,11 @@
  * This file is the executable form of DESIGN-v2.md. The build copies these values into
  * src/styles/app.css (lane F); the mockups import it directly.
  */
+/* The Arabic display font (wordmark, Arabic names). Mockups use Aref Ruqaa Bold (SIL OFL, from
+   github.com/google/fonts ofl/arefruqaa); the app swaps it behind the same token. */
+@font-face { font-family: 'Arabic Display'; src: url('fonts/ArefRuqaa-Bold.ttf') format('truetype'); font-weight: 700; unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF; }
 @font-face { font-family: 'Archivo'; src: url('../../../src/styles/fonts/archivo-latin.woff2') format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 @font-face { font-family: 'Archivo'; src: url('../../../src/styles/fonts/archivo-latin-ext.woff2') format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
-@font-face { font-family: 'Reem Kufi'; src: url('../../../src/styles/fonts/reem-kufi-arabic-600.woff2') format('woff2'); font-weight: 600; unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF; }
-@font-face { font-family: 'Reem Kufi'; src: url('../../../src/styles/fonts/reem-kufi-latin-600.woff2') format('woff2'); font-weight: 600; unicode-range: U+0000-00FF; }
 
 :root {
   /* ---- Sky and data windows (never glass, never tinted) ---- */
@@ -43,7 +44,7 @@
   --good: #6fe0aa;  --good-soft: rgb(80 214 150 / .16);
   --warn: #ffc670;  --warn-soft: rgb(255 176 58 / .16);
   --bad:  #ff8a8f;  --bad-soft:  rgb(255 92 102 / .16);
-  --skill: #ffd98a;           /* the one Discover reward colour: unlocked skills only */
+  --skill: #ffffff;           /* unlocked skills shine white, like a star: no new hue */
 
   /* ---- Materials: blur / saturate / brightness of the backdrop, tint opacity ---- */
   --thin-blur: 16px;    --thin-sat: 1.5;    --thin-bri: .55;    --thin-a: .62;
@@ -59,7 +60,8 @@
 
   /* ---- Type ---- */
   --font: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
-  --kufi: 'Reem Kufi', 'Archivo', sans-serif;
+  --arabic-display: 'Arabic Display', 'Noto Naskh Arabic', serif;  /* one token: the app swaps the face here */
+  --arabic-text: 'Noto Sans Arabic', sans-serif;                  /* Arabic in sentences (open question) */
 
   /* ---- Radii (concentric: inner = outer - padding) ---- */
   --r-tag: 8px; --r-ctl: 12px; --r-card: 18px; --r-bar: 24px; --r-sheet: 28px; --r-pill: 999px;
@@ -83,7 +85,7 @@
   --good: #12754a; --good-soft: #dcefe3;
   --warn: #8a5200; --warn-soft: #f5e5c4;
   --bad: #b3262f;  --bad-soft: #f7dedd;
-  --skill: #8a5a00;
+  --skill: #0f1a3c;
   --thin-bri: 1.35; --reg-bri: 1.4; --raised-bri: 1.45;
   --thin-a: .84; --reg-a: .85; --raised-a: .88;
   --thin-sat: 1.3; --reg-sat: 1.3; --raised-sat: 1.3;
@@ -182,15 +184,15 @@ body {
 .pill.warn { background: var(--warn-soft); color: var(--warn); }
 .pill.bad { background: var(--bad-soft); color: var(--bad); }
 .pill.neutral { background: var(--fill-2); color: var(--on-glass-2); }
-.pill.skill { background: rgb(255 217 138 / .14); color: var(--skill); }
+.pill.skill { background: rgb(255 255 255 / .14); color: var(--skill); }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); display: inline-block; }
 .label { font: 600 12px/1.35 var(--font); color: var(--on-glass-3); letter-spacing: .01em; }
 .muted { color: var(--on-glass-2); }
 .faint { color: var(--on-glass-3); }
 .kbd { font: 500 11px/1 var(--font); padding: 3px 6px; border-radius: 6px; background: var(--fill-2); color: var(--on-glass-2); }
-.wordmark { display: flex; align-items: baseline; gap: 8px; font-family: var(--kufi); font-weight: 600; }
-.wordmark .ar { font-size: 24px; }
-.wordmark .la { font-size: 19px; }
+.wordmark { display: flex; align-items: center; gap: 9px; }
+.wordmark .ar { font: 700 30px/1.3 var(--arabic-display); margin-top: -2px; }
+.wordmark .la { font: 600 17px/1 var(--font); letter-spacing: .02em; }
 .seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 13px; background: var(--fill-1); }
 .seg span { height: 32px; padding: 0 12px; display: inline-flex; align-items: center; gap: 7px; border-radius: 10px; font: 500 14px/1 var(--font); color: var(--on-glass-2); }
 .seg span.on { background: var(--fill-3); color: var(--on-glass); box-shadow: 0 1px 3px rgb(0 0 0 / .35), inset 0 1px 0 rgb(255 255 255 / .12); }
