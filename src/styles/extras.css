@@ -277,3 +277,87 @@
     white-space: normal;
   }
 }
+
+/* ----- The sandbox card (O-V7) ----- */
+.sb-lede .pill {
+  margin-right: 2px;
+}
+.sb-inputs {
+  display: grid;
+  gap: 4px;
+}
+.sb-input {
+  display: grid;
+  grid-template-columns: 96px 84px 1fr;
+  align-items: center;
+  gap: var(--gap-tight);
+  font: var(--text-control);
+}
+.sb-input-name {
+  justify-self: start;
+}
+.sb-num {
+  width: 84px;
+}
+.sb-unit {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.sb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap-group);
+}
+.sb-body {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 0;
+  margin-right: -10px;
+  padding: 8px 10px 0 0;
+  border-top: 1px solid var(--rule);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.sb-verdict {
+  margin: 0;
+  font: var(--text-control);
+  color: var(--ink);
+}
+.sb-verdict .pill {
+  margin-right: 2px;
+}
+.sb-line {
+  margin: 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.sb-honest {
+  color: var(--ink);
+}
+.sb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--text-label);
+}
+.sb-table th {
+  padding: 0 0 4px;
+  color: var(--ink-3);
+  font: var(--text-group);
+  text-align: left;
+}
+.sb-table td {
+  padding: 3px 0;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.sb-table .num {
+  padding-left: 8px;
+  text-align: right;
+}
+.sb-table tr.best td {
+  color: var(--ink);
+  font-weight: 600;
+}

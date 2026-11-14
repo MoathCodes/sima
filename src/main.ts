@@ -17,6 +17,7 @@ import './styles/extras.css';
 import { startShell } from './shell/shell.ts';
 import { startPlaces } from './shell/places.ts';
 import { startFinds } from './shell/finds.ts';
+import { startSandbox } from './shell/sandbox.ts';
 import { startSky } from './sky/sky.ts';
 import { startSearch } from './viewer/omnibox.ts';
 import { startFrame } from './viewer/frame.ts';
@@ -70,6 +71,7 @@ if (!link.embed) {
   if (sky) start('sky', () => startSky(sky));
   start('places', startPlaces);
   start('finds', startFinds);
+  start('sandbox', startSandbox);
 }
 start('url', () => startUrl(link));
 document.documentElement.dataset.started = '';
