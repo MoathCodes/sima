@@ -463,7 +463,6 @@ function place(force = false): void {
     if (el.checkVisibility()) avoid.push(el.getBoundingClientRect());
   }
   const tip = tooltipBox();
-  if (tip) avoid.push(tip, tip, tip, tip); // weigh it heavily: never cover a hover card
   if (!target) return centre(card);
   const spot = placeBeside(
     target,
@@ -471,7 +470,7 @@ function place(force = false): void {
     { width: r.width, height: r.height },
     { width: innerWidth, height: innerHeight },
     avoid,
-    { gap: 16, margin: 12, force: true },
+    { gap: 16, margin: 12, force: true, never: tip ? [tip] : [] },
   );
   if (!spot) return centre(card);
   if (!force && Math.abs(spot.box.left - r.left) < 2 && Math.abs(spot.box.top - r.top) < 2) return;

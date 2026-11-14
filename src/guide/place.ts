@@ -43,6 +43,8 @@ export interface PlaceOptions {
    * target); false returns null.
    */
   force?: boolean;
+  /** Boxes the card must never cover, even when forced (an open hover card: O-G1). */
+  never?: readonly Box[];
 }
 
 /**
@@ -74,6 +76,7 @@ export function placeNear(
         continue;
       }
       if (overlaps(box, target, -1)) continue;
+      if (opts.never?.some((n) => overlaps(box, n))) continue;
       const cost = avoid.reduce((sum, a) => sum + shared(box, a), 0);
       if (cost === 0) return { box, side };
       if (!best || cost < best.cost) best = { box, side, cost };
