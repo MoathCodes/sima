@@ -149,7 +149,7 @@ const coordinates: SearchSource = {
     return [
       {
         name,
-        line: `RA ${at.ra.toFixed(4)}°, Dec ${at.dec.toFixed(4)}° · move the frame here`,
+        line: `RA ${at.ra.toFixed(4)}°, Dec ${at.dec.toFixed(4).replace('-', '−')}° · move the frame here`,
         icon: 'pin',
         score: 1,
         choose: () => openPlace({ name, ...at }),
