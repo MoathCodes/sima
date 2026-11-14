@@ -1,0 +1,458 @@
+/* The workspace (src/workspace): extra frames, their menus, the tool tray. Owner: integrator.
+   Tokens come from app.css. Extra frames look like the main frame, smaller: a card with a dark
+   data window, a title bar, a step control and the provenance line (H2). They sit with the
+   frame and the rail on --z-card. */
+
+/* ----- An extra frame ------------------------------------------------------------------------- */
+.wf {
+  position: fixed;
+  z-index: var(--z-card);
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  min-height: 220px;
+  padding: 0 8px 6px;
+  border-radius: var(--r-frame);
+  transition: opacity var(--t-fade) linear;
+}
+@starting-style {
+  .wf {
+    opacity: 0;
+  }
+}
+.wf:focus-visible {
+  outline-offset: -2px;
+}
+/* Linked frames share an edge in Soft Ink and a lettered chain tag (colour is not the only
+   signal: the tag names the group). */
+.wf.linked {
+  box-shadow:
+    inset 0 0 0 2px var(--ink-2),
+    var(--lift);
+}
+.wf[data-moving] {
+  transition: none;
+}
+
+.wf-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--gap-tight);
+  height: 38px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.wf[data-moving] .wf-head {
+  cursor: grabbing;
+}
+.wf-num {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--r-tip);
+  background: var(--ink);
+  color: var(--card);
+  font: var(--text-label);
+  font-weight: 600;
+}
+.wf-link {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  height: 22px;
+  padding: 0 5px 0 3px;
+  border: 0;
+  border-radius: var(--r-tip);
+  background: var(--card-2);
+  color: var(--ink-2);
+  font: var(--text-label);
+  font-weight: 600;
+}
+.wf-link .icon {
+  width: 16px;
+  height: 16px;
+}
+.wf-link:hover {
+  background: var(--card-3);
+}
+.wf-title {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--gap-tight);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.wf-title b {
+  font: var(--text-control);
+  font-weight: 600;
+}
+.wf-det {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.wf-where {
+  overflow: hidden;
+  color: var(--ink-3);
+  font: var(--text-label);
+  text-overflow: ellipsis;
+}
+.wf-acts {
+  display: flex;
+  flex: none;
+  gap: var(--gap-group);
+}
+
+.wf-body {
+  position: relative;
+  display: grid;
+  flex: 1;
+  place-items: center;
+  min-height: 0;
+  overflow: hidden;
+  background: #000; /* pictures sit on pure black (DESIGN "Data windows") */
+}
+.wf[data-type='spectrum'] .wf-body,
+.wf[data-type='brightness'] .wf-body,
+.wf[data-type='info'] .wf-body {
+  background: var(--st-bg);
+}
+.wf-canvas {
+  display: block;
+  image-rendering: pixelated;
+}
+.wf-badge {
+  max-width: calc(100% - 16px);
+}
+.wf-table {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 8px;
+  color: var(--st-ink);
+  font: var(--text-label);
+}
+.wf-info {
+  width: 100%;
+  border-collapse: collapse;
+}
+.wf-info th {
+  color: var(--st-ink-3);
+  font-weight: 500;
+  text-align: left;
+}
+.wf-info th,
+.wf-info td {
+  padding: 3px 6px 3px 0;
+  border-bottom: 1px solid var(--st-line);
+  white-space: nowrap;
+}
+.wf-info .wf-id {
+  max-width: 9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wf-info a {
+  color: var(--st-ink);
+  text-decoration: underline;
+}
+.wf-cat {
+  margin: 6px 0;
+  color: var(--st-ink-2);
+  white-space: normal;
+}
+
+/* Loading and "no pictures here": over the window, saying what, how far and what works. */
+.wf-cover {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 14px;
+  background: var(--st-bg);
+  color: var(--st-ink);
+  font: var(--text-label);
+}
+.wf-cover.loading {
+  /* Shown only if the wait lasts (DESIGN Motion: 0.25 s). */
+  animation: wf-late var(--t-fade) linear var(--delay-frame-loader) both;
+}
+.wf-meanwhile {
+  color: var(--st-ink-2);
+}
+.wf-meanwhile:empty {
+  display: none;
+}
+.wf-bar {
+  position: relative;
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--st-raise);
+}
+.wf-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: var(--st-ink-2);
+}
+.wf-bar.moving > span {
+  width: 30%;
+  animation: wf-slide 1.4s ease-in-out infinite;
+}
+@keyframes wf-late {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes wf-slide {
+  from {
+    left: -30%;
+  }
+  to {
+    left: 100%;
+  }
+}
+
+.wf-ctl {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--gap-group);
+  height: 34px;
+  margin-top: 4px;
+}
+.wf-date {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-tight);
+  min-width: 0;
+  margin-left: 4px;
+  overflow: hidden;
+  font: var(--text-label);
+  white-space: nowrap;
+}
+.wf-count {
+  color: var(--ink-3);
+}
+.wf-all {
+  margin-left: auto;
+}
+.wf-foot {
+  display: -webkit-box;
+  flex: none;
+  margin: 2px 2px 0;
+  overflow: hidden;
+  color: var(--ink-2);
+  font: var(--text-label);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+.wf-grip {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 14px;
+  height: 14px;
+  border-right: 2px solid var(--card-3);
+  border-bottom: 2px solid var(--card-3);
+  border-bottom-right-radius: 6px;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+.wf-grip:hover {
+  border-color: var(--ink-3);
+}
+
+/* ----- Menus ---------------------------------------------------------------------------------- */
+.wf-menu {
+  display: grid;
+  gap: 6px;
+  width: 300px;
+  max-height: calc(100vh - 16px);
+  overflow: auto;
+  padding: 10px;
+}
+.wf-menu:not(:popover-open) {
+  display: none;
+}
+.wf-menu .group-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 2px 0;
+}
+.wf-menu .group-label .icon {
+  width: 16px;
+  height: 16px;
+}
+.wf-types,
+.wf-linkto,
+.wf-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-group);
+}
+.wf-seg {
+  display: flex;
+}
+.wf-seg > button {
+  padding: 0 6px;
+  font: var(--text-label);
+}
+.wf-kinds .btn.text {
+  gap: 6px;
+  color: var(--ink);
+}
+.wf-rule {
+  width: 100%;
+  height: 1px;
+  margin: 4px 0;
+  border: 0;
+  background: var(--rule);
+}
+
+/* "Six frames are open": which to close. */
+.wf-full p {
+  margin: 8px 0 12px;
+}
+.wf-full-list {
+  display: grid;
+  gap: var(--gap-group);
+}
+.wf-full-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+/* ----- The tool tray -------------------------------------------------------------------------- */
+#workspace {
+  width: 340px;
+  max-height: calc(100vh - 16px);
+  overflow: auto;
+  padding: 10px;
+}
+#workspace .group-label {
+  margin: 2px 2px 4px;
+}
+.wf-hint {
+  margin: 0 2px 8px;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.wf-tools {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.wf-tool {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 8px 2px 6px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--card-2);
+  color: var(--ink);
+  font: var(--text-label);
+  cursor: grab;
+  touch-action: none;
+}
+.wf-tool:hover {
+  background: var(--card-3);
+}
+.wf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 8px 2px 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.wf-save {
+  display: flex;
+  gap: var(--gap-tight);
+  margin-bottom: 6px;
+}
+.wf-save .field {
+  flex: 1;
+  min-width: 0;
+}
+.wf-saved {
+  display: grid;
+  gap: var(--gap-group);
+  max-height: 168px;
+  margin-bottom: 4px;
+  overflow: auto;
+}
+.wf-saved-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-group);
+}
+.wf-saved-row .menu-item {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wf-saved-row .field {
+  flex: 1;
+  min-width: 0;
+}
+.wf-files {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap-group);
+}
+.wf-files .wf-hint {
+  flex-basis: 100%;
+  margin: 4px 2px 0;
+}
+.wf-import {
+  cursor: pointer;
+}
+
+/* What follows the pointer while a tool is dragged onto the sky. */
+.wf-ghost {
+  position: fixed;
+  z-index: var(--z-tooltip);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-tight);
+  padding: 6px 10px;
+  border-radius: var(--r-panel);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--lift);
+  font: var(--text-control);
+  translate: -50% -120%;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wf,
+  .wf-cover.loading {
+    transition: none;
+    animation: none;
+  }
+  .wf-bar.moving > span {
+    animation: none;
+    left: 35%;
+  }
+}

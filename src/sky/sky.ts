@@ -14,7 +14,7 @@
  *   dropped, it sends `aim`. A click on empty sky only offers "Move the frame here". The sky
  *   moves only when the user moves it: never because pictures arrived.
  */
-import { emit, on, type BusEvents } from '../shell/bus.ts';
+import { emit, on, type BusEvents, type PatchSource } from '../shell/bus.ts';
 import { frameRect, onFrameMove, skyReady, type SkyLoad } from '../shell/shell.ts';
 import { icon } from '../shell/icons.ts';
 import { formatCoords } from '../core/astro.ts';
@@ -97,10 +97,29 @@ const flags = { grid: false, grab: true, sw: false, lost: false, moved: false, c
 let patch: Readonly<BusEvents['patch']> | null = null;
 /** Where the user dropped the patch, shown until the frame's next `patch` message. */
 let dropped: { ra: number; dec: number; until: number } | null = null;
-/** The patch while it is being dragged. */
-let dragging: { ra: number; dec: number; dx: number; dy: number } | null = null;
+/** The patch (or a workspace frame's ring, by id) while it is being dragged. */
+let dragging: { ra: number; dec: number; dx: number; dy: number; ring?: string } | null = null;
 /** The spot of the open click card. */
 let clicked: SkyPoint | null = null;
+
+/**
+ * A workspace frame's patch (SPEC 10 O-V1): drawn like the main patch, with its number and a thin
+ * line to its window. Set by src/workspace through `setRings`.
+ */
+export interface Ring {
+  id: string;
+  ra: number;
+  dec: number;
+  /** Arcminutes. */
+  fov: number;
+  source: PatchSource;
+  /** Shown on the ring's corner: the frame's number. */
+  label: string;
+  /** The frame's window, for the line; null draws no line. */
+  el: Element | null;
+}
+let rings: readonly Ring[] = [];
+const ringDropFns = new Set<(id: string, ra: number, dec: number) => void>();
 
 const clickFns = new Set<(p: SkyPoint) => void>();
 const pointerFns = new Set<(p: SkyPoint | null) => void>();
@@ -398,7 +417,29 @@ export function toWorld(x: number, y: number): { ra: number; dec: number } | nul
 
 /** The patch square's box on screen; null when there is no patch or it is out of view. */
 export function outline(): DOMRect | null {
-  const at = patchAt();
+  return boxAt(patchAt());
+}
+
+/**
+ * The workspace's extra frames' patches (O-V1). Each is drawn as a square in the patch's line
+ * styles, numbered, with a thin dotted line to its window, and can be dragged like the patch.
+ */
+export function setRings(next: readonly Ring[]): void {
+  rings = next;
+  requestDraw();
+}
+
+/**
+ * Calls `fn` when the user drops a ring somewhere else (the frame looks there next).
+ * @returns Unsubscribe.
+ */
+export function onRingDrop(fn: (id: string, ra: number, dec: number) => void): () => void {
+  ringDropFns.add(fn);
+  return () => ringDropFns.delete(fn);
+}
+
+/** A square on the sky's box on screen; null when it is out of view. */
+function boxAt(at: { ra: number; dec: number; fov: number } | null): DOMRect | null {
   if (!at || !view) return null;
   const c = project(view, at.ra, at.dec);
   if (!c) return null;
@@ -928,14 +969,15 @@ function sizeCanvas(c: HTMLCanvasElement | null): void {
 /** Where the patch is drawn: being dragged, just dropped, or where the frame says. */
 function patchAt(): { ra: number; dec: number; fov: number } | null {
   if (!patch) return null;
-  if (dragging) return { ra: dragging.ra, dec: dragging.dec, fov: patch.fov };
+  if (dragging && !dragging.ring) return { ra: dragging.ra, dec: dragging.dec, fov: patch.fov };
   if (dropped) return { ra: dropped.ra, dec: dropped.dec, fov: patch.fov };
   return patch;
 }
 
 /** FRM-1: line style says what the patch holds. */
-function patchStyle(): { stroke: string; dash: number[]; cap: CanvasLineCap } {
-  const source = dragging || dropped ? 'loading' : (patch?.source ?? 'none');
+function patchStyle(
+  source: PatchSource = (dragging && !dragging.ring) || dropped ? 'loading' : (patch?.source ?? 'none'),
+): { stroke: string; dash: number[]; cap: CanvasLineCap } {
   switch (source) {
     case 'simulated':
       return { stroke: colours.amber ?? '', dash: [6, 4], cap: 'butt' };
@@ -963,37 +1005,13 @@ function drawPatch(): void {
       ctx.stroke();
     }
   }
+  drawRings(ctx);
   const box = outline();
   if (!box || !patch) return;
   const style = patchStyle();
   const f = frameRect();
   // The tether: a dotted line from the patch to the nearest point of the frame (DESIGN.md).
-  if (f && !dragging) {
-    const cx = box.x + box.width / 2;
-    const cy = box.y + box.height / 2;
-    const tx = Math.max(f.left, Math.min(f.right, cx));
-    const ty = Math.max(f.top + 14, Math.min(f.bottom - 14, cy));
-    const inside = cx >= f.left && cx <= f.right && cy >= f.top && cy <= f.bottom;
-    if (!inside && !(tx >= box.left && tx <= box.right && ty >= box.top && ty <= box.bottom)) {
-      const dx = tx - cx;
-      const dy = ty - cy;
-      const half = box.width / 2;
-      const s = Math.min(
-        Math.abs(dx) > 0 ? half / Math.abs(dx) : 1,
-        Math.abs(dy) > 0 ? half / Math.abs(dy) : 1,
-        1,
-      );
-      ctx.save();
-      ctx.strokeStyle = colours.mark ?? '';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([2, 5]);
-      ctx.beginPath();
-      ctx.moveTo(cx + dx * s, cy + dy * s);
-      ctx.lineTo(tx, ty);
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
+  if (f && !(dragging && !dragging.ring)) tether(ctx, box, f);
   ctx.save();
   ctx.strokeStyle = style.stroke;
   ctx.lineWidth = 2;
@@ -1002,20 +1020,72 @@ function drawPatch(): void {
   ctx.strokeRect(box.x, box.y, box.width, box.height);
   ctx.restore();
   // The patch label: only when nothing else names the patch (DESIGN.md Marks on the sky).
-  const loading = !!(dragging || dropped) || patch.source === 'loading';
+  const moving = !!((dragging && !dragging.ring) || dropped);
+  const loading = moving || patch.source === 'loading';
   if (loading || !f) {
-    const text = loading
-      ? `${dropped || dragging ? 'Moving here' : patch.label} · loading`
-      : patch.label;
-    ctx.font = colours.font ?? '';
-    const w = ctx.measureText(text).width + 10;
-    const y = box.top - 20 < 4 ? box.bottom + 3 : box.top - 19;
-    ctx.fillStyle = style.stroke;
-    roundRect(ctx, box.left - 1, y, w, 17, 4);
-    ctx.fill();
-    ctx.fillStyle = colours.sky ?? '';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, box.left + 4, y + 9);
+    const text = loading ? `${moving ? 'Moving here' : patch.label} · loading` : patch.label;
+    tag(ctx, box, text, style.stroke);
+  }
+}
+
+/** The workspace's frames: their squares, numbers and lines to their windows. */
+function drawRings(ctx: CanvasRenderingContext2D): void {
+  for (const r of rings) {
+    const moving = dragging?.ring === r.id;
+    const box = boxAt(moving && dragging ? { ra: dragging.ra, dec: dragging.dec, fov: r.fov } : r);
+    if (!box) continue;
+    const style = patchStyle(moving ? 'loading' : r.source);
+    const win = r.el?.checkVisibility() ? r.el.getBoundingClientRect() : null;
+    if (win && !moving) tether(ctx, box, win);
+    ctx.save();
+    ctx.strokeStyle = style.stroke;
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = style.cap;
+    ctx.setLineDash(style.dash);
+    ctx.strokeRect(box.x, box.y, box.width, box.height);
+    ctx.restore();
+    tag(ctx, box, r.label, style.stroke);
+  }
+}
+
+/** A small tag on a square's top left corner (or under it near the top of the window). */
+function tag(ctx: CanvasRenderingContext2D, box: DOMRect, text: string, fill: string): void {
+  ctx.font = colours.font ?? '';
+  const w = ctx.measureText(text).width + 10;
+  const y = box.top - 20 < 4 ? box.bottom + 3 : box.top - 19;
+  ctx.fillStyle = fill;
+  roundRect(ctx, box.left - 1, y, w, 17, 4);
+  ctx.fill();
+  ctx.fillStyle = colours.sky ?? '';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, box.left + 4, y + 9);
+}
+
+/** A dotted line from a square to the nearest point of a window (DESIGN.md "Tether"). */
+function tether(ctx: CanvasRenderingContext2D, box: DOMRect, f: DOMRect): void {
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  const tx = Math.max(f.left, Math.min(f.right, cx));
+  const ty = Math.max(f.top + 14, Math.min(f.bottom - 14, cy));
+  const inside = cx >= f.left && cx <= f.right && cy >= f.top && cy <= f.bottom;
+  if (!inside && !(tx >= box.left && tx <= box.right && ty >= box.top && ty <= box.bottom)) {
+    const dx = tx - cx;
+    const dy = ty - cy;
+    const half = box.width / 2;
+    const s = Math.min(
+      Math.abs(dx) > 0 ? half / Math.abs(dx) : 1,
+      Math.abs(dy) > 0 ? half / Math.abs(dy) : 1,
+      1,
+    );
+    ctx.save();
+    ctx.strokeStyle = colours.mark ?? '';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([2, 5]);
+    ctx.beginPath();
+    ctx.moveTo(cx + dx * s, cy + dy * s);
+    ctx.lineTo(tx, ty);
+    ctx.stroke();
+    ctx.restore();
   }
 }
 
@@ -1039,6 +1109,19 @@ function grabBox(): DOMRect | null {
   if (!box) return null;
   const grow = Math.max(0, (28 - box.width) / 2);
   return new DOMRect(box.x - grow, box.y - grow, box.width + 2 * grow, box.height + 2 * grow);
+}
+
+/** The workspace ring under a screen point (at least 28 px to grab), if any. */
+function ringAt(x: number, y: number): { r: Ring; box: DOMRect } | null {
+  for (let i = rings.length - 1; i >= 0; i--) {
+    const r = rings[i]!;
+    const box = boxAt(r);
+    if (!box) continue;
+    const grow = Math.max(0, (28 - box.width) / 2);
+    const big = new DOMRect(box.x - grow, box.y - grow, box.width + 2 * grow, box.height + 2 * grow);
+    if (inBox(big, x, y)) return { r, box };
+  }
+  return null;
 }
 
 function inBox(r: DOMRect | null, x: number, y: number): boolean {
@@ -1082,6 +1165,15 @@ function watchPointer(el: HTMLElement): void {
         requestDraw();
         return;
       }
+      const ring = flags.grab ? ringAt(e.clientX, e.clientY) : null;
+      if (ring) {
+        stop(e);
+        dragging = { ra: ring.r.ra, dec: ring.r.dec, dx: e.clientX - (ring.box.x + ring.box.width / 2), dy: e.clientY - (ring.box.y + ring.box.height / 2), ring: ring.r.id };
+        el.setPointerCapture(e.pointerId);
+        setCursor('grabbing');
+        requestDraw();
+        return;
+      }
       down = { x: e.clientX, y: e.clientY, t: performance.now(), moved: false };
     },
     true,
@@ -1103,7 +1195,8 @@ function watchPointer(el: HTMLElement): void {
         flags.moved = true; // the user panned: the sky is theirs now (FRM-4)
       }
       if (!down) {
-        const overPatch = flags.grab && inBox(grabBox(), e.clientX, e.clientY);
+        const overPatch =
+          flags.grab && (inBox(grabBox(), e.clientX, e.clientY) || !!ringAt(e.clientX, e.clientY));
         const dot = !overPatch ? (dotHooks?.pick(e.clientX, e.clientY) ?? null) : null;
         dotHooks?.hover(dot?.id ?? null);
         setCursor(overPatch ? 'grab' : dot ? 'pointer' : '');
@@ -1124,6 +1217,17 @@ function watchPointer(el: HTMLElement): void {
   );
 
   const end = (e: PointerEvent) => {
+    if (dragging?.ring) {
+      stop(e);
+      const id = dragging.ring;
+      const at = { ra: wrapRa(dragging.ra), dec: Math.max(-90, Math.min(90, dragging.dec)) };
+      dragging = null;
+      setCursor('grab');
+      rings = rings.map((r) => (r.id === id ? { ...r, ...at, source: 'loading' } : r));
+      for (const fn of ringDropFns) fn(id, at.ra, at.dec);
+      requestDraw();
+      return;
+    }
     if (dragging) {
       stop(e);
       const at = { ra: wrapRa(dragging.ra), dec: Math.max(-90, Math.min(90, dragging.dec)) };
