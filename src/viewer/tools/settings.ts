@@ -191,8 +191,11 @@ export function sane(p: PicSettings): PicSettings {
  */
 export function clampPoints(black: number, white: number): { black: number; white: number } {
   const b = Math.min(99_999, Math.max(-50, Number.isFinite(black) ? black : 0));
-  const w = Math.min(100_000, Math.max(b + 0.1, Number.isFinite(white) ? white : 800));
-  return { black: round(b), white: round(w) };
+  const rb = round(b);
+  const step = Math.abs(rb) >= 100 ? 1 : 0.1;
+  const w = round(Math.min(100_000, Number.isFinite(white) ? white : 800));
+  // Rounding must not put white on or below black.
+  return { black: rb, white: w > rb ? w : round(rb + step) };
 }
 
 function round(v: number): number {
