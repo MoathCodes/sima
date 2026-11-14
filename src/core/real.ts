@@ -451,7 +451,7 @@ export function aperturePhotometry(
   const err = Math.sqrt(nok * s.noise * s.noise + nok * nok * skyErr2);
   return {
     flux: nok ? sum * conv : Number.NaN,
-    fluxErr: err * conv,
+    fluxErr: nok ? err * conv : Number.NaN,
     flagged: nok < npix,
     npix,
     nok,

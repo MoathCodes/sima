@@ -20,7 +20,8 @@ import { current, mark, markOf, setList, setPic } from './settings.ts';
 import { candidate, onSearch, openCandidate, rowLabel, search, shown } from './search.ts';
 import { allRows } from './catalogue.ts';
 import { download, esc, fileName, num, pill, pressSeg, seg, setSwitch, sig, term, token } from './dom.ts';
-import { drawChart } from '../measure/charts.ts';
+import { drawChart, drawPath, moverPath } from '../measure/charts.ts';
+import { moverLine } from '../measure/model.ts';
 import { paintCutout, triplet } from '../measure/cutouts.ts';
 import { detail } from '../detail.ts';
 import { plainP } from '../measure/words.ts';
@@ -227,11 +228,14 @@ export function updateFind(root: HTMLElement): void {
       ? `<p class="tl-line">${r.candidates.length ? 'Every candidate is hidden by the filter above.' : 'No candidates at this threshold.'}</p>`
       : '';
   const openC = s.open ? candidate(s.open) : null;
+  root.toggleAttribute('data-open', !!openC);
   if (openC) {
     const host = list.querySelector<HTMLElement>('[data-detail]');
     if (host) fillDetail(host, openC);
-    // Picking a candidate scrolls its cutouts and facts into view (docs/tools.md).
-    host?.scrollIntoView({ block: 'nearest' });
+    // Picking a candidate scrolls its row, verdict and evidence into view (docs/tools.md), inside
+    // the list only.
+    const row = host?.previousElementSibling as HTMLElement | null;
+    if (row) list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top;
   }
   root.querySelector<HTMLElement>('[data-csv]')!.hidden = !r?.candidates.length;
 }
@@ -266,12 +270,16 @@ export function passWords(window: number): string {
 function fillDetail(host: HTMLElement, c: Candidate): void {
   const field = S.field;
   if (!field) return;
-  const tri = triplet(field, S.det, c.window);
+  const tri = triplet(field, S.det, c.window, { ra: c.ra, dec: c.dec, half: 7 });
   const single = !S.pic.combinePass;
-  const motion = c.motion
-    ? `<p>Measured motion ${esc(num(c.motion.total, 2))} ± ${esc(num(c.motion.totalErr, 2))}″ a year${c.known?.pmTotal != null ? `; the catalogue says ${esc(num(c.known.pmTotal, 2))}″ a year` : ''}.</p>`
-    : '';
+  const motion = c.motion ? `<p>${moverLine(c, search().result?.det ?? S.det, S.field?.target?.values)}</p>` : '';
+  // The row's verdict label is followed at once by its evidence (the small chart, the cutouts),
+  // then why, and the actions, so they show together in a short list (1366); the date, the checks
+  // and the details follow.
   host.innerHTML = `
+    <div class="window tl-mini"><canvas data-mini></canvas></div>
+    <p class="tl-line" data-mini-note>${c.kind === 'mover' ? '' : 'Measuring the light here on every exposure…'}</p>
+    ${motion}
     <div class="tl-cuts">
       ${['ref', 'now', 'diff']
         .map(
@@ -281,24 +289,21 @@ function fillDetail(host: HTMLElement, c: Candidate): void {
         )
         .join('')}
     </div>
-    <p>${esc(passWords(c.window))}, ${esc(formatDate(field.frames[c.frame]?.mjd ?? Number.NaN, 'day'))}, at ${esc(formatCoords(c.ra, c.dec))}. Compared with ${esc(tri?.refText ?? 'the other dates')}.</p>
-    ${single ? (combineTurnedOn ? '' : `<p>Found in the combined picture of ${esc(passWords(c.window))}. The frame shows one exposure of it. <button type="button" class="link" data-act="combine" data-id="${esc(c.id)}">Show the combined pass</button></p>`) : ''}
-    ${!single && combineTurnedOn ? `<p>This turned on Combine each pass in Clean up. <button type="button" class="link" data-act="uncombine" data-id="${esc(c.id)}">Turn it off</button></p>` : ''}
     <p><b>Why it is listed:</b> ${esc(c.why)}</p>
-    ${motion}
     ${c.verdict === 'weak' && c.expectedFromNoise !== null ? `<p>Weak: as expected from noise. About ${esc(sig(c.expectedFromNoise, 2))} spots this strong would come from noise alone here.</p>` : ''}
-    <dl class="tl-checks">
-      <dt>${term('Each exposure', 'The change measured on every single exposure of its date. A change on one exposure only is most likely a cosmic ray or a hot pixel.')}</dt><dd>${esc(c.checks.eachExposure || 'not measured')}</dd>
-      <dt>${term('Fixed aperture', 'The light in a fixed circle on the original exposures, this date against the others. It agrees, sees no change, or could not look (flagged pixels).')}</dt><dd>${esc(c.checks.fixedAperture || 'not measured')}</dd>
-    </dl>
-    <div class="window tl-mini"><canvas data-mini></canvas></div>
-    <p class="tl-line" data-mini-note>Measuring the light here on every exposure…</p>
     ${/not a discovery/i.test(c.why) ? '' : '<p class="tl-not">Not a discovery: a candidate to check.</p>'}
     <div class="tl-actions">
       <button type="button" class="btn" data-act="checked" data-id="${esc(c.id)}" aria-pressed="${markOf(c.id) === 'checked'}">Checked <span class="kbd">C</span></button>
       <button type="button" class="btn" data-act="reject" data-id="${esc(c.id)}" aria-pressed="${markOf(c.id) === 'reject'}">Reject <span class="kbd">X</span></button>
       <button type="button" class="btn" data-act="measure" data-id="${esc(c.id)}">Open in Measure</button>
-    </div>`;
+    </div>
+    <p>${esc(passWords(c.window))}, ${esc(formatDate(field.frames[c.frame]?.mjd ?? Number.NaN, 'day'))}, at ${esc(formatCoords(c.ra, c.dec))}. Compared with ${esc(tri?.refText ?? 'the other dates')}.</p>
+    ${single ? (combineTurnedOn ? '' : `<p>Found in the combined picture of ${esc(passWords(c.window))}. The frame shows one exposure of it. <button type="button" class="link" data-act="combine" data-id="${esc(c.id)}">Show the combined pass</button></p>`) : ''}
+    ${!single && combineTurnedOn ? `<p>This turned on Combine each pass in Clean up. <button type="button" class="link" data-act="uncombine" data-id="${esc(c.id)}">Turn it off</button></p>` : ''}
+    <dl class="tl-checks">
+      <dt>${term('Each exposure', 'The change measured on every single exposure of its date. A change on one exposure only is most likely a cosmic ray or a hot pixel.')}</dt><dd>${esc(c.checks.eachExposure || 'not measured')}</dd>
+      <dt>${term('Fixed aperture', 'The light in a fixed circle on the original exposures, this date against the others. It agrees, sees no change, or could not look (flagged pixels).')}</dt><dd>${esc(c.checks.fixedAperture || 'not measured')}</dd>
+    </dl>`;
   if (tri) {
     const sigma = field.noise[S.det - 1];
     host.querySelectorAll<HTMLCanvasElement>('[data-cut]').forEach((cv) => {
@@ -315,8 +320,11 @@ async function miniChart(host: HTMLElement, c: Candidate): Promise<void> {
   const note = host.querySelector<HTMLElement>('[data-mini-note]');
   if (!canvas || !note) return;
   if (c.kind === 'mover') {
-    note.textContent = `A mover walks out of a fixed circle, so its light is not measured here. Its positions and fitted line are on Measure’s Path tab.`;
-    canvas.parentElement?.setAttribute('hidden', '');
+    // Its own evidence in place (TLS-5): the positions behind the fit and the fitted line.
+    const tint = (frame: number) => token(`--p${((S.set?.frames[frame]?.meta.window ?? 0) % 4) + 1}`, '#c3cbea');
+    const ringed = new Set(S.field?.frames.filter((f) => f.window === c.window).map((f) => f.src));
+    drawPath(canvas, moverPath(c, tint, (fr) => ringed.has(fr)));
+    note.textContent = 'Its position on each exposure (colours are survey passes, rings its date) and the fitted line.';
     return;
   }
   if (!S.set) {

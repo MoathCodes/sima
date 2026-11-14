@@ -95,9 +95,16 @@ async function run(job: Job): Promise<JobResult> {
       // Lane D measures the target once per patch (load.ts); share it rather than measure again.
       const ms = await (targetMeasurements() ?? Promise.reject(new Error('no target with real exposures')));
       if (myGen !== gen) throw STALE;
-      // The fits take under 30 ms (core/work.ts) and run here.
+      // The fits take under 30 ms each on a quiet machine and run here, with a turn for the page
+      // between them so a busy machine does not join them into one long task (TLS-8).
+      const turn = async () => {
+        await new Promise((r) => setTimeout(r, 0));
+        if (myGen !== gen) throw STALE;
+      };
       const fit = fitMotion(ms, target);
+      await turn();
       const curves = realCurve(ms, target);
+      await turn();
       const usable = ms.filter((m) => m.seen && !m.lower && !m.saturated && !m.skipped && Number.isFinite(m.flux));
       const spectrum = channelSpectrum(usable.map((m) => ({ lam: m.lam, det: m.det, flux: m.flux, err: m.fluxErr })));
       return { ms: [...ms], fit, curves, lower: lowerLimits(ms), spectrum } satisfies TargetResult;

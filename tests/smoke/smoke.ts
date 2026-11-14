@@ -58,6 +58,23 @@ export function guide(name: string): string {
   return `[data-guide="${name}"]`;
 }
 
+/**
+ * Loads `url` (or reloads the page) and waits until it is ready: `data-ready` on `<html>` and the
+ * fonts in. It does not wait for the `load` event, and allows 30 s: on a busy machine the sky's
+ * WebGL start alone can take several seconds.
+ */
+export async function openPage(page: Page, url?: string): Promise<void> {
+  if (url) await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  else await page.reload({ waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await page.waitForSelector('html[data-ready]', { state: 'attached', timeout: 30_000 });
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+}
+
+/** A step that reloads the page and waits until it is ready. */
+export function reloadStep(label = 'Reload'): Step {
+  return { name: label, run: (page) => openPage(page) };
+}
+
 /** Clicks the part with this `data-guide` name. */
 export async function press(page: Page, name: string): Promise<void> {
   await page.locator(guide(name)).first().click();
@@ -75,9 +92,11 @@ export function keyStep(key: string, label = `Key ${key}`): Step {
 
 /**
  * Waits until the page is still: no running finite animation or transition (endless ones, such
- * as a loading bar, are ignored), then two more drawn frames. At most `timeout` ms.
+ * as a loading bar, are ignored), then two more drawn frames. At most `timeout` ms: generous,
+ * because on a busy machine one change can start the next fade late; an animation that never
+ * ends still fails.
  */
-export async function settle(page: Page, timeout = 3000): Promise<void> {
+export async function settle(page: Page, timeout = 10_000): Promise<void> {
   await page.waitForFunction(
     () =>
       document.getAnimations().every((a) => {

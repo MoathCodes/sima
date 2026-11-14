@@ -176,11 +176,11 @@ function legend(): void {
     const L = current().layers;
     const cat = catalogue();
     if (L.gaia && cat.gaia.rows.length)
-      items.push('<span class="lg-sym lg-circle"></span>Gaia DR3 stars, moved to this date');
+      items.push('<span class="lg-sym lg-circle"></span>Gaia DR3 stars on this date');
     if (L.catwise && cat.catwise.rows.length)
-      items.push('<span class="lg-sym lg-square"></span>CatWISE2020 sources, moved to this date');
+      items.push('<span class="lg-sym lg-square"></span>CatWISE2020 sources on this date');
     if (L.path && S.field.target)
-      items.push('<span class="lg-sym lg-path"></span>Path from the catalogue motion');
+      items.push('<span class="lg-sym lg-path"></span>Catalogue motion path');
     if (L.flags) items.push('<span class="lg-sym lg-flag"></span>Flagged or missing pixels');
     if (current().marks && search().result?.candidates.length)
       items.push('<span class="lg-sym lg-cand"></span>Candidates to check');

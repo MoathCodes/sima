@@ -16,23 +16,25 @@
 import { S, watch, type MeasureTab, type Selection } from './state.ts';
 import { onTap } from './render.ts';
 import { setLevel } from '../explore/game.ts';
+import { emit } from '../shell/bus.ts';
 import { icon } from '../shell/icons.ts';
 import { formatCoords, formatDate, formatDec, formatRa, mjdToYear, offsetArcsec, separation } from '../core/astro.ts';
 import { atDate } from '../core/catalog.ts';
 import { foldCurve, type DetectorCurve } from '../core/fit.ts';
 import { channelSpectrum, chi2Test, weightedMean, type ChannelPoint } from '../core/stats.ts';
-import { channelOf } from '../core/instrument.ts';
+import { BAND_EDGES, channelOf } from '../core/instrument.ts';
 import { toCsv, type Cell } from '../core/csv.ts';
 import type { Measurement } from '../core/types.ts';
 import { compute, STALE } from './tools/compute.ts';
 import type { SpotResult, StackSet, TargetResult } from './tools/jobs.ts';
 import { allRows, catalogue } from './tools/catalogue.ts';
-import { candidate } from './tools/search.ts';
+import { candidate, search } from './tools/search.ts';
 import { lastView, noiseOf } from './tools/view.ts';
 import { download, esc, fileName, num, pill, sig, term, token } from './tools/dom.ts';
-import { drawChart, drawPath, mjdDate, type Pt } from './measure/charts.ts';
+import { drawChart, drawPath, mjdDate, moverPath, type Pt } from './measure/charts.ts';
+import type { Candidate } from '../core/detect.ts';
 import { paintCutout, triplet } from './measure/cutouts.ts';
-import { ABSORPTION, candidateLines, neighbours, spotHeadline, targetHeadline, targetStats, type Headline } from './measure/model.ts';
+import { ABSORPTION, candidateLines, moverLine, neighbours, pathLine, showDet, spotHeadline, targetHeadline, targetStats, type Headline } from './measure/model.ts';
 import { plainP, trendWords } from './measure/words.ts';
 import { renderFound, startInbox } from './inbox.ts';
 
@@ -58,6 +60,13 @@ let res: Results = { key: '', target: null, spot: null, stacks: null, error: nul
 /** "Show all at once" on the Spectrum tab; otherwise it builds as the pictures play. */
 let spectrumAll = false;
 let lastField: unknown = null;
+/**
+ * Measure opens on the detector its headline is about (MSR-1): set to the detector on screen when
+ * Measure opens or the patch changes, and used up once the headline knows its best detector. If
+ * the user picks a detector before that, theirs stays.
+ */
+let openOn: number | null = null;
+let shownBefore = false;
 
 /** Fills Measure and shows it with the Measure level. Called once by main.ts. */
 export function startMeasure(): void {
@@ -70,6 +79,7 @@ export function startMeasure(): void {
     if (S.field === lastField) return;
     lastField = S.field;
     spectrumAll = false;
+    openOn = S.det;
     S.selected = S.field?.target && !S.field.simulated ? { kind: 'target' } : null;
   });
   watch(['level', 'selected', 'measureTab', 'allNumbers', 'field', 'set', 'label', 'det', 'color', 'source'], render);
@@ -169,6 +179,7 @@ function skeleton(p: HTMLElement): void {
           ([key, label]) =>
             `<button type="button" role="tab" data-tab="${key}" aria-selected="false">${label}</button>`,
         ).join('')}</div>
+        <p class="ms-chart-head" data-chart-head></p>
         <div class="window ms-chart" data-guide="chart" data-chartbox>
           <canvas data-chart aria-label="Chart"></canvas>
           <div class="ms-cuts" data-cuts hidden></div>
@@ -197,9 +208,11 @@ function skeleton(p: HTMLElement): void {
   p.querySelectorAll<HTMLElement>('[data-tab]').forEach((b) =>
     b.addEventListener('click', () => selectTab(b.dataset.tab as MeasureTab)),
   );
-  p.querySelector('[data-under]')?.addEventListener('click', (e) => {
+  p.querySelector('[data-wrap]')?.addEventListener('click', (e) => {
     const t = (e.target as HTMLElement).closest<HTMLElement>('[data-do]');
     if (!t) return;
+    if (t.dataset.do === 'det') emit('band', { det: Number(t.dataset.det) });
+    if (t.dataset.do === 'tab') selectTab(t.dataset.to as MeasureTab);
     if (t.dataset.do === 'csv') exportCsv();
     if (t.dataset.do === 'all-at-once') {
       spectrumAll = !spectrumAll;
@@ -252,7 +265,12 @@ function render(): void {
   const p = panel();
   if (!p) return;
   p.hidden = S.level !== 'measure';
-  if (p.hidden) return;
+  if (p.hidden) {
+    shownBefore = false;
+    return;
+  }
+  if (!shownBefore) openOn = S.det;
+  shownBefore = true;
   skeleton(p);
   ensure();
   const q = <T extends HTMLElement = HTMLElement>(s: string) => p.querySelector<T>(s)!;
@@ -320,16 +338,125 @@ function render(): void {
     kind.innerHTML = selKind(sel!);
   }
   head.innerHTML = `
-    <p class="ms-value" data-guide="headline"><span class="term" tabindex="0" data-tip="${esc(h.valueTip)}">${esc(h.value)}</span> ${pill(h.pill.text, h.pill.tone)}</p>
+    <p class="ms-value" data-guide="headline"><span class="term" tabindex="0" data-tip="${esc(h.valueTip)}">${esc(h.value)}</span> ${h.pill.text ? pill(h.pill.text, h.pill.tone) : ''}</p>
     <p class="ms-sub">${h.sub}</p>`;
+  openOnBest(h);
 
   const tab = all ? (S.measureTab ?? h.chart) : h.chart;
   p.querySelectorAll<HTMLElement>('[data-tab]').forEach((b) =>
     b.setAttribute('aria-selected', String(b.dataset.tab === tab)),
   );
   under.innerHTML = underText(tab, h);
+  q('[data-chart-head]').innerHTML = chartHead(tab);
+  fitUnder(q('.ms-main'), under);
 
   chart();
+}
+
+/**
+ * MSR-8: nothing is cut off and nothing scrolls. When the words under the chart do not fit the
+ * column, or leave the chart too small to read (all the numbers at 1366), the paragraph that explains how to read the chart folds into a
+ * dotted "How to read this chart" whose explanation shows on hover or focus (MSR-4).
+ */
+let fitQueued = false;
+
+function fitUnder(main: HTMLElement, under: HTMLElement): void {
+  // Measured in the next drawn frame, with the page's own layout, not forced inside a click
+  // (TLS-8); several renders in one frame measure once.
+  if (fitQueued) return;
+  fitQueued = true;
+  requestAnimationFrame(() => {
+    fitQueued = false;
+    // Fold when the column overflows, or when the words squeeze the chart below a useful size
+    // (two rows of cutouts need about 240 px, a chart about 140 px).
+    const box = main.querySelector<HTMLElement>('[data-chartbox]');
+    const cuts = !!main.querySelector('[data-cuts]:not([hidden])');
+    const small = !!box && !box.hidden && box.clientHeight < (cuts ? 240 : 140);
+    if (main.scrollHeight <= main.clientHeight + 1 && !small) return;
+    const para = under.querySelector<HTMLElement>('.ms-para');
+    if (!para) return;
+    const words = (para.textContent ?? '').replace(/\s+/g, ' ').trim();
+    para.outerHTML = `<p class="ms-note">${term('How to read this chart', words)}</p>`;
+  });
+}
+
+/** The detector in words: "D6, 4.41–5.0 µm". */
+function detWords(det: number): string {
+  return `D${det}, ${num(BAND_EDGES[det - 1] ?? Number.NaN, 2)}–${num(BAND_EDGES[det] ?? Number.NaN, 2)} µm`;
+}
+
+/**
+ * A stable heading over every chart (O-T6): which detector and which dates it shows, so the
+ * headline and the chart can never be read as one claim when they are about different things.
+ */
+function chartHead(tab: MeasureTab): string {
+  const g = S.groups[S.epoch];
+  const sel = S.selected!;
+  const det = S.color ? 'Color view: pick one detector' : detWords(S.det);
+  const day = g ? formatDate(g.mjd, 'day') : 'no picture on screen';
+  switch (tab) {
+    case 'path': {
+      const c = moverOf(sel);
+      if (c) return `<b>Path</b> · D${searchDet()} · ${c.path?.length ?? 0} positions`;
+      const f = res.target?.fit;
+      if (sel.kind !== 'target' || !f?.ok) return '<b>Path</b> · all six detectors';
+      const ms = (res.target?.ms ?? []).filter((m) => m.seen && Number.isFinite(m.ra) && !m.skipped);
+      const t0 = Math.min(...ms.map((m) => m.mjd));
+      const t1 = Math.max(...ms.map((m) => m.mjd));
+      return `<b>Path</b> · all six detectors · ${esc(formatDate(t0, 'month'))} to ${esc(formatDate(t1, 'month'))}`;
+    }
+    case 'spectrum':
+      return `<b>Spectrum</b> · all six detectors · ${spectrumAll ? 'every date' : `dates up to ${esc(g ? formatDate(g.mjd1 ?? g.mjd, 'day') : '—')}`}`;
+    case 'brightness':
+      return `<b>Brightness</b> · ${esc(det)} · every date`;
+    case 'folded':
+      return `<b>Folded</b> · ${esc(det)}`;
+    case 'cutouts':
+      return `<b>Cutouts</b> · ${esc(det)}`;
+    case 'exposure':
+      return `<b>Exposures</b> · ${esc(det)} · ${esc(day)}, the picture on screen`;
+  }
+}
+
+/** A mover candidate from the change search, with its positions; null for anything else. */
+function moverOf(sel: Selection): Candidate | null {
+  const c = sel.kind === 'candidate' ? candidate(sel.id) : null;
+  return c?.kind === 'mover' && c.path?.length ? c : null;
+}
+
+/** The detector the last change search ran in. */
+function searchDet(): number {
+  return search().result?.det ?? S.det;
+}
+
+/** The detector where a fixed spot has the most clean exposures, if not the one on screen. */
+function bestSpotDet(): number | null {
+  const n = new Map<number, number>();
+  for (const p of res.spot?.points ?? []) if (!p.flagged && Number.isFinite(p.flux)) n.set(p.det, (n.get(p.det) ?? 0) + 1);
+  let best: number | null = null;
+  for (const [d, k] of n) if (d !== S.det && k >= 2 && (best === null || k > (n.get(best) ?? 0))) best = d;
+  return best;
+}
+
+/** The detectors with a shown brightness curve, the biggest change first. */
+function curveDets(): number[] {
+  const amp = (c: DetectorCurve) => {
+    const v = c.visits.map((x) => x.dmag).filter(Number.isFinite);
+    return v.length ? Math.max(...v) - Math.min(...v) : 0;
+  };
+  return (res.target?.curves ?? [])
+    .filter((c) => c.shown && c.visits.length >= 2)
+    .sort((a, b) => amp(b) - amp(a))
+    .map((c) => c.det);
+}
+
+/** Once per opening: move to the detector the headline is strongest in (MSR-1). */
+function openOnBest(h: Headline): void {
+  if (openOn === null || h.pending) return;
+  const was = openOn;
+  openOn = null;
+  if (S.selected?.kind !== 'target' || h.best === null || S.color || S.det !== was || h.best === S.det) return;
+  emit('band', { det: h.best });
 }
 
 /** A selection's position, degrees; the patch centre for the target (its own position moves). */
@@ -380,13 +507,33 @@ function headline(): Headline {
       stacks: res.stacks,
       exposures: field.frames.length,
       error: res.error,
+      det: S.color ? undefined : S.det,
     });
+  }
+  const mover = moverOf(sel);
+  if (mover?.motion) {
+    // A mover walks out of a fixed circle: it leads with its own measured motion and Path.
+    return {
+      value: `${num(mover.motion.total, 2)}″/yr`,
+      valueTip: 'How far it moves across the sky in a year, fitted from the positions the change search measured on the pixels.',
+      pill: { text: 'candidate to check', tone: '' },
+      sub: moverLine(mover, searchDet(), field.target?.values),
+      chart: 'path',
+      para: candidateLines(mover),
+      det: searchDet(),
+      best: null,
+    };
   }
   const pts = res.spot?.points ?? null;
   const mine = (pts ?? []).filter((p) => p.det === S.det && !p.flagged && Number.isFinite(p.flux));
   const test = pts ? chi2Test(mine.map((p) => p.flux), mine.map((p) => p.err)) : null;
   const mean = pts ? weightedMean(mine.map((p) => p.flux), mine.map((p) => p.err)) : null;
   const h = spotHeadline(pts, S.det, S.color ? 'The Color view mixes six detectors: pick one on the wavelength scale.' : res.error, test, mean);
+  if (pts && !mine.length && !S.color) {
+    // A next action: the detector where this spot has the most clean exposures (O-T6).
+    const best = bestSpotDet();
+    if (best !== null) h.sub += ` ${showDet(best, `Show D${best}, measured there`)}`;
+  }
   if (sel.kind === 'candidate') {
     const c = candidate(sel.id);
     if (c) h.para = `${candidateLines(c)} ${h.para}`;
@@ -414,9 +561,14 @@ function underText(tab: MeasureTab, h: Headline): string {
             .join(' ')}</p>`,
         );
       }
+      // An empty chart offers the next step (O-T6): the detector that has a measurement. The
+      // headline already offers it when it leads with brightness.
+      const other = curveDets().filter((d) => d !== S.det);
+      if (res.target && (!curve || curve.shown === false) && other.length && h.chart !== 'brightness')
+        parts.push(`<p class="ms-note">Measured in ${other.map((d) => `D${d}`).join(', ')}. ${showDet(other[0]!)}</p>`);
     } else {
       const pts = (res.spot?.points ?? []).filter((p) => p.det === S.det && !p.flagged && Number.isFinite(p.flux));
-      if (res.spot) parts.push(`<p class="ms-note">${plainP(chi2Test(pts.map((p) => p.flux), pts.map((p) => p.err)))}</p>`);
+      if (res.spot && pts.length) parts.push(`<p class="ms-note">${plainP(chi2Test(pts.map((p) => p.flux), pts.map((p) => p.err)))}</p>`);
       const sat = res.spot?.points.filter((p) => p.det === S.det && p.nearSaturated !== null) ?? [];
       if (sat.length)
         parts.push(`<p class="ms-note">A saturated star about ${Math.round(sat[0]!.nearSaturated ?? 0)}″ away (on ${sat.length} of ${pts.length} exposures) adds its glow to the circle and the sky ring here, so these numbers include its light.</p>`);
@@ -425,6 +577,9 @@ function underText(tab: MeasureTab, h: Headline): string {
   if (tab === 'folded') {
     // The period is a catalogue value: say which one (H4); without one nothing is folded (H9).
     const t = field.target;
+    const other = curveDets().filter((d) => d !== S.det);
+    if (t?.period && res.target && !curve?.shown && other.length)
+      parts.push(`<p class="ms-note">Not measured in D${S.det}; measured in ${other.map((d) => `D${d}`).join(', ')}. ${showDet(other[0]!)}</p>`);
     parts.push(
       t?.period
         ? `<p class="ms-note">Folded on the catalogue period of ${esc(num(t.period, 1))} days${t.periodFrom ? ` (${esc(t.periodFrom)})` : ''}. Each cycle is drawn twice, so it reads across the join.</p>`
@@ -436,15 +591,42 @@ function underText(tab: MeasureTab, h: Headline): string {
     const note = res.stacks?.find((s) => s.det === S.det)?.note;
     if (note) parts.push(`<p class="ms-note">${neighbours(note)}</p>`);
   }
-  if (tab === 'path' && sel.kind !== 'target') {
+  if (tab === 'path' && sel.kind === 'target' && field.target && h.chart !== 'path') {
+    // Every mover states its fitted total next to the catalogue's (MSR-3).
+    parts.push(`<p class="ms-note">${pathLine(field.target, res.target?.fit ?? null)}</p>`);
+  }
+  if (tab === 'path' && sel.kind !== 'target' && !moverOf(sel)) {
     parts.push('<p class="ms-note">A fixed spot has no path. Pick the target, or a mover from Found in this patch.</p>');
   }
   if (tab === 'exposure') parts.push('<p class="ms-note">The exposures behind the picture on screen, as NASA’s archive gives them.</p>');
+  // An empty chart other than the headline's points back to the one that has the measurement.
+  if (tab !== h.chart && !h.pending && h.value !== 'Not measured' && emptyTab(tab)) {
+    const name = TABS.find(([k]) => k === h.chart)?.[1] ?? '';
+    parts.push(`<p class="ms-note">The measurement is under <button type="button" class="link" data-do="tab" data-to="${h.chart}">${esc(name)}</button>.</p>`);
+  }
   if (hasNumbers()) parts.push('<p class="ms-note"><button type="button" class="link" data-do="csv">Download these numbers (CSV)</button></p>');
   if (sel.kind !== 'target' && field.target) {
     parts.push(`<p class="ms-note"><button type="button" class="link" data-do="target">Back to ${esc(field.target.name)}</button> · <button type="button" class="link" data-do="picture">The picture on screen</button></p>`);
   }
   return parts.join('');
+}
+
+/** True when a target's chart on this tab has nothing measured to draw. */
+function emptyTab(tab: MeasureTab): boolean {
+  if (S.selected?.kind !== 'target' || !res.target) return false;
+  const c = curveFor();
+  switch (tab) {
+    case 'path':
+      return !res.target.fit.ok;
+    case 'spectrum':
+      return res.target.spectrum.filter((x) => Number.isFinite(x.flux) && !x.weak).length < 3;
+    case 'brightness':
+      return !c?.shown;
+    case 'folded':
+      return !S.field?.target?.period || !c?.shown;
+    default:
+      return false;
+  }
 }
 
 function hasNumbers(): boolean {
@@ -659,6 +841,11 @@ function detsWith(curves: DetectorCurve[]): string {
 function drawPathTab(canvas: HTMLCanvasElement, ring: Set<number>, pending: string): void {
   const r = res.target;
   const f = r?.fit;
+  const mover = S.selected ? moverOf(S.selected) : null;
+  if (mover) {
+    const win = (frame: number) => S.set?.frames[frame]?.meta.window ?? 0;
+    return drawPath(canvas, moverPath(mover, (fr) => tint(win(fr)), (fr) => ring.has(fr)));
+  }
   if (S.selected?.kind !== 'target' || !r || !f) {
     return drawPath(canvas, { points: [], fit: null, catalogue: null, empty: S.selected?.kind === 'target' ? pending : 'A fixed spot has no path' });
   }
@@ -693,20 +880,27 @@ function drawCuts(host: HTMLElement): void {
   const field = S.field!;
   const sel = S.selected!;
   const g = S.groups[S.epoch];
-  // Calm, the one chart backs the headline: the stack of its detector. With all the numbers, the
-  // stack of the detector on screen. Either way the captions name the detector.
-  const measured = (res.stacks ?? []).filter((s) => Number.isFinite(s.along.snr));
-  const lead = !S.allNumbers && measured.length ? measured.reduce((a, b) => (b.along.snr > a.along.snr ? b : a)) : null;
-  const stack = sel.kind === 'target' ? (lead ?? res.stacks?.find((s) => s.det === S.det)) : null;
+  // The stack and the date are both of the detector on screen, as the headline is (MSR-1). Calm,
+  // with the stack as the headline's evidence, only the stack row shows.
+  const stack = sel.kind === 'target' ? res.stacks?.find((s) => s.det === S.det) : null;
+  const stackOnly = !!stack && !S.allNumbers && S.field?.target?.lead === 'stack';
   let pos: { ra: number; dec: number } | null = sel.kind === 'target' ? null : { ra: sel.ra, dec: sel.dec };
   const t = field.target;
   if (sel.kind === 'target' && t && g) pos = atDate({ cat: 'gaia', id: t.name, ra: t.ra, dec: t.dec, ep: t.ep, pmra: t.pmra, pmdec: t.pmdec, mag: 0 }, g.mjd);
-  const tri = g && pos ? triplet(field, S.det, g.window) : null;
+  const tri = !stackOnly && g && pos ? triplet(field, S.det, g.window, { ...pos, half: 7 }) : null;
   const fig = (k: string, cap: string) => `<figure><canvas data-cut="${k}"></canvas><figcaption>${cap}</figcaption></figure>`;
-  host.innerHTML = `
-    <div class="ms-cutrow">${fig('ref', 'Reference')}${fig('now', 'This date')}${fig('diff', 'Difference')}</div>
-    ${stack ? `<div class="ms-cutrow">${fig('along', `D${stack.det} ${esc(stack.along.label.toLowerCase())} · ${Number.isFinite(stack.along.snr) ? `${num(stack.along.snr, 1)}σ` : 'not measured'}`)}${fig('c0', `${esc(stack.controls[0].label)} · ${Number.isFinite(stack.controls[0].snr) ? `${num(stack.controls[0].snr, 1)}σ` : '—'}`)}${fig('c1', `${esc(stack.controls[1].label)} · ${Number.isFinite(stack.controls[1].snr) ? `${num(stack.controls[1].snr, 1)}σ` : '—'}`)}</div>` : ''}
-    ${!tri ? `<p class="ms-cutnote">${esc(g ? 'No other date in this detector to compare with.' : 'No picture on screen.')}</p>` : ''}`;
+  const snr = (v: number) => (Number.isFinite(v) ? `${num(v, 1)}σ` : 'not measured');
+  const stackRow = stack
+    ? `<p class="ms-cuthead">${term(`Stacks of ${stack.frames} D${stack.det} exposures`, 'Every exposure of this detector added up three ways. Only the first follows the target’s catalogue motion; the two controls should not show it.')}</p>
+      <div class="ms-cutrow">${fig('along', `Along the motion · ${snr(stack.along.snr)}`)}${fig('c0', `Not shifted · ${snr(stack.controls[0].snr)}`)}${fig('c1', `Opposite motion · ${snr(stack.controls[1].snr)}`)}</div>`
+    : '';
+  const dateRow = stackOnly
+    ? ''
+    : tri
+      ? `<p class="ms-cuthead">${term(`One date: ${g ? formatDate(g.mjd, 'day') : ''}, D${S.det}`, `The picture on screen, against ${tri.refText}, and the difference.`)}</p>
+        <div class="ms-cutrow">${fig('ref', 'Reference')}${fig('now', 'This date')}${fig('diff', 'Difference')}</div>`
+      : `<p class="ms-cutnote">${esc(g ? 'No other date in this detector to compare with.' : 'No picture on screen.')}</p>`;
+  host.innerHTML = stackRow + dateRow;
   if (pos && tri) {
     const sigma = field.noise[S.det - 1];
     for (const k of ['ref', 'now', 'diff'] as const) {
@@ -783,7 +977,8 @@ function exportCsv(): void {
     const header = ['id', 'date', 'mjd', 'det', 'lam_um', 'channel', 'flux_uJy', 'flux_err_uJy', 'saturated', 'lower_limit', 'ra_deg', 'dec_deg', 'pos_err_arcsec', 'not_measured_because'];
     const rows: Cell[][] = res.target.ms.map((m) => [
       m.id, iso(m.mjd), m.mjd, m.det, m.lam, channelOf(m.lam, m.det) - (m.det - 1) * 17,
-      fin(m.flux), fin(m.fluxErr), m.saturated, m.lower, fin(m.ra), fin(m.dec), fin(m.posErr), m.skipped,
+      fin(m.flux), fin(m.fluxErr), m.saturated, m.lower, fin(m.ra), fin(m.dec), fin(m.posErr),
+      m.skipped ?? (Number.isFinite(m.flux) ? null : 'No light measured: every pixel within 2 pixels is flagged or off the picture'),
     ]);
     const notes = [
       `${field.target?.name}: light within 2 pixels on each exposure (sky from a ring 6 to 12 pixels out) and the measured position. lower_limit = 1: a flagged pixel in the aperture, so only usable pixels count.`,
