@@ -146,7 +146,7 @@ export function buildRealField(
     simulated: false,
     frames: [],
     windows: 0,
-    monthly: set.data.monthly ?? false,
+    monthly: set.data.monthly,
     noise: [Number.NaN, Number.NaN, Number.NaN, Number.NaN, Number.NaN, Number.NaN],
     target: opts.target,
     neighbours: set.data.neighbours ?? [],

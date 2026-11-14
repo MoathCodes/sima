@@ -71,7 +71,8 @@ function liveService(plan: LivePlan): Plugin {
       const child = spawn(python, args, { stdio: ['ignore', 'pipe', 'pipe'] });
       let stopping = false;
       const relay = (chunk: Buffer) => {
-        for (const line of chunk.toString().split('\n')) if (line.trim()) log.info(`[live] ${line}`);
+        for (const line of chunk.toString().split('\n'))
+          if (line.trim()) log.info(`[live] ${line}`);
       };
       child.stdout?.on('data', relay);
       child.stderr?.on('data', relay);

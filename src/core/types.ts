@@ -6,9 +6,10 @@
  * years for catalogue epochs, mas/yr for catalogue motions (the east motion already times
  * cos dec), MJy/sr for raw exposure pixels, µJy per pixel for pictures on the viewer's grid.
  *
- * The file-format types (DataIndex, TargetData, FrameMeta, Wcs, Neighbour, LiveStatus) match
- * docs/data-format.md and docs/live-service.md exactly: every field here is a field in the JSON
- * that lane A writes.
+ * The file-format types (DataIndex, TargetData, FrameMeta, Wcs, Neighbour, CatalogueTrack,
+ * LiveBlock, LiveStatus, PatchCatalog, LiveHealth) match docs/data-format.md and
+ * docs/live-service.md exactly: every field here is a field in the JSON that lane A writes
+ * (scripts/prebake.py, scripts/live.py), checked against every public/data/<key>/frames.json.
  *
  * Changing this file: adding an optional field is fine (tell the lanes that read it). Renaming or
  * removing a field, or changing what it means, needs the integrator (AGENTS.md).
@@ -69,12 +70,13 @@ export interface FrameMeta {
   wcs: Wcs;
   /** Largest difference between `wcs` and the full pipeline WCS inside the cutout, arcsec. */
   wcsErr: number;
-  /** Median of the zodiacal light model that was subtracted, MJy/sr. */
-  zodi: number;
-  /** Typical pixel noise: square root of the median VARIANCE of usable pixels, MJy/sr. */
-  sigma: number;
-  /** Median pixel solid angle (OMEGA_MEDIAN), arcsec². */
-  omega: number;
+  /** Median of the zodiacal light model that was subtracted, MJy/sr; null if the plane has none. */
+  zodi: number | null;
+  /** Typical pixel noise: square root of the median VARIANCE of usable pixels, MJy/sr; null if
+   * no pixel is usable. */
+  sigma: number | null;
+  /** Median pixel solid angle (OMEGA_MEDIAN), arcsec²; null if the header lacks it. */
+  omega: number | null;
   /** Fraction of the cutout's pixels that carry a bad flag, 0 to 1. */
   badFrac: number;
   /** Visit window, counting from 0: a survey pass, or a calendar month when `monthly`. */
@@ -102,7 +104,13 @@ export interface Neighbour {
   target?: boolean;
 }
 
-/** The catalogue position and motion that centred each cutout (frames.json `catalogue`). */
+/**
+ * The catalogue position and motion that centred each cutout (frames.json `catalogue`). Cutouts
+ * are centred on the position moved by the motion only (parallax is under 0.6″).
+ *
+ * In a live patch this is the patch centre typed by the user: motion 0, parallax null, ep 2016.0,
+ * and `from` says it is "a position, not a catalogue object".
+ */
 export interface CatalogueTrack {
   /** Degrees at decimal year `ep`. */
   ra: number;
@@ -112,6 +120,25 @@ export interface CatalogueTrack {
   /** mas/yr, east motion times cos dec. */
   pmra: number;
   pmdec: number;
+  /** mas; null in a live patch (no object). */
+  parallax: number | null;
+  /** Where the values come from, in words, e.g. "Gaia DR3 4472832130942575872 (ESA Gaia archive,
+   * gaiadr3.gaia_source)". Shown with the numbers (H4). */
+  from: string;
+}
+
+/** The `live` block of a live patch's frames.json (docs/live-service.md). Absent in shipped data. */
+export interface LiveBlock {
+  /** The service's job id, 16 lowercase hex digits. */
+  id: string;
+  /** `first`: one exposure per detector at the oldest and newest visit; `full`: the whole plan. */
+  step: 'first' | 'full';
+  /** When the files were written, UTC (ISO 8601). */
+  fetched: string;
+  /** Exposures the search found. */
+  found: number;
+  /** Number of visit windows. */
+  windows: number;
 }
 
 /** One target's frames.json. */
@@ -130,19 +157,22 @@ export interface TargetData {
   badFlags: string[];
   /** How many exposures per detector per visit window were kept. */
   perDetPerWindow: number;
-  /** True when each window is one calendar month of a deep field (R Draconis). */
-  monthly?: boolean;
+  /** True when each window is one calendar month of a deep field (R Draconis). Always written. */
+  monthly: boolean;
   /** One entry per exposure, in time order. */
   frames: FrameMeta[];
   /** Gaia DR3 and CatWISE2020 sources near the target's path. Absent on older files. */
   neighbours?: Neighbour[];
   /** With `neighbours`: which service answered for each catalogue, in words. */
   neighboursFrom?: Partial<Record<'gaia' | 'catwise', string>>;
+  /** Only in a live patch: which job and step wrote it. */
+  live?: LiveBlock;
 }
 
 /** One target in manifest.json (`targets.<key>`). */
 export interface DataIndexEntry {
-  /** Folder of the target's files, relative to public/data/, ending in `/`. */
+  /** Folder of the target's files, relative to the site root (public/), ending in `/`:
+   * `data/barnard/`. Fetch `${import.meta.env.BASE_URL}${path}frames.json`. */
   path: string;
   /** Name to show. */
   label: string;
@@ -171,35 +201,89 @@ export interface DataIndex {
 }
 
 /**
- * The live service's status answer (docs/live-service.md, `GET /api/patch?ra=&dec=&fov=`).
- * Note: SPEC 6.3 lists the finished state as `done`; docs/live-service.md (the service's own
- * document) lists `ready` and `empty`. This type follows docs/live-service.md.
+ * The live service's status answer (docs/live-service.md): `GET /api/patch?ra=&dec=&fov=` (starts
+ * the patch if new) and `GET /api/patch/<id>`. Poll every 1.5 s until `ready`, `empty` or
+ * `failed`.
+ *
+ * SPEC 6.3 sketches the finished state as `done` and the count as `ready`; docs/live-service.md
+ * (what the service sends) says `ready`/`empty` and `done`/`total`. This type follows the service.
+ *
+ * Other answers of the same route: `400 {"error": "…"}` for bad input and
+ * `503 {"error": "busy", "state": "busy"}` when 8 patches already wait (see LiveError).
  */
 export interface LiveStatus {
-  /** Job id, e.g. `a0414aa3f729076b`. */
+  /** Job id, 16 lowercase hex digits, e.g. `6d32669fdcdddebf`. */
   id: string;
   state: 'queued' | 'searching' | 'first' | 'rest' | 'ready' | 'empty' | 'failed';
   /** Exposures the search found. */
   found: number;
-  /** Exposures fetched so far in the current step, of `total`. */
+  /** Exposures fetched so far in the current step (`first`, then `rest`), of `total`. */
   done: number;
   total: number;
-  /** Exposures kept. */
+  /** How many of the fetched exposures were usable. */
   kept: number;
-  /** Releases searched. */
+  /** Collections the kept frames came from (e.g. `spherex_dr1`); [] until a step is written. */
   releases: string[];
   /** Why it failed, in words; '' when it did not. */
   error: string;
-  /** For example a retired release; '' when none. */
+  /** Set when a release found nothing because IRSA no longer lists it; '' when none. */
   warning: string;
   /** Folder of the first look once written (`/api/patch/<id>/first/`), else null. */
   first: string | null;
-  /** Folder of the full set once written, else null. */
+  /** Folder of the full set once written (`/api/patch/<id>/full/`), else null. */
   full: string | null;
-  /** The patch as the service rounded it: degrees, degrees, arcmin. */
+  /** Address of catalog.json once written (`/api/patch/<id>/catalog.json`), else null. */
+  catalog: string | null;
+  /** Why the catalogue query failed, in words; '' when it did not (or has not finished). */
+  catalogError: string;
+  /** The patch as the service rounded it (0.001°): degrees, degrees, arcmin (3, 6 or 12). */
   ra: number;
   dec: number;
   fov: number;
+  /** Collections the search asked (the service's release list). */
+  searched: string[];
+}
+
+/** An error answer of the live service: `400 {error}`, `404`, or `503 {error: 'busy', state: 'busy'}`. */
+export interface LiveError {
+  error: string;
+  state?: 'busy' | 'failed' | 'pending';
+}
+
+/**
+ * A live patch's catalog.json (docs/live-service.md, O-D4): Gaia DR3 and CatWISE2020 sources in a
+ * circle that holds the whole patch plus 30″, brightest first. The route answers
+ * `202 {"state": "pending"}` while the query runs and `502 {"state": "failed", "error"}` if both
+ * the primary service and the fallback failed.
+ */
+export interface PatchCatalog {
+  /** The patch's job id. */
+  id: string;
+  /** Patch centre (degrees) and field size (arcmin). */
+  ra: number;
+  dec: number;
+  fov: number;
+  /** Radius of the circle searched, degrees. */
+  radius: number;
+  /** When it was written, UTC (ISO 8601). */
+  generated: string;
+  /** Which service answered each catalogue, in words. */
+  from: { gaia: string; catwise: string };
+  /** True when a catalogue reached `limit` rows (crowded field): its faintest are missing. */
+  capped: { gaia: boolean; catwise: boolean };
+  /** Most rows kept per catalogue. */
+  limit: number;
+  /** Fields of Neighbour, without `target` (a patch has no target). */
+  rows: Omit<Neighbour, 'target'>[];
+}
+
+/** `GET /api/health`. */
+export interface LiveHealth {
+  ok: boolean;
+  /** The collections the service searches. */
+  releases: string[];
+  /** Field sizes it accepts, arcmin. */
+  fovs: number[];
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -225,9 +309,10 @@ export interface Target {
   pmdec: number;
   /** Catalogue parallax, mas; null when the catalogue gives none. */
   plx: number | null;
-  /** Catalogue pulsation period, days; null for stars that are not periodic. */
+  /** Catalogue pulsation period, days, from a named catalogue; null for stars that are not
+   * periodic and while no catalogue value has been fetched (H9: never from memory). */
   period: number | null;
-  /** Where the catalogue values come from, in words, e.g. "Gaia DR3". */
+  /** Where the catalogue values come from, in words: frames.json `catalogue.from`. */
   values: string;
   /** What Measure leads with when it opens calm (MSR-1). */
   lead: 'motion' | 'spectrum' | 'stack' | 'brightness';

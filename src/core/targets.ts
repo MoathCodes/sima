@@ -1,14 +1,15 @@
 /**
  * The five test targets of the challenge (SPEC 1). Owner: lane B. Pure: no page access.
  *
- * The catalogue values here must equal the `catalogue` block of each target's frames.json, which
- * lane A's prebake.py writes from the same sources (docs/data-format.md).
+ * The catalogue numbers (ra, dec, ep, pmra, pmdec, plx, values) are copied exactly from the
+ * `catalogue` block of each target's public/data/<key>/frames.json, which lane A's prebake.py
+ * wrote from the ESA Gaia archive (WISE 0855−0714: SPEC 7.1 rule 6, checked against CatWISE2020).
+ * docs/data-format.md requires the two to stay equal; tests/data-contract.test.ts checks it.
  *
- * PHASE 0 STUB: names, lines and the Measure lead come from the spec. Catalogue numbers are
- * filled only where the spec states them (WISE 0855−0714 in SPEC 7.1, R Draconis's period in
- * docs/data-format.md); everything else is NaN or null until lane B fetches it from SIMBAD,
- * Gaia DR3 and CatWISE2020 (H9: never from memory). The UI must not show a NaN: it says "not
- * known yet".
+ * PHASE 0 STUB: names, lines and the Measure lead come from the spec and its screenshots. `kind`
+ * is filled only where a screenshot shows it, and `period` is null everywhere until lane B fetches
+ * R Draconis's period from a named catalogue (H9: never from memory). The UI must not show an
+ * empty kind: it leaves the line out.
  */
 import type { Target } from './types.ts';
 
@@ -19,14 +20,14 @@ export const TARGETS: readonly Target[] = Object.freeze([
     name: "Barnard's Star",
     kind: 'Red dwarf (M4 V)',
     line: 'The runaway star',
-    ra: Number.NaN,
-    dec: Number.NaN,
+    ra: 269.44850252543836,
+    dec: 4.739420051112412,
     ep: 2016.0,
-    pmra: Number.NaN,
-    pmdec: Number.NaN,
-    plx: null,
+    pmra: -801.5509783684709,
+    pmdec: 10362.394206546573,
+    plx: 546.975939730948,
     period: null,
-    values: 'Gaia DR3',
+    values: 'Gaia DR3 4472832130942575872 (ESA Gaia archive, gaiadr3.gaia_source)',
     lead: 'motion',
   },
   {
@@ -34,14 +35,14 @@ export const TARGETS: readonly Target[] = Object.freeze([
     name: 'Epsilon Indi B',
     kind: '',
     line: 'The twin failed stars',
-    ra: Number.NaN,
-    dec: Number.NaN,
+    ra: 331.07645259656397,
+    dec: -56.79381206688221,
     ep: 2016.0,
-    pmra: Number.NaN,
-    pmdec: Number.NaN,
-    plx: null,
+    pmra: 3981.97666296105,
+    pmdec: -2466.8318147663504,
+    plx: 270.6580324694526,
     period: null,
-    values: '',
+    values: 'Gaia DR3 6412596012146801152 (ESA Gaia archive, gaiadr3.gaia_source)',
     lead: 'spectrum',
   },
   {
@@ -56,7 +57,8 @@ export const TARGETS: readonly Target[] = Object.freeze([
     pmdec: 680,
     plx: 449,
     period: null,
-    values: '',
+    values:
+      'SPEC 7.1 rule 6 (too cold for Gaia); checked against CatWISE2020, which lists it three times near this track',
     lead: 'stack',
   },
   {
@@ -64,14 +66,14 @@ export const TARGETS: readonly Target[] = Object.freeze([
     name: 'RW Aurigae',
     kind: '',
     line: 'The flickering newborn',
-    ra: Number.NaN,
-    dec: Number.NaN,
+    ra: 76.95608119552952,
+    dec: 30.401204589097233,
     ep: 2016.0,
-    pmra: Number.NaN,
-    pmdec: Number.NaN,
-    plx: null,
+    pmra: 2.6406431770317083,
+    pmdec: -27.397582540455325,
+    plx: 6.406249329219477,
     period: null,
-    values: '',
+    values: 'Gaia DR3 156430822114424576 (ESA Gaia archive, gaiadr3.gaia_source)',
     lead: 'brightness',
   },
   {
@@ -79,14 +81,14 @@ export const TARGETS: readonly Target[] = Object.freeze([
     name: 'R Draconis',
     kind: '',
     line: 'The breathing giant',
-    ra: Number.NaN,
-    dec: Number.NaN,
+    ra: 248.1673783672889,
+    dec: 66.75500674547219,
     ep: 2016.0,
-    pmra: Number.NaN,
-    pmdec: Number.NaN,
-    plx: null,
-    period: 245.5,
-    values: '',
+    pmra: -20.642811719160797,
+    pmdec: 6.148818852711324,
+    plx: 1.2509180143740992,
+    period: null,
+    values: 'Gaia DR3 1648328016354496384 (ESA Gaia archive, gaiadr3.gaia_source)',
     lead: 'brightness',
   },
 ]);
