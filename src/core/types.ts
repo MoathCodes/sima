@@ -316,6 +316,11 @@ export interface Target {
   values: string;
   /** What Measure leads with when it opens calm (MSR-1). */
   lead: 'motion' | 'spectrum' | 'stack' | 'brightness';
+  /** Where `kind` comes from, in words (H9). Optional: added by lane B. */
+  kindFrom?: string;
+  /** Where `period` comes from, in words (H9); also why a catalogued period is not used. Optional:
+   * added by lane B. */
+  periodFrom?: string;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -490,6 +495,12 @@ export interface Measurement {
   snr: number;
   /** Why this exposure was not measured, in words (H5), e.g. naming a neighbour within 12.3″. */
   skipped: string | null;
+  /**
+   * The exposure's CD matrix ([CD1_1, CD1_2, CD2_1, CD2_2], degrees per pixel), so the motion fit
+   * can test whether a fixed shift on the detector mimics parallax (SPEC 7.1.8). Optional: added
+   * by lane B; measurements made without it skip that test.
+   */
+  cd?: [number, number, number, number];
 }
 
 /** Proper motion from the measured positions (core/fit.ts `fitMotion`). */
