@@ -21,7 +21,7 @@
   align-items: center;
   gap: var(--gap-group);
   min-width: 0;
-  padding: 8px 0 6px;
+  padding: 6px 0 4px;
   cursor: grab;
   user-select: none;
 }
@@ -96,7 +96,7 @@
 /* The loading line keeps one line's height, words or not, so the frame never grows (O-I5). */
 .frame-load {
   height: 17px;
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   overflow: hidden;
   color: var(--ink-2);
   font: var(--text-label);
@@ -364,7 +364,7 @@
 
 .frame-views {
   display: flex;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .frame-views > button {
   min-width: 0;
@@ -383,14 +383,14 @@
 .frame-exif {
   /* Two lines kept, so the frame does not change height from one date to the next (O-I5). */
   min-height: calc(2 * 1.4em);
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: var(--ink-2);
   font: var(--text-label);
   text-align: center;
   text-wrap: balance;
 }
 .frame-explain {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: var(--ink-2);
   font: var(--text-label);
   text-align: center;
