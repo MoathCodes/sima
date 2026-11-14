@@ -656,7 +656,12 @@ samp {
 
 /* Tooltip: ink fill, card text, 12px. Shown after 0.35s on hover or keyboard focus; below by
    default, to the right on the rail, above on the bar. */
+.tooltip[popover] {
+  position: fixed;
+  inset: auto;
+}
 .tooltip {
+  z-index: var(--z-tooltip);
   max-width: 280px;
   margin: 0;
   padding: 5px 9px;
@@ -813,12 +818,17 @@ samp {
   bottom: 8px;
   z-index: var(--z-notes);
   max-width: calc(100vw - 2 * 12px);
-  padding: 3px 8px;
+  padding: 1px 8px;
   border-radius: 4px;
   background: var(--note-bg);
   color: var(--st-ink);
   font: var(--text-label);
+  line-height: 16px; /* 18px tall: clear of the bar, which ends 30px above the bottom */
   white-space: nowrap;
+}
+#sky-note:empty,
+#sky-coords:empty {
+  display: none;
 }
 #sky-note {
   left: 12px;
@@ -872,6 +882,13 @@ samp {
   translate: -50% 0;
   z-index: var(--z-top);
 }
+/* Search suggestions hang under the search field. viewer/omnibox.ts lines `left` up with the
+   search card when it opens them; this is the starting guess. */
+#search-results {
+  top: calc(var(--top) + var(--h-top) + 6px);
+  left: calc(var(--gutter) + 136px);
+  width: 400px;
+}
 
 /* Lane F: the map's tool rail, centred on the window's height. */
 #rail {
@@ -880,6 +897,12 @@ samp {
   left: var(--gutter);
   translate: 0 -50%;
   z-index: var(--z-card);
+}
+/* The sky map chooser opens to the right of the rail. */
+#sky-layers {
+  top: calc(50% - 60px);
+  left: calc(var(--gutter) + 58px);
+  width: 280px;
 }
 
 /* Lane F places the frame; lane D fills it. It hangs from its top right corner. Phase 0 sizes
@@ -935,7 +958,7 @@ body:has(#measure:not([hidden])) #tools {
 #places-list,
 #place-card {
   position: fixed;
-  top: 88px;
+  top: 112px; /* under the chips row (68 to 98px) */
   left: calc(var(--gutter) + 58px);
   bottom: calc(var(--bar-bottom) + var(--bar-h) + 14px);
   z-index: var(--z-card);
@@ -970,6 +993,15 @@ body:has(#measure:not([hidden])) #tools {
 #tip {
   position: fixed;
   z-index: var(--z-tip);
+}
+#explain {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-tour);
+  pointer-events: none;
+}
+#explain > * {
+  pointer-events: auto;
 }
 
 /* Lane F: toasts above the bar. */

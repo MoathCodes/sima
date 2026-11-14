@@ -20,6 +20,10 @@ export type Cell = string | number | boolean | null;
  * @param header Column names.
  * @param rows One array of cells per row, in header order.
  */
-export function toCsv(notes: readonly string[], header: readonly string[], rows: readonly Cell[][]): string {
+export function toCsv(
+  notes: readonly string[],
+  header: readonly string[],
+  rows: readonly Cell[][],
+): string {
   return '# Phase 0 stub: no data\r\n';
 }

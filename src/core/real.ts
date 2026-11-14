@@ -203,7 +203,10 @@ export function centroid(frame: RealFrame, badMask: number, x0: number, y0: numb
  *
  * PHASE 0 STUB: always false.
  */
-export function colourMatch(a: { lam: number; bw: number }, b: { lam: number; bw: number }): boolean {
+export function colourMatch(
+  a: { lam: number; bw: number },
+  b: { lam: number; bw: number },
+): boolean {
   return false;
 }
 

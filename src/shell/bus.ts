@@ -176,7 +176,8 @@ function deliver<K extends BusEvent>(type: K, fn: Listener<K>, msg: Readonly<Bus
 const SOURCES: readonly PatchSource[] = ['real', 'live', 'simulated', 'none', 'loading'];
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
-const isDet = (v: unknown): boolean => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 6;
+const isDet = (v: unknown): boolean =>
+  Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 6;
 
 function checkPosition(m: Record<string, unknown>): string | null {
   if (!isNum(m.ra) || m.ra < 0 || m.ra >= 360) return 'has ra outside 0 ≤ ra < 360 degrees';
@@ -195,9 +196,11 @@ function check(type: BusEvent, m: Record<string, unknown>): string | null {
     case 'aim':
       return checkPosition(m) ?? (m.fov === undefined ? null : checkFov(m.fov));
     case 'patch':
-      if (!SOURCES.includes(m.source as PatchSource)) return `has an unknown source "${String(m.source)}"`;
+      if (!SOURCES.includes(m.source as PatchSource))
+        return `has an unknown source "${String(m.source)}"`;
       if (typeof m.label !== 'string') return 'has no label';
-      if (m.target !== null && typeof m.target !== 'string') return 'has a target that is not a string or null';
+      if (m.target !== null && typeof m.target !== 'string')
+        return 'has a target that is not a string or null';
       return checkPosition(m) ?? checkFov(m.fov);
     case 'start':
       return typeof m.starter === 'string' && m.starter ? null : 'has no starter id';

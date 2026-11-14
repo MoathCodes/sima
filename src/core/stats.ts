@@ -95,7 +95,11 @@ export function chi2Tail(chi2: number, dof: number): number {
  * Weighted straight-line fit with errors on both terms.
  * PHASE 0 STUB: NaN everywhere.
  */
-export function lineFit(x: ArrayLike<number>, y: ArrayLike<number>, err: ArrayLike<number>): LineFit {
+export function lineFit(
+  x: ArrayLike<number>,
+  y: ArrayLike<number>,
+  err: ArrayLike<number>,
+): LineFit {
   return {
     a: Number.NaN,
     b: Number.NaN,

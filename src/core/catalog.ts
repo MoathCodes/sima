@@ -30,7 +30,11 @@ export function atDate(n: Neighbour, mjd: number): { ra: number; dec: number } {
  *
  * @returns The neighbour (named on screen), or null when the exposure can be measured.
  */
-export function blendedWith(target: Target, neighbours: readonly Neighbour[], mjd: number): Neighbour | null {
+export function blendedWith(
+  target: Target,
+  neighbours: readonly Neighbour[],
+  mjd: number,
+): Neighbour | null {
   return null;
 }
 

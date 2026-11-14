@@ -36,7 +36,11 @@ export interface Histogram {
  * @param p Settings in force.
  * @param noise The picture's sky level and noise, µJy.
  */
-export function limits(pix: Float32Array, p: PicSettings, noise: { sky: number; sigma: number }): Range {
+export function limits(
+  pix: Float32Array,
+  p: PicSettings,
+  noise: { sky: number; sigma: number },
+): Range {
   return { lo: 0, hi: 1 };
 }
 
