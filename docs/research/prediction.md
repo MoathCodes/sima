@@ -43,7 +43,7 @@ not always the small part.
 
 ### What I measured for this report
 
-I sent 12 requests to IRSA in all, one at a time, between 23:41 and 23:56 UTC on 14 November 2026,
+I sent 10 requests to IRSA in all, one at a time, between 23:41 and 23:56 UTC on 14 November 2026,
 with the User-Agent `sima-sky-viewer/1.0`.
 
 | Request | Result |
@@ -57,8 +57,8 @@ with the User-Agent `sima-sky-viewer/1.0`.
 | Cutout, 12′, another exposure | 503 busy in 0.7 s |
 | Byte range, 1 MB from the middle of a full Level 2 file (62 MB) | First byte 1.6 s, done 4.1 s |
 
-(Two more requests were wasted by my own mistake: a negative RA in one SIA2 call, which returned an
-empty answer in 0.7 s. They are counted in the 12.)
+(One more request was wasted by my own mistake: a negative RA in an SIA2 call, which returned an
+empty answer in 0.7 s. It is counted in the 10.)
 
 What this shows:
 
