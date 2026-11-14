@@ -1,2 +1,810 @@
-/* Lane E: the Measure panel, its charts, the found list and the picture tools panel.
-   Style only lane E's own classes here. Tokens and shared components are in app.css. */
+/* Lane E: the Measure panel, its charts, the found list, the picture tools panel, the marks over
+   the picture and their legend. Style only lane E's own classes here (.ms-*, .tl-*, .lg-*).
+   Tokens and shared components are in app.css. */
+
+/* ------------------------------------------------------------------------------------------
+   Measure (MSR-1 to MSR-8). It must fit 1366×768 with no inner scroll (MSR-8): the panel is a
+   column whose chart shrinks first; only the found list scrolls, inside itself.
+   ------------------------------------------------------------------------------------------ */
+.ms-panel {
+  display: flex;
+  flex-direction: column;
+  padding: var(--pad-panel);
+  overflow: hidden;
+}
+.ms-wrap {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'main' 'foot';
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 0;
+}
+.ms-main {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+}
+.ms-main > * {
+  flex-shrink: 0;
+}
+.ms-headrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.ms-title {
+  flex: 1;
+  min-width: 0;
+}
+.ms-title h2 {
+  font: var(--text-title);
+  overflow-wrap: anywhere;
+}
+.ms-kind {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.ms-kind:empty {
+  display: none;
+}
+.ms-headline {
+  display: grid;
+  gap: 4px;
+}
+.ms-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font: var(--text-headline);
+  letter-spacing: var(--tracking-headline);
+}
+.ms-value .pill {
+  letter-spacing: 0;
+}
+.ms-sub,
+.ms-note,
+.ms-cutnote {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.ms-para {
+  font: var(--text-label);
+  color: var(--ink);
+}
+.ms-under {
+  display: grid;
+  gap: 6px;
+}
+.ms-under:empty {
+  display: none;
+}
+
+.ms-tabs {
+  flex-wrap: wrap;
+  column-gap: 14px;
+}
+.ms-main > .ms-chart {
+  position: relative;
+  flex: 0 1 190px;
+  min-height: 110px;
+  overflow: hidden;
+}
+.ms-all .ms-main > .ms-chart {
+  flex: 1 1 200px;
+}
+.ms-chart > canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.ms-cuts,
+.ms-table {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  padding: 8px;
+}
+.ms-cutrow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.ms-cutrow + .ms-cutrow {
+  margin-top: 6px;
+}
+.ms-cuts figure,
+.tl-cuts figure {
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  min-width: 0;
+}
+.ms-cuts canvas {
+  width: 100%;
+  max-width: 96px;
+  aspect-ratio: 1;
+  image-rendering: pixelated;
+  background: #000;
+  border-radius: 4px;
+}
+.ms-cuts figcaption,
+.tl-cuts figcaption {
+  color: var(--st-ink-2);
+  font: var(--text-label);
+  text-align: center;
+}
+.tl-cuts figcaption {
+  color: var(--ink-2);
+}
+.ms-cutnote {
+  color: var(--st-ink-2);
+  margin-top: 6px;
+}
+.ms-table table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--st-ink-2);
+  font: var(--text-label);
+}
+.ms-table th {
+  color: var(--st-ink-3);
+  text-align: left;
+  font-weight: 500;
+}
+.ms-table th,
+.ms-table td {
+  padding: 2px 6px 2px 0;
+  border-bottom: 1px solid var(--st-line);
+  white-space: nowrap;
+}
+.ms-table a {
+  color: var(--st-ink);
+}
+.ms-table {
+  overflow: auto;
+}
+
+/* The numbers column, the detector strip and the found list: only with all the numbers. */
+.ms-aside {
+  grid-area: aside;
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding-left: 14px;
+  border-left: 1px solid var(--rule);
+}
+.ms-stats {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 10px;
+  font: var(--text-label);
+}
+.ms-stats dt {
+  color: var(--ink-2);
+}
+.ms-stats dd {
+  text-align: right;
+  white-space: nowrap;
+}
+.ms-stats dt,
+.ms-stats dd {
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--rule);
+}
+.ms-pic {
+  max-width: 420px;
+}
+#detectors:empty {
+  display: none;
+}
+.ms-found {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.ms-found-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ms-count {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.ms-found-list {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-height: 0;
+  overflow: auto;
+}
+.ms-find {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  text-align: left;
+}
+.ms-find:hover {
+  background: var(--card-2);
+}
+.ms-find.on {
+  background: var(--action-soft);
+}
+.ms-find-name {
+  font: var(--text-control);
+  font-weight: 600;
+}
+.ms-find-line {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.ms-find-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ms-foot {
+  grid-area: foot;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+.ms-foot-line {
+  flex: 1 1 200px;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.ms-foot-line:empty {
+  display: none;
+}
+
+/* Calm: no tabs, no column. All the numbers: the column beside the chart. */
+.ms-wrap:not(.ms-all) .ms-tabs {
+  display: none;
+}
+.ms-all {
+  grid-template-columns: minmax(0, 1fr) 230px;
+  grid-template-areas: 'main aside' 'foot aside';
+}
+.ms-all .ms-aside {
+  display: flex;
+}
+@media (min-width: 1600px) {
+  .ms-all {
+    grid-template-columns: minmax(0, 1fr) var(--measure-col);
+  }
+}
+/* Simulated, or the picture on screen: no chart and no tabs. Nothing to measure: nothing else. */
+.ms-wrap:not([data-state='measure']) :is(.ms-tabs, .ms-chart) {
+  display: none;
+}
+.ms-wrap[data-state='none'] :is(.ms-aside, .ms-foot) {
+  display: none;
+}
+.ms-stats:empty {
+  display: none;
+}
+
+/* ------------------------------------------------------------------------------------------
+   The picture tools panel (TLS-1 to TLS-8)
+   ------------------------------------------------------------------------------------------ */
+.tl-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.tl-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 8px 8px 0 16px;
+}
+.tl-tabs {
+  flex: 1;
+  gap: 14px;
+}
+.tl-head .icon-btn {
+  margin-bottom: 4px;
+}
+.tl-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 16px;
+}
+.tl-body > *,
+.tl-find-top > * {
+  flex-shrink: 0;
+}
+.tl-body.tl-find {
+  overflow: hidden;
+}
+.tl-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px 8px 10px;
+  border-top: 1px solid var(--rule);
+}
+.tl-foot-line {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.tl-intro {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.tl-group {
+  margin-top: 4px;
+}
+.tl-line {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.ms-seg {
+  display: flex;
+  width: 100%;
+}
+.ms-seg > button {
+  min-width: 0;
+  padding: 0 4px;
+  font: var(--text-label);
+}
+
+.tl-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 0;
+}
+.tl-row-tight {
+  padding: 0;
+}
+.tl-row-text {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+}
+.tl-row-name {
+  font: var(--text-control);
+}
+.tl-row-line {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.tl-row-line:empty {
+  display: none;
+}
+.tl-tile {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-window);
+  background: var(--st-bg);
+  color: var(--st-ink);
+}
+
+.tl-hist {
+  position: relative;
+  height: 76px;
+  margin: 4px 7px 0;
+}
+.tl-hist canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.tl-hist-off .tl-handle {
+  display: none;
+}
+.tl-handle {
+  position: absolute;
+  top: 0;
+  bottom: 14px;
+  width: 14px;
+  margin-left: -7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.tl-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 6px;
+  width: 2px;
+  background: var(--mark);
+}
+.tl-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 2px;
+  border: 5px solid transparent;
+  border-top-color: var(--mark);
+}
+.tl-points {
+  display: flex;
+  gap: 12px;
+  font: var(--text-label);
+}
+.tl-points label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tl-num {
+  width: 84px;
+  height: 30px;
+}
+.tl-slider {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  font: var(--text-label);
+}
+.tl-slider input {
+  grid-column: 1 / -1;
+  accent-color: var(--action);
+}
+.tl-slider output {
+  color: var(--ink-2);
+}
+.tl-cmaps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gap-group);
+}
+.tl-cmap {
+  display: grid;
+  gap: 4px;
+  padding: 5px;
+  border: 0;
+  border-radius: var(--r-window);
+  background: transparent;
+  font: var(--text-label);
+}
+.tl-cmap:hover {
+  background: var(--card-2);
+}
+.tl-cmap[aria-pressed='true'] {
+  background: var(--action-soft);
+  color: var(--action);
+}
+.tl-swatch {
+  height: 10px;
+  border-radius: 3px;
+}
+/* The colour maps' own colours: these are data, shown as data. */
+.tl-sw-band {
+  background: linear-gradient(90deg, #000, var(--d3));
+}
+.tl-sw-thermal {
+  background: linear-gradient(90deg, #000004, #57106e, #bc3754, #f98e09, #fcffa4);
+}
+.tl-sw-mono {
+  background: linear-gradient(90deg, #000, #fff);
+}
+.tl-sw-viridis {
+  background: linear-gradient(90deg, #440154, #3b528b, #21918c, #5ec962, #fde725);
+}
+.tl-mix {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px 8px;
+  font: var(--text-label);
+}
+.tl-mix label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tl-select {
+  min-width: 0;
+  flex: 1;
+  height: 28px;
+  padding: 0 4px;
+  font: var(--text-label);
+}
+.tl-png {
+  justify-self: start;
+  align-self: flex-start;
+}
+.tl-paused {
+  padding: 6px 10px;
+  border-radius: var(--r-control);
+  background: var(--card-2);
+  font: var(--text-label);
+}
+.tl-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tl-dim {
+  opacity: 0.45;
+}
+
+/* Find changes: the top stays, the list scrolls (O-T3). */
+.tl-find-top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: none;
+}
+.tl-status {
+  padding: 6px 10px;
+  border-radius: var(--r-control);
+  background: var(--card-2);
+  font: var(--text-label);
+}
+.tl-status:empty {
+  display: none;
+}
+.tl-busy {
+  color: var(--ink-2);
+}
+.tl-details {
+  font: var(--text-label);
+  color: var(--ink-2);
+}
+.tl-details summary {
+  cursor: pointer;
+  color: var(--ink);
+}
+.tl-details p {
+  margin-top: 4px;
+}
+.tl-listbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tl-listbar .ms-seg {
+  width: auto;
+  flex: none;
+}
+.tl-check {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font: var(--text-label);
+}
+.tl-check input {
+  accent-color: var(--action);
+  margin: 2px 0 0;
+}
+.tl-body > .tl-list {
+  flex: 1 1 auto;
+  min-height: 60px;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  border-radius: var(--r-control);
+}
+.tl-cand {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 4px;
+  border-radius: var(--r-control);
+  font: var(--text-label);
+  cursor: pointer;
+}
+.tl-cand:hover {
+  background: var(--card-2);
+}
+.tl-cand.open {
+  background: var(--action-soft);
+}
+.tl-rank {
+  flex: none;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--card);
+  font: var(--text-label);
+}
+.tl-cand-text {
+  flex: 1;
+  min-width: 0;
+}
+.tl-cand-line {
+  display: block;
+  color: var(--ink-2);
+}
+.tl-cand-tags {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.tl-detail {
+  display: grid;
+  gap: 6px;
+  padding: 6px 4px 10px 32px;
+  font: var(--text-label);
+}
+.tl-cuts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.tl-cuts canvas {
+  width: 100%;
+  aspect-ratio: 1;
+  image-rendering: pixelated;
+  background: #000;
+  border-radius: var(--r-window);
+}
+.tl-checks {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+}
+.tl-checks dt {
+  color: var(--ink-2);
+}
+.tl-mini {
+  position: relative;
+  height: 110px;
+}
+.tl-mini canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.tl-not {
+  font-weight: 600;
+}
+.tl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tl-actions .btn {
+  height: 30px;
+  padding: 0 10px;
+  font: var(--text-label);
+}
+.tl-find-foot {
+  flex: none;
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  padding-top: 6px;
+  border-top: 1px solid var(--rule);
+}
+.tl-more {
+  padding: 4px;
+}
+
+/* ------------------------------------------------------------------------------------------
+   Over the picture: Processed, the value under the pointer, Original (H8, TLS-6)
+   ------------------------------------------------------------------------------------------ */
+.tl-pic {
+  position: absolute;
+  inset: 8px;
+  z-index: 1;
+  pointer-events: none;
+}
+.tl-pic > * {
+  position: absolute;
+  margin: 0;
+}
+.tl-original {
+  right: 0;
+  bottom: 0;
+  border: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+}
+.tl-original[aria-pressed='true'] {
+  background: var(--st-raise);
+  outline: 1.5px solid var(--st-ink);
+}
+.tl-processed {
+  top: 0;
+  right: 0;
+  max-width: 55%;
+  color: var(--st-accent-2);
+  text-align: right;
+}
+.tl-readout {
+  left: 50%;
+  bottom: 30px;
+  max-width: 96%;
+  translate: -50% 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The legend under the picture: every mark explained in view (O-G5). */
+.lg {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 12px;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.lg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.lg-sym {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+}
+.lg-circle {
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+.lg-square {
+  border: 1.5px solid currentColor;
+}
+.lg-path {
+  height: 0;
+  width: 14px;
+  border-top: 2px dashed var(--st-accent-2);
+}
+.lg .lg-path {
+  border-top-color: var(--warn);
+}
+.lg-flag {
+  background: var(--bad);
+}
+.lg-cand {
+  border: 1.5px dashed var(--warn);
+}
+.lg-sel {
+  border: 2px solid var(--mark-ink);
+  border-radius: 50%;
+}
+.lg-name {
+  width: auto;
+  height: auto;
+  font: var(--text-label);
+}
+.lg-name::before {
+  content: 'Aa';
+}

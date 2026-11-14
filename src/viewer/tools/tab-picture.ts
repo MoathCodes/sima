@@ -194,6 +194,12 @@ function drawHistogram(root: HTMLElement): void {
       : '';
   if (why) {
     if (unit) unit.textContent = why;
+    if (ctx) {
+      ctx.fillStyle = token('--st-ink-2', '#aab2d0');
+      ctx.font = '500 12px Archivo, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No histogram for this picture', canvas.clientWidth / 2, canvas.clientHeight / 2 + 4);
+    }
     box.classList.add('tl-hist-off');
     inputs.forEach((i) => {
       if (document.activeElement !== i) i.value = String(i.dataset.point === 'black' ? pic().black : pic().white);
