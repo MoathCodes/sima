@@ -783,8 +783,7 @@ function exportCsv(): void {
     const header = ['id', 'date', 'mjd', 'det', 'lam_um', 'channel', 'flux_uJy', 'flux_err_uJy', 'saturated', 'lower_limit', 'ra_deg', 'dec_deg', 'pos_err_arcsec', 'not_measured_because'];
     const rows: Cell[][] = res.target.ms.map((m) => [
       m.id, iso(m.mjd), m.mjd, m.det, m.lam, channelOf(m.lam, m.det) - (m.det - 1) * 17,
-      fin(m.flux), fin(m.fluxErr), m.saturated, m.lower, fin(m.ra), fin(m.dec), fin(m.posErr),
-      m.skipped ?? (Number.isFinite(m.flux) ? null : 'No light measured: every pixel within 2 pixels is flagged or off the picture'),
+      fin(m.flux), fin(m.fluxErr), m.saturated, m.lower, fin(m.ra), fin(m.dec), fin(m.posErr), m.skipped,
     ]);
     const notes = [
       `${field.target?.name}: light within 2 pixels on each exposure (sky from a ring 6 to 12 pixels out) and the measured position. lower_limit = 1: a flagged pixel in the aperture, so only usable pixels count.`,
