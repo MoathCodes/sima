@@ -62,3 +62,14 @@ test('brightness-match gains: 1 for the reference of each detector', async () =>
   }
   assert.ok(gains.every((g) => g >= 0.25 && g <= 4));
 });
+
+test('brightness-match gains follow the field stars, not a variable star\'s glow (R Draconis D3)', async () => {
+  // June 2026 (QR3): R Draconis is at its faintest, so its glow is 2 to 6 times weaker than in the
+  // reference, while field stars agree within about 15% (same calibration files in DR1 and QR3).
+  const field = await loadField('r-dra');
+  const gains = matchGains(field);
+  // MJD 61192 to 61222 is June 2026 (UTC).
+  const june = field.frames.filter((f) => f.det === 3 && f.mjd >= 61192 && f.mjd < 61222);
+  assert.ok(june.length >= 2);
+  for (const f of june) assert.ok(gains[f.i]! > 0.8 && gains[f.i]! < 1.25, `${f.id}: ${gains[f.i]}`);
+});

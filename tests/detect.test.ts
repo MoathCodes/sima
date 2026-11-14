@@ -151,7 +151,8 @@ test('TLS-4: R Draconis D3 at 3× gives the honest status line, with weak spots 
   const field = await loadField('r-dra');
   const set = await loadSet('r-dra');
   const r = findChanges(field, set, 3, 3);
-  // "60 candidates in D3 · 52 unexplained · about 14 expected from noise" on 14 Nov 2026.
+  // "18 candidates in D3 · 11 unexplained · about 14 expected from noise" on 14 Nov 2026, after
+  // brightness matching used compact stars instead of R Draconis's own glow (was 60 · 52 · 14).
   assert.match(r.status, /^\d+ candidates in D3 · \d+ unexplained · about \d+ expected from noise$/);
   assert.ok(r.expected > 5 && r.expected < 30, `expected ${r.expected}`);
   assert.equal(r.unexplained, r.candidates.filter((c) => !c.known && !c.glare && c.verdict !== 'artefact').length);
