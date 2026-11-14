@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { targetHeadline, spotHeadline, targetStats, type TargetInput } from '../src/viewer/measure/model.ts';
-import { chance, plainP, verdictOf, widenedNote, trendWords } from '../src/viewer/measure/words.ts';
+import { chance, plainP, verdictOf, trendWords } from '../src/viewer/measure/words.ts';
 import { targetByKey } from '../src/core/targets.ts';
 import type { MotionFit } from '../src/core/types.ts';
 import type { DetectorCurve } from '../src/core/fit.ts';
@@ -142,8 +142,6 @@ test('chances and notes read as people say them', () => {
   assert.equal(chance(0.0001), 'less than 1 in 1,000');
   assert.equal(chance(0.05), 'about 1 in 20');
   assert.equal(chance(0.34), 'about 34 in 100');
-  assert.equal(widenedNote(1), '');
-  assert.match(widenedNote(1.63), /widened ×1\.6/);
   assert.equal(trendWords({ slope: 0.05, err: 0.01, drawn: true }), 'fading 0.05 ± 0.01 mag a year');
   assert.equal(trendWords({ slope: -0.05, err: 0.01, drawn: false }), '');
 });

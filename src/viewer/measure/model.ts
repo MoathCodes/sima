@@ -139,8 +139,8 @@ function spectrumHeadline(t: TargetInput): Headline {
     sub: `${good.length} of 102 ${term('colours', 'SPHEREx splits light into 102 narrow colours (channels), 17 per detector, from 0.75 to 5.0 µm.')} measured from the pixels of real exposures`,
     chart: 'spectrum',
     para:
-      'Each point is the light at one of SPHEREx’s 102 colours, and it builds up as the pictures play. ' +
-      `Cold failed stars absorb light where ${term('water', 'Water vapour in a cool atmosphere absorbs near 1.4, 1.9 and 2.7 µm.')} and ${term('methane', 'Methane forms only below about 1,500 K and absorbs near 2.2 and 3.3 µm.')} do, so look for dips in the shaded bands. The bands mark where the molecules absorb, not a model of this star.`,
+      'Each point is the light at one of SPHEREx’s 102 colours, building up as the pictures play. ' +
+      `Cold failed stars absorb light where ${term('water', 'Water vapour in a cool atmosphere absorbs near 1.4, 1.9 and 2.7 µm.')} and ${term('methane', 'Methane forms only below about 1,500 K and absorbs near 2.2 and 3.3 µm.')} do: look for dips in the shaded bands (where they absorb, not a model of this star).`,
   };
 }
 
@@ -161,9 +161,17 @@ function stackHeadline(t: TargetInput): Headline {
     chart: 'cutouts',
     para:
       'Too faint for any single picture, so every exposure of a detector is shifted along the catalogue motion and added. ' +
-      'The two controls beside it are the same exposures not shifted, and shifted the opposite way: the target should show only in the first. ' +
-      esc(best.note),
+      'Two controls, the same exposures not shifted and shifted the opposite way, should not show it. ' +
+      neighbours(best.note),
   };
+}
+
+/** A stack note with its list of neighbour names folded into a tooltip, so the paragraph stays short. */
+export function neighbours(note: string): string {
+  const m = /^(.*?)Listed neighbours fitted alongside, so their light is not counted: (.+?)\.?$/s.exec(note);
+  if (!m) return esc(note);
+  const names = m[2]!.split(', ');
+  return `${esc(m[1]!)}${term(`${names.length} listed neighbour${names.length === 1 ? '' : 's'}`, names.join(', '))} fitted alongside, so their light is not counted.`;
 }
 
 function brightnessHeadline(t: TargetInput): Headline {
@@ -192,9 +200,9 @@ function brightnessHeadline(t: TargetInput): Headline {
     sub: `Up to ${num(amp(best), 2)} mag change in D${best.det}, ${term('measured', 'From the pixels: the light in a fixed circle, or the outer glow when the star’s centre is saturated.')} between ${best.visits.length} visits`,
     chart: 'brightness',
     para:
-      'Each point is one exposure, compared only with the same detector’s own average, with the star’s colour taken out. Squares are visit averages. ' +
-      (best.note ? `${esc(best.note)} ` : '') +
-      (t.target.period ? 'This star has a catalogue period: see its cycle under Folded.' : ''),
+      // The chart shows the detector on screen; its own note (glow, widened errors, Folded) is
+      // written under the chart (detail.ts).
+      'Each point is one exposure, compared only with the same detector’s own average, with the star’s colour taken out. Squares are visit averages.',
   };
 }
 

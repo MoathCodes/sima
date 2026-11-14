@@ -32,8 +32,8 @@ import { lastView, noiseOf } from './tools/view.ts';
 import { download, esc, fileName, num, pill, sig, term, token } from './tools/dom.ts';
 import { drawChart, drawPath, mjdDate, type Pt } from './measure/charts.ts';
 import { paintCutout, triplet } from './measure/cutouts.ts';
-import { ABSORPTION, candidateLines, spotHeadline, targetHeadline, targetStats, type Headline } from './measure/model.ts';
-import { plainP, trendWords, widenedNote } from './measure/words.ts';
+import { ABSORPTION, candidateLines, neighbours, spotHeadline, targetHeadline, targetStats, type Headline } from './measure/model.ts';
+import { plainP, trendWords } from './measure/words.ts';
 import { renderFound, startInbox } from './inbox.ts';
 
 const TABS: readonly [MeasureTab, string][] = [
@@ -408,7 +408,8 @@ function underText(tab: MeasureTab, h: Headline): string {
     if (sel.kind === 'target') {
       if (curve) {
         parts.push(
-          `<p class="ms-note">${[plainP(curve.test), esc(widenedNote(curve.widenedBy)), trendWords(curve.trend) ? `Trend: ${esc(trendWords(curve.trend))}.` : '', curve.note && !h.para.includes(esc(curve.note)) ? esc(curve.note) : '']
+          // A curve that is not shown is not tested in words either: the chart says why.
+          `<p class="ms-note">${[curve.shown === false ? '' : plainP(curve.test), trendWords(curve.trend) ? `Trend: ${esc(trendWords(curve.trend))}.` : '', curve.note ? esc(curve.note) : '']
             .filter(Boolean)
             .join(' ')}</p>`,
         );
@@ -421,8 +422,19 @@ function underText(tab: MeasureTab, h: Headline): string {
         parts.push(`<p class="ms-note">A saturated star about ${Math.round(sat[0]!.nearSaturated ?? 0)}″ away (on ${sat.length} of ${pts.length} exposures) adds its glow to the circle and the sky ring here, so these numbers include its light.</p>`);
     }
   }
-  if (tab === 'folded' && !field.target?.period) {
-    parts.push('<p class="ms-note">Folding needs a catalogue period, and this star has none in a named catalogue, so nothing is folded (a period is never guessed).</p>');
+  if (tab === 'folded') {
+    // The period is a catalogue value: say which one (H4); without one nothing is folded (H9).
+    const t = field.target;
+    parts.push(
+      t?.period
+        ? `<p class="ms-note">Folded on the catalogue period of ${esc(num(t.period, 1))} days${t.periodFrom ? ` (${esc(t.periodFrom)})` : ''}. Each cycle is drawn twice, so it reads across the join.</p>`
+        : `<p class="ms-note">Folding needs a catalogue period, and a period is never guessed, so nothing is folded.${t?.periodFrom ? ` ${esc(t.periodFrom)}.` : ''}</p>`,
+    );
+  }
+  if (tab === 'cutouts' && tab !== h.chart && sel.kind === 'target') {
+    // Why the stack of the detector on screen did or did not measure (the headline's says it there).
+    const note = res.stacks?.find((s) => s.det === S.det)?.note;
+    if (note) parts.push(`<p class="ms-note">${neighbours(note)}</p>`);
   }
   if (tab === 'path' && sel.kind !== 'target') {
     parts.push('<p class="ms-note">A fixed spot has no path. Pick the target, or a mover from Found in this patch.</p>');

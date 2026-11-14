@@ -51,12 +51,6 @@ export function plainP(test: Chi2 | null): string {
   }
 }
 
-/** The note when visit averages' errors were widened (SPEC 7.1.12), or '' when they were not. */
-export function widenedNote(by: number): string {
-  if (!Number.isFinite(by) || by <= 1.005) return '';
-  return `Visit error bars widened ×${num(by, 1)}: the exposures inside one visit scatter more than their own error bars allow, so a change must stand out of that scatter too.`;
-}
-
 /** A trend in plain words: "fading 0.05 ± 0.01 mag a year", or '' when not drawn. */
 export function trendWords(trend: { slope: number; err: number; drawn: boolean } | null): string {
   if (!trend || !trend.drawn || !Number.isFinite(trend.slope)) return '';
