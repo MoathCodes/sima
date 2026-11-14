@@ -5,13 +5,14 @@
  * the page in headless Chromium (the build in ~/.cache/ms-playwright that playwright-core
  * 1.63.0 expects, chromium_headless_shell-1243: nothing is downloaded) and runs every flow in
  * tests/smoke/flows/ at 1900×1030 and 1366×768. smoke.ts says what a flow is and what is
- * checked after each step. Runs go three at a time, each in its own browser context of one
- * browser; each run's lines print together when it ends.
+ * checked after each step. Runs go up to three at a time (fewer when the machine is busy), each
+ * in its own browser context of one browser; each run's lines print together when it ends.
  *
  * `npm run smoke -- measure` runs only the flows whose name contains "measure".
  * `npm run smoke -- --only=g` runs only lane G's flows (a lane letter, or `integrator`);
  * `--only=<words>` with more than one letter matches flow names, as above.
- * `npm run smoke -- --workers=1` runs one at a time (default 3, or SMOKE_WORKERS).
+ * `npm run smoke -- --workers=1` runs one at a time (or SMOKE_WORKERS=1); the default is one
+ * run for each three free cores, at most three.
  * `SMOKE_SHOTS=1 npm run smoke` saves a screenshot of every step in test-results/smoke/.
  *
  * Exit code 0 when every check passed, 1 otherwise. Servers and the browser are always stopped.
@@ -21,6 +22,7 @@ import { createServer, type ViteDevServer } from 'vite';
 import { createServer as createNetServer } from 'node:net';
 import { mkdir, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { availableParallelism, loadavg } from 'node:os';
 import { SIZES, openPage, settle, type Flow, type Size, type Step } from './smoke.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -32,7 +34,15 @@ const flag = (name: string) =>
     ?.slice(name.length + 3)
     .toLowerCase();
 const ONLY = (flag('only') ?? ARGS.filter((a) => !a.startsWith('--')).join(' ')).toLowerCase();
-const WORKERS = Math.max(1, Number(flag('workers') ?? process.env.SMOKE_WORKERS ?? 3) || 3);
+/**
+ * Runs at a time: up to three, one for each three cores the machine has free. On a busy machine
+ * (other agents' browsers) more at once only makes every run slow enough to time out.
+ */
+const FREE_CORES = availableParallelism() - loadavg()[0];
+const WORKERS = Math.max(
+  1,
+  Number(flag('workers') ?? process.env.SMOKE_WORKERS) || Math.min(3, Math.floor(FREE_CORES / 3)),
+);
 
 /** A TCP port nothing listens on right now. */
 function freePort(): Promise<number> {
