@@ -17,11 +17,14 @@ import { on, emit } from '../shell/bus.ts';
 import { openPlace } from '../shell/shell.ts';
 import { icon } from '../shell/icons.ts';
 import { fitMotion } from '../core/fit.ts';
+import { formatDate } from '../core/astro.ts';
 import { targetByKey } from '../core/targets.ts';
 import { SCENARIOS } from '../core/field.ts';
 import { ring, type PointAt } from '../guide/ring.ts';
 import {
   HINT_LABELS,
+  KEYS_LINE,
+  movedLine,
   LIVE_LINE,
   LOOK_CLOSER,
   LOOK_CLOSER_FAINT,
@@ -34,6 +37,7 @@ import {
 } from './copy.ts';
 import { hits, ringSource, targetAt } from './track.ts';
 import { setMarks, startCloseup } from './closeup.ts';
+import { pickerOn, startKeyPick, sync as syncKeyPick } from './keypick.ts';
 
 export type { PointAt } from '../guide/ring.ts';
 
@@ -95,6 +99,8 @@ let note = '';
 let noteTimer = 0;
 /** The measured result, as HTML, once found (filled in when the measurement arrives). */
 let result = '';
+/** One measured sentence under it: how far the object moved between the first and last date. */
+let moved = '';
 let pointTimer = 0;
 
 const foundFns = new Set<(key: string) => void>();
@@ -115,6 +121,17 @@ export function startGame(): void {
   }
   startCloseup();
   onTap(tapped);
+  startKeyPick({
+    open: () => {
+      const t = task();
+      return !!t && !found && t.kind !== 'faint';
+    },
+    pick: tapped,
+    aim: ringNow,
+    focus: renderTask,
+    name: () => S.field?.target?.name ?? task()?.title ?? '',
+    missed: MISSED,
+  });
   watch(['target', 'field', 'source', 'groups', 'level'], renderTask);
   watch(['mode'], () => {
     if (task()?.kind === 'faint' && S.mode === 'stack' && !found) markFound();
@@ -248,6 +265,7 @@ function resetIfNewPatch(): void {
   found = false;
   revealed = false;
   result = '';
+  moved = '';
   note = '';
   setMarks('none');
 }
@@ -272,14 +290,17 @@ function renderTask(): void {
   box.innerHTML = `
     <div class="task${t.simulated ? ' sim' : ''}${found ? ' done' : ''}">
       <div class="task-text">
-        <p class="task-title">${t.simulated ? '<span class="pill warn">Simulated</span>' : ''}<span data-title></span></p>
+        <p class="task-title">${t.simulated ? '<span class="pill warn">Simulated</span>' : ''}<span data-title></span>${
+          numbers
+            ? `<button class="btn text task-hint task-numbers" data-numbers data-guide="task-numbers" data-tip="Open Measure on it">${icon('chart')}See the numbers</button>`
+            : ''
+        }</p>
         <p class="task-line" data-line></p>
         <p class="task-help" data-help hidden></p>
         <p class="task-big" data-result hidden></p>
         <p class="task-note" data-caption hidden></p>
       </div>
       ${label ? `<button class="btn text task-hint" data-hint data-guide="hint">${icon('bulb')}<span></span></button>` : ''}
-      ${numbers ? `<button class="btn text task-hint" data-numbers data-guide="task-numbers" data-tip="Open Measure on it">${icon('chart')}See the numbers</button>` : ''}
     </div>`;
   const set = (sel: string, text: string) => {
     const el = box.querySelector<HTMLElement>(sel);
@@ -290,8 +311,10 @@ function renderTask(): void {
   };
   const name = S.field?.target?.name ?? (t.simulated ? SCENARIOS[t.key]?.title : '') ?? t.title;
   set('[data-title]', found ? name : t.title);
-  set('[data-line]', found ? '' : t.line);
+  // With the keyboard crosshair on, the keys take the place of "Tap it" (no jump in height).
+  set('[data-line]', found ? '' : pickerOn() ? KEYS_LINE : t.line);
   set('[data-help]', note || (found ? '' : helpText()));
+  syncKeyPick();
   const hint = box.querySelector<HTMLElement>('[data-hint]');
   if (hint) {
     hint.querySelector('span')!.textContent = label ?? '';
@@ -319,12 +342,15 @@ function showResult(box: HTMLElement, t: TaskCopy & { key: string; simulated: bo
   const cap = box.querySelector<HTMLElement>('[data-caption]');
   if (!cap) return;
   cap.hidden = false;
-  const where = `Rings: ${ringSource(S.field)}. Worked out, not observed.${
+  const where = `Rings: ${ringSource(S.field)}. Worked out, not observed. The bold ring is the date on screen; the letters in the close-up are the first and last dates.${
     t.simulated ? ' Practice exposure IDs start with SIMULATED.' : ''
   }`;
-  cap.innerHTML = `<span class="term" tabindex="0"></span>${
+  // The measured sentence first (what moved, how far), then where the rings come from.
+  cap.innerHTML = `${found && moved ? '<span class="task-moved"></span> ' : ''}<span class="term" tabindex="0"></span>${
     t.key === 'planet-x' ? ' · contrast raised in the close-up only' : ''
   }`;
+  const said = cap.querySelector<HTMLElement>('.task-moved');
+  if (said) said.textContent = moved;
   const term = cap.querySelector<HTMLElement>('.term')!;
   term.textContent = t.simulated ? 'Rings: where the simulation put it' : 'Rings: catalogue predictions';
   term.dataset.tip = where;
@@ -332,10 +358,11 @@ function showResult(box: HTMLElement, t: TaskCopy & { key: string; simulated: bo
 
 // ----- Tapping the picture ----------------------------------------------------------------------
 
-function tapped(p: { x: number; y: number; ra: number; dec: number }): void {
+/** A tap, or Enter on the keyboard crosshair (keypick.ts): true when it hit the object. */
+function tapped(p: { x: number; y: number; ra: number; dec: number }): boolean {
   const t = task();
   const view = currentView();
-  if (!t || found || t.kind === 'faint' || !view?.field) return;
+  if (!t || found || t.kind === 'faint' || !view?.field) return false;
   const pts = S.groups
     .map((g) => targetAt(view.field, S.target, groupDate(view.field, g)))
     .map((at) => (at ? view.skyToPic(at.ra, at.dec) : null))
@@ -343,7 +370,7 @@ function tapped(p: { x: number; y: number; ra: number; dec: number }): void {
   const tap = view.toPic(p.x, p.y);
   if (hits(pts, tap, Math.max(18, 3 * view.k))) {
     markFound();
-    return;
+    return true;
   }
   note = MISSED;
   clearTimeout(noteTimer);
@@ -352,6 +379,18 @@ function tapped(p: { x: number; y: number; ra: number; dec: number }): void {
     renderTask();
   }, 3500);
   renderTask();
+  return false;
+}
+
+/** Where "Show me" rings the object on the date on screen, field pixels; null before it. */
+function ringNow(): { x: number; y: number } | null {
+  const view = currentView();
+  const g = S.groups[S.epoch];
+  if (help < 4 || !view?.field) return null;
+  const mjd = view.mjd ?? (g ? groupDate(view.field, g) : Number.NaN);
+  const at = targetAt(view.field, S.target, mjd);
+  const p = at ? view.skyToPic(at.ra, at.dec) : null;
+  return p ? view.toField(p.x, p.y) : null;
 }
 
 function markFound(): void {
@@ -364,44 +403,55 @@ function markFound(): void {
   setMarks('closeup');
   draw();
   result = '';
+  moved = '';
   renderTask();
   for (const fn of foundFns) fn(t.key);
-  void measureResult(t).then((html) => {
+  void measureResult(t).then((r) => {
     if (task()?.key !== t.key || !found) return;
-    result = html;
+    result = r.html;
+    moved = r.moved;
     renderTask();
   });
 }
 
 /** What the found object measures, from the pixels (H4, H5): never a model value. */
-async function measureResult(t: TaskCopy & { key: string; simulated: boolean }): Promise<string> {
+async function measureResult(
+  t: TaskCopy & { key: string; simulated: boolean },
+): Promise<{ html: string; moved: string }> {
   const term = (text: string, tip: string) =>
     `<span class="term" tabindex="0" data-tip="${esc(tip)}">${esc(text)}</span>`;
+  const only = (html: string) => ({ html, moved: '' });
   if (t.simulated) {
     const what = t.key === 'planet-x' ? 'the made-up planet' : 'the made-up moving dot';
-    return term(
-      `You found ${what}`,
-      'Practice pictures are made up. They are never measured or mixed with real results.',
+    return only(
+      term(
+        `You found ${what}`,
+        'Practice pictures are made up. They are never measured or mixed with real results.',
+      ),
     );
   }
   if (t.kind === 'variable') {
-    return term(
-      'Its brightness changes between dates',
-      'Measure shows by how much, measured from the pixels of each exposure.',
+    return only(
+      term(
+        'Its brightness changes between dates',
+        'Measure shows by how much, measured from the pixels of each exposure.',
+      ),
     );
   }
   if (t.kind === 'faint') {
-    return term(
-      'Stacked along its path',
-      'Measure says how clearly it shows in each detector once the dates are added up.',
+    return only(
+      term(
+        'Stacked along its path',
+        'Measure says how clearly it shows in each detector once the dates are added up.',
+      ),
     );
   }
   const pending = targetMeasurements();
-  if (!pending) return term('Not measured', 'This patch has no real exposures to measure.');
+  if (!pending) return only(term('Not measured', 'This patch has no real exposures to measure.'));
   try {
     const ms = await pending;
     const fit = fitMotion(ms, S.field?.target ?? null);
-    if (!fit.ok) return term('Not measured', fit.reason ?? 'The motion could not be measured.');
+    if (!fit.ok) return only(term('Not measured', fit.reason ?? 'The motion could not be measured.'));
     const pill =
       fit.matches === true
         ? '<span class="pill good">matches catalogue</span>'
@@ -411,13 +461,35 @@ async function measureResult(t: TaskCopy & { key: string; simulated: boolean }):
     const cat = fit.catalogue
       ? ` ${fit.catalogue.source.startsWith('Gaia DR3') ? 'Gaia DR3' : 'The catalogue'} says ${fit.catalogue.total.toFixed(2)}″/yr.`
       : '';
-    return `<b>${term(
+    const html = `<b>${term(
       `${fit.total.toFixed(2)}″/yr`,
       `Moves ${fit.total.toFixed(2)} ± ${fit.totalErr.toFixed(2)} arcseconds a year, measured from the pixels of ${fit.used} of ${fit.of} real exposures.${cat}`,
     )}</b> ${pill}`;
+    // How far that is between the first and last date on the date scale, the step the rings show.
+    const field = S.field;
+    const dated = field
+      ? S.groups
+          .map((g) => ({ letter: g.letter, mjd: groupDate(field, g) }))
+          .filter((d) => Number.isFinite(d.mjd))
+          .sort((a, b) => a.mjd - b.mjd)
+      : [];
+    const first = dated[0];
+    const last = dated[dated.length - 1];
+    if (!field || !first || !last || last.mjd <= first.mjd) return { html, moved: '' };
+    const years = (last.mjd - first.mjd) / 365.25;
+    return {
+      html,
+      moved: movedLine(
+        `${first.letter} (${formatDate(first.mjd, 'month')})`,
+        `${last.letter} (${formatDate(last.mjd, 'month')})`,
+        fit.total * years,
+        fit.totalErr * years,
+        field.scale,
+      ),
+    };
   } catch (err) {
     console.warn('game: measuring the target failed', err);
-    return term('Not measured', 'The measurement could not run on this page.');
+    return only(term('Not measured', 'The measurement could not run on this page.'));
   }
 }
 

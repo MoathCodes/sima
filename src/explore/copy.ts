@@ -100,6 +100,24 @@ export const LOOK_CLOSER_FAINT = 'Stack is under Measure. It is ringed.';
 export const SHOW_ME = 'It is ringed. Now tap it yourself.';
 export const SHOW_ME_FAINT = 'The ring is where the catalogue says it is. Now press Measure, then Stack.';
 
+/** The task line while the picture has keyboard focus (keypick.ts). */
+export const KEYS_LINE = 'Arrow keys move the crosshair (Shift: 5 pixels). Enter picks.';
+
+/**
+ * The one measured sentence under a found mover: how far it moved between the first and last
+ * date on screen, from the measured motion (arcseconds, and pixels of `scale` arcseconds).
+ */
+export function movedLine(
+  from: string,
+  to: string,
+  arcsec: number,
+  err: number,
+  scale: number,
+): string {
+  const px = (arcsec / scale).toFixed(1);
+  return `Measured: from ${from} to ${to} it moved ${arcsec.toFixed(1)} ± ${err.toFixed(1)}″, about ${px} pixel${px === '1.0' ? '' : 's'}.`;
+}
+
 /** A tap that missed. */
 export const MISSED = 'Not that one: that dot stays put. Try again, or ask for a hint.';
 /** A tap while the found star is shown. */

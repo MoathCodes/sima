@@ -518,3 +518,29 @@
     transition: none;
   }
 }
+
+/* ----- Finding with the keyboard (GDE-1): the tour's line and the focused picture ----------- */
+
+.tour-keys {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.tour-keys .btn.text {
+  display: inline;
+  height: auto;
+  padding: 0;
+  color: var(--action);
+  font: inherit;
+  font-weight: 600;
+  vertical-align: baseline;
+}
+.pic-canvas[data-keypick]:focus-visible {
+  outline-offset: -2px; /* inside: the picture's box clips anything outside it */
+}
+.task-title .task-numbers {
+  margin-left: auto;
+  font-weight: 500;
+}
+.task-moved {
+  color: var(--ink);
+}
