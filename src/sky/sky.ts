@@ -1161,5 +1161,6 @@ if (import.meta.env.DEV) {
       return view;
     },
     cam,
+    outline,
   };
 }
