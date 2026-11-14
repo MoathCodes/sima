@@ -290,6 +290,9 @@ elements overlapping or leaving the window. `tests/smoke/smoke.ts` explains the 
   `flows: Flow[]`. Find parts by `data-guide` name (`pressStep('play')`). Never edit another lane's
   flow file.
 - **Run some:** `npm run smoke -- measure` runs flows whose name contains "measure".
+  `npm run smoke -- --only=g` runs lane G's flows (a lane letter, or `integrator`). Runs go up to
+  three at a time in one browser, fewer when the machine is busy; `--workers=N` (or
+  `SMOKE_WORKERS=N`) sets it.
 - **See it:** `SMOKE_SHOTS=1 npm run smoke` saves a screenshot of every step in
   `test-results/smoke/`. A failed step is always saved.
 - The demo flow of SPEC 9.6 is in `0-skeleton.ts`. When your lane builds a missing step (the tour

@@ -20,6 +20,30 @@ async function patchOf(page: Page): Promise<number[] | null> {
   return v ? v.split(' ').map(Number) : null;
 }
 
+/** Waits until the sky's view has not changed for `frames` drawn frames in a row (20 s at most). */
+async function stillFor(page: Page, frames: number): Promise<void> {
+  const end = Date.now() + 20_000;
+  while (Date.now() < end) {
+    const still = await page.evaluate(
+      (frames) =>
+        new Promise<boolean>((done) => {
+          const view = () => document.querySelector('#sky')?.getAttribute('data-view');
+          const first = view();
+          let n = 0;
+          const next = () => {
+            if (view() !== first) done(false);
+            else if (++n >= frames) done(true);
+            else requestAnimationFrame(next);
+          };
+          requestAnimationFrame(next);
+        }),
+      frames,
+    );
+    if (still) return;
+  }
+  throw new Error(`the sky kept moving for 20 s`);
+}
+
 function same(a: number[], b: number[]): boolean {
   return a.length === b.length && a.every((x, i) => Math.abs(x - (b[i] ?? NaN)) < 1e-4);
 }
@@ -61,23 +85,20 @@ export const flows: Flow[] = [
               fov * 0.8,
             before[2] ?? 0,
           );
-          await page.waitForTimeout(600);
         },
       },
       {
         name: 'A click on empty sky only offers "Move the frame here" (FRM-3)',
         async run(page, size) {
-          // Let the zoom finish gliding first.
-          let before = await viewOf(page);
-          for (let i = 0; i < 20; i++) {
-            await page.waitForTimeout(300);
-            const now = await viewOf(page);
-            if (same(before, now)) break;
-            before = now;
-          }
+          // Let the zoom finish first. It eases a step each drawn frame, and on a busy machine a
+          // frame can take longer than any fixed wait, so wait for frames, not time.
+          await stillFor(page, 8);
+          const before = await viewOf(page);
           await page.mouse.click(size.width * 0.3, size.height * 0.62);
           await page.locator(guide('move-frame-here')).waitFor({ state: 'visible' });
-          if (!same(before, await viewOf(page))) throw new Error('the sky moved on a click');
+          const after = await viewOf(page);
+          if (!same(before, after))
+            throw new Error(`the sky moved on a click: ${before.join(' ')} → ${after.join(' ')}`);
         },
       },
       keyStep('Escape', 'Escape closes the click card'),

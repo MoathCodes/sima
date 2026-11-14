@@ -17,7 +17,29 @@ const waiters: ((l: Loaded) => void)[] = [];
 
 /** Sets the catalogue once it has arrived. */
 export function setCatalogue(cat: PlacesCatalogue): Loaded {
-  loaded = { cat, byId: new Map(cat.places.map((p) => [p.id, p])), index: makeIndex(cat.places) };
+  // Building the search index in one go blocks the page for over 100 ms (TLS-8), so it is built
+  // in slices of about 10 ms meanwhile; a search that comes first finishes it at once.
+  const index: PlaceIndex = { entries: [] };
+  let next = 0;
+  const build = (ms: number) => {
+    const end = performance.now() + ms;
+    for (; next < cat.places.length && performance.now() < end; next += 50) {
+      index.entries.push(...makeIndex(cat.places.slice(next, next + 50)).entries);
+    }
+  };
+  const slice = () => {
+    build(10);
+    if (next < cat.places.length) setTimeout(slice, 0);
+  };
+  setTimeout(slice, 0);
+  loaded = {
+    cat,
+    byId: new Map(cat.places.map((p) => [p.id, p])),
+    get index() {
+      build(Infinity);
+      return index;
+    },
+  };
   waiters.splice(0).forEach((fn) => fn(loaded as Loaded));
   return loaded;
 }

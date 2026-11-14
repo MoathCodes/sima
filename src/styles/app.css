@@ -184,6 +184,7 @@
   --tether-dash: 2px;
   --tether-gap: 5px;
   --bar-h: 84px;
+  --bar-room: var(--bar-h); /* the bar's real height: layout.ts sets it when the bar wraps */
   --bar-bottom: 30px; /* the bar sits this far above the window's bottom */
   --bar-pad: 0 18px 0 12px;
   --frame-top: 76px; /* the frame hangs from its top right corner */
@@ -980,7 +981,7 @@ samp {
   right: var(--gutter);
   z-index: var(--z-card);
   width: var(--measure-w);
-  max-height: calc(100vh - var(--frame-top) - var(--bar-bottom) - var(--bar-h) - 14px);
+  max-height: calc(100vh - var(--frame-top) - var(--bar-bottom) - var(--bar-room) - 14px);
   transition-property: opacity, display, overlay;
   transition-duration: var(--t-fade), var(--t-fade), var(--t-fade);
   transition-timing-function: linear;
@@ -1006,7 +1007,7 @@ samp {
   right: calc(var(--gutter) + var(--frame-w) + 10px);
   z-index: var(--z-card);
   width: var(--tools-width, 320px);
-  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-h) - 14px);
+  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-room) - 14px);
 }
 
 /* Lane D: the bar, 30px above the bottom, centred. */
@@ -1029,10 +1030,10 @@ samp {
   width: 360px; /* lane G's places/room.ts narrows it to keep clear of the frame */
 }
 #places-list {
-  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-h) - 14px);
+  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-room) - 14px);
 }
 #place-card {
-  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-h) - 14px);
+  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-room) - 14px);
 }
 #places-menu {
   top: calc(var(--top) + var(--h-top) + 6px);
@@ -1077,7 +1078,7 @@ samp {
 /* Lane F: toasts above the bar. */
 #toasts {
   position: fixed;
-  bottom: calc(var(--bar-bottom) + var(--bar-h) + 14px);
+  bottom: calc(var(--bar-bottom) + var(--bar-room) + 14px);
   left: 50%;
   translate: -50% 0;
   z-index: var(--z-toast);

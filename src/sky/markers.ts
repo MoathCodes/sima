@@ -68,8 +68,17 @@ let avoidCache: { at: number; boxes: Box[] } | null = null;
 /** How long the last few paints took, ms (PLC-8: under 4 ms a frame). */
 const paintTimes: number[] = [];
 
-onZoom(() => {
+/** The view at the last move, so a redraw of only the patch is not taken for a move. */
+let lastView = '';
+
+onZoom((c) => {
   paint();
+  // The sky also redraws when only the patch changes (each picture during playback): the view
+  // has not moved, so "In this view" lists are not rebuilt (their buttons would keep changing
+  // under the pointer).
+  const view = `${c.ra} ${c.dec} ${c.fov} ${c.width} ${c.height}`;
+  if (view === lastView) return;
+  lastView = view;
   clearTimeout(restTimer);
   restTimer = window.setTimeout(() => restFns.forEach((fn) => fn()), 200);
 });
@@ -117,13 +126,20 @@ if (typeof MutationObserver !== 'undefined') {
  */
 export function setDots(next: readonly Dot[]): void {
   dots = [...next].sort((a, b) => a.tier - b.tier);
-  inputs = dots.map((d) => ({
-    ra: d.ra,
-    dec: d.dec,
-    tier: d.tier,
-    always: false,
-    width: textWidth(label(d)),
-  }));
+  // Label widths are measured when a label is first placed: measuring all 2,289 at once blocks
+  // the page for over 100 ms (TLS-8), and most never show.
+  inputs = dots.map((d) => {
+    let width = 0;
+    return {
+      ra: d.ra,
+      dec: d.dec,
+      tier: d.tier,
+      always: false,
+      get width() {
+        return (width ||= textWidth(label(d)));
+      },
+    };
+  });
   refreshAlways();
   soon();
 }

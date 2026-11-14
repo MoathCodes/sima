@@ -3,7 +3,7 @@
  * Owner: lane E. Parts are found by their data-guide names; checks throw with a plain reason.
  */
 import type { Page } from 'playwright-core';
-import { SIZES, guide, press, pressStep, type Flow, type Step } from '../smoke.ts';
+import { SIZES, guide, openPage, press, pressStep, type Flow, type Step } from '../smoke.ts';
 
 const ownWay = pressStep('welcome-own', 'Close the welcome card');
 
@@ -182,8 +182,7 @@ export const flows: Flow[] = [
       {
         name: 'Reload keeps all the numbers (MSR-2)',
         async run(page) {
-          await page.reload();
-          await page.waitForSelector('html[data-ready]');
+          await openPage(page);
           await page.locator(`${guide('all-numbers')}[aria-pressed="true"]`).waitFor({ timeout: 5000 });
         },
       },

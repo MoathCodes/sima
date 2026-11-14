@@ -15,7 +15,7 @@
  *   moves only when the user moves it: never because pictures arrived.
  */
 import { emit, on, type BusEvents } from '../shell/bus.ts';
-import { frameRect, onFrameMove, skyReady } from '../shell/shell.ts';
+import { frameRect, onFrameMove, skyReady, type SkyLoad } from '../shell/shell.ts';
 import { icon } from '../shell/icons.ts';
 import { formatCoords } from '../core/astro.ts';
 import { CHANNEL_LAM, DEFAULT_LAM, WISE_HIPS, channelFor, detectorOf } from './hips.ts';
@@ -61,6 +61,8 @@ const H1 = 'Average of all dates: moving objects are blurred or shifted here';
 
 interface HiPSLayer {
   setOpacity(o: number): void;
+  /** True once Aladin has added it to the view. */
+  readonly added: boolean;
 }
 interface Aladin {
   getRaDec(): [number, number];
@@ -600,9 +602,32 @@ function fadeIn(next: Shown): void {
   requestAnimationFrame(step);
 }
 
+/** Maps to remove, and since when the oldest has waited (ms). */
+const leaving: Shown[] = [];
+let leavingSince = 0;
+
+/**
+ * Removes a map's layers. Aladin ignores the removal of a layer it has not added yet and adds it
+ * later anyway, and when it removes its selected layer it selects the newest one, which may not be
+ * added yet ("sky-N does not exists"). So a map is hidden at once and removed once Aladin has
+ * added every layer asked for (or after 10 s, if one never loads).
+ */
 function removeShown(shown: Shown): void {
-  al?.removeImageLayer(shown.name);
-  if (shown.soft) al?.removeImageLayer(shown.soft.name);
+  shown.hips.setOpacity(0);
+  shown.soft?.hips.setOpacity(0);
+  if (!leaving.length) leavingSince = performance.now();
+  leaving.push(shown);
+  removeLeaving();
+}
+
+function removeLeaving(): void {
+  if (!al || !leaving.length) return;
+  const all = [current, incoming, ...leaving].flatMap((x) => (x ? [x.hips, x.soft?.hips] : []));
+  if (all.some((h) => h && !h.added) && performance.now() - leavingSince < 10_000) return;
+  for (const x of leaving.splice(0)) {
+    al.removeImageLayer(x.name);
+    if (x.soft) al.removeImageLayer(x.soft.name);
+  }
 }
 
 function tellWorker(channel: number | null): void {
@@ -649,6 +674,11 @@ let firstDone = false;
 let roundDone = false;
 let doneTimer = 0;
 let reportTimer = 0;
+/** When the current round of loading started, and the timer that looks again after 10 s. */
+let roundStart = 0;
+let slowTimer = 0;
+/** After this long without the whole sharp map, the card says why (O-I15). */
+const SLOW_MS = 10_000;
 
 function onTile(e: TileEvent): void {
   const key = `spherex/${e.ch}/${e.rev}`;
@@ -680,6 +710,7 @@ function report(): void {
   if (!shown.key.startsWith('spherex/')) {
     firstDone = true;
     roundDone = true;
+    roundStart = 0;
     skyReady({ layer: LAYER_NAMES[layer], loaded: 1, total: 1, failed: 0, first: false });
     return;
   }
@@ -688,7 +719,7 @@ function report(): void {
   const loaded = (t?.done.size ?? 0) + (t?.failed.size ?? 0);
   const failed = t?.failed.size ?? 0;
   const done = total > 0 && loaded >= total;
-  const load = {
+  const load: SkyLoad = {
     layer: LAYER_NAMES.spherex,
     loaded: total ? loaded : 0,
     total: total || 1,
@@ -699,9 +730,22 @@ function report(): void {
     clearTimeout(doneTimer);
     doneTimer = 0;
     roundDone = false;
+    // Every tile not yet in is waiting on NASA's tile server: cached, shipped and Allsky tiles
+    // answer at once. After 10 s the card says so, with how many (O-I15).
+    const now = performance.now();
+    roundStart ||= now;
+    const waiting = total - loaded;
+    if (now - roundStart >= SLOW_MS && waiting > 0) {
+      load.why = `${waiting} ${waiting === 1 ? 'tile is' : 'tiles are'} still waiting on NASA's tile server (IRSA) after ${Math.round((now - roundStart) / 1000)} s.`;
+    }
+    clearTimeout(slowTimer);
+    slowTimer = window.setTimeout(report, Math.max(1000, roundStart + SLOW_MS - now));
     skyReady(load);
     return;
   }
+  clearTimeout(slowTimer);
+  slowTimer = 0;
+  roundStart = 0;
   // Done only once loading has been quiet for a moment: tiles arrive in bursts while the view
   // moves, and the loading card should not flicker between them.
   if (roundDone || doneTimer) return;
@@ -797,6 +841,7 @@ function loop(): void {
 
 function animate(now: number): void {
   if (!al) return;
+  removeLeaving();
   if (glide) {
     const t = Math.min(1, (now - glide.start) / glide.ms);
     const e = 1 - (1 - t) ** 3;
