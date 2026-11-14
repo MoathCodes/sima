@@ -26,8 +26,9 @@
       - data-overlay="name" a popover, dialog, tip, tour or toast that may sit over cards.
       - data-escape="N"    Escape closes the visible one with the highest N first, by clicking the
                            [data-close] button inside it: 50 popover-like cards, 30 lists and
-                           cards, 20 tools, 10 Measure (GEN-1). Native popovers and dialogs close
-                           on Escape by themselves, before any of these.
+                           cards, 20 tools, 10 Measure (GEN-1); the one opened last first on a
+                           tie. Open popovers and dialogs close before any of these.
+                           src/shell/escape.ts is the one place that decides; see its header.
       - data-guide="name"  a stable name the guide uses to point at a part (docs/lanes.md).
       - data-scroll        on the one element of a card that may scroll inside (a long list).
     -->
@@ -64,8 +65,20 @@
         data-overlay="search-results"
         data-guide="search-results"
       ></div>
-      <!-- Lane G: chips: Stars, Nearby, Changing, Clusters, Nebulae, Galaxies, Tours, Surprise me. -->
+      <!-- Lane G: chips: Stars, Nearby, Changing, Clusters, Nebulae, Galaxies, Tours, Surprise me.
+           Each chip is a direct child of #chips. Chips that do not fit beside the frame are made
+           inert by lane F and offered in the "More" menu below. -->
       <nav id="chips" data-card="chips" data-guide="chips" aria-label="Kinds of places"></nav>
+      <!-- Lane F: "More", after the last chip that fits, and its menu of the chips that do not. -->
+      <div id="chips-more" data-card="chips-more" hidden></div>
+      <div
+        id="chips-menu"
+        class="popover"
+        popover
+        data-overlay="chips-menu"
+        data-guide="chips-menu"
+        aria-label="More kinds of places"
+      ></div>
     </div>
     <!-- Lane F: the top row, right: Guide, Places, Share, About. -->
     <nav id="actions" class="card" data-card="actions" data-guide="actions" aria-label="Page"></nav>
@@ -76,8 +89,12 @@
       data-card="sky-loading"
       data-guide="sky-loading"
       role="status"
-      hidden
-    ></div>
+    >
+      <!-- On screen from the first paint, until the sky reports (GEN-4). -->
+      <p class="sky-loading-head">Loading the sky map</p>
+      <p class="sky-loading-line">The frame and the bar work meanwhile.</p>
+      <span class="sky-loading-bar" aria-hidden="true"><span></span></span>
+    </div>
 
     <!-- Lane F: the map's tool rail: zoom in, zoom out, sky map, coordinate grid. -->
     <nav id="rail" class="card" data-card="rail" data-guide="rail" aria-label="Sky map"></nav>
@@ -120,6 +137,8 @@
       <!-- Lane F: the size corner, bottom left. -->
       <div id="frame-grip" aria-hidden="true"></div>
     </section>
+    <!-- Lane F: while the frame is hidden, this small card in its place shows it again (FRM-5). -->
+    <div id="frame-show" class="card" data-card="frame-show" hidden></div>
 
     <!-- Lane E: Measure, beside the frame. Lane E puts an empty #detectors in it for lane D's detector strip. -->
     <section

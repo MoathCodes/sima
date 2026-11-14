@@ -1,2 +1,338 @@
 /* Lane F: the shell (top row, rail, frame placement, loading cards, dialogs, toasts).
    Style only lane F's own classes here. Tokens and shared components are in app.css. */
+
+/* ----- Wordmark: سيما then Sima, in one card ------------------------------------------------ */
+#wordmark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  color: var(--ink);
+}
+.wordmark-ar {
+  font: var(--text-wordmark);
+}
+.wordmark-latin {
+  font: var(--text-wordmark-latin);
+}
+
+/* ----- Search ------------------------------------------------------------------------------- */
+#search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px 0 13px;
+  color: var(--ink-3);
+}
+#search:focus-within {
+  outline: 2px solid var(--action);
+  outline-offset: 0;
+}
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--ink);
+  font: var(--text-body);
+}
+.search-input::placeholder {
+  color: var(--ink-3);
+}
+.search-input::-webkit-search-cancel-button {
+  display: none;
+}
+#search-results {
+  max-height: calc(100vh - 140px);
+  overflow: auto;
+}
+.search-group {
+  padding: 6px 10px 2px;
+}
+.search-row {
+  cursor: pointer;
+}
+.search-row[aria-selected='true'] {
+  background: var(--card-2);
+  color: var(--ink);
+}
+.search-tile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+}
+.search-tile .icon {
+  width: 16px;
+  height: 16px;
+}
+.search-words {
+  min-width: 0;
+}
+.search-name {
+  display: block;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-row .line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-none {
+  padding: 8px 10px;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+
+/* ----- "More" chips -------------------------------------------------------------------------- */
+.chip-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  padding: 0 8px 0 12px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--card);
+  color: var(--ink);
+  font: var(--text-control);
+  box-shadow: var(--lift);
+}
+.chip-more:hover,
+.chip-more[aria-expanded='true'] {
+  background: var(--card-2);
+}
+.chip-more .icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ----- Top right actions -------------------------------------------------------------------- */
+#actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-group);
+  padding: 0 var(--pad-group);
+}
+
+/* ----- Rail and the sky map chooser --------------------------------------------------------- */
+#rail {
+  display: grid;
+  gap: var(--gap-group);
+  padding: var(--pad-group);
+}
+.rail-rule {
+  width: 24px;
+  height: 1px;
+  margin: 2px auto;
+  border: 0;
+  background: var(--rule);
+}
+.layers-label {
+  padding: 4px 10px;
+}
+.layer-ring {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--ink-3);
+  border-radius: 50%;
+}
+.layer-item[aria-checked='true'] .layer-ring {
+  border-color: var(--action);
+  background: radial-gradient(circle, var(--action) 0 4px, transparent 4.5px);
+}
+
+/* ----- The sky's loading card, top centre (GEN-4) ------------------------------------------- */
+#sky-loading {
+  position: fixed;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  column-gap: 8px;
+  max-width: min(320px, calc(100vw - 2 * 560px));
+  padding: 7px 14px 9px;
+  overflow: hidden;
+}
+.sky-loading-head {
+  font: var(--text-label);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sky-loading-line {
+  grid-column: 1;
+  color: var(--ink-2);
+  font: var(--text-label);
+  white-space: nowrap;
+}
+#sky-loading [data-retry] {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.sky-loading-bar {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--card-3);
+}
+.sky-loading-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ink-2);
+  transition: width var(--t-settle) var(--ease-out);
+}
+
+/* ----- Toasts ------------------------------------------------------------------------------ */
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(640px, calc(100vw - 2 * var(--gutter)));
+  padding: 8px 12px;
+  border-radius: var(--r-panel);
+  background: var(--ink);
+  color: var(--card);
+  font: var(--text-label);
+  box-shadow: var(--lift);
+}
+.toast .icon-btn {
+  color: var(--card);
+}
+.toast .icon-btn:hover {
+  background: var(--ink-2);
+}
+
+/* ----- Dialogs: Share and About ------------------------------------------------------------- */
+.dialog-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.dialog-head h2 {
+  flex: 1;
+  font: var(--text-title);
+}
+
+#share {
+  width: min(560px, calc(100vw - 2 * var(--gutter)));
+}
+.share-tabs {
+  margin-bottom: 12px;
+}
+.share-panel {
+  display: grid;
+  gap: 10px;
+}
+.share-row {
+  display: flex;
+  align-items: start;
+  gap: var(--gap-tight);
+  padding: 5px;
+  border-radius: var(--r-control);
+  background: var(--card-2);
+}
+.share-code {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--h-control);
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--r-window);
+  background: transparent;
+  color: var(--ink);
+  font: 12px/1.5 var(--font-mono);
+  resize: none;
+}
+.share-code:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 0;
+}
+.share-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--text-body);
+}
+.share-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--action);
+}
+.share-note {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+
+#about {
+  width: min(760px, calc(100vw - 2 * var(--gutter)));
+  max-width: none;
+  max-height: min(860px, calc(100vh - 2 * var(--gutter)));
+  overflow: hidden;
+}
+#about[open] {
+  display: flex;
+  flex-direction: column;
+}
+.about-ar {
+  margin-right: 6px;
+  font: var(--text-wordmark);
+  font-size: 19px;
+}
+.about-body {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 8px;
+  font: var(--text-reading);
+}
+.about-body > * {
+  max-width: var(--reading-measure);
+}
+.about-body > * + * {
+  margin-top: 12px;
+}
+.about-body h3 {
+  margin-top: 28px;
+  font: var(--text-headline);
+  letter-spacing: var(--tracking-headline);
+}
+.about-body ul {
+  display: grid;
+  gap: 6px;
+  padding-left: 18px;
+  list-style: disc;
+}
+.about-lead {
+  font-size: 17px;
+}
+.about-source {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.about-table {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--text-body);
+}
+.about-table th,
+.about-table td {
+  padding: 6px 8px 6px 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+.about-table th {
+  color: var(--ink-3);
+  font: var(--text-group);
+}

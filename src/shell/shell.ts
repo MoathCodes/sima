@@ -5,14 +5,18 @@
  * Owner: lane F.
  *
  * The functions exported here are the contract in SPEC 8.4; other lanes call only these.
- *
- * PHASE 0 STUB: the cards are filled with their final words where the screenshots show them,
- * but the frame cannot be dragged or sized yet, and Share and About hold placeholders.
+ * Placement, dragging and the glide are in layout.ts; the Escape order is in escape.ts.
  */
 import { emit } from './bus.ts';
 import { icon } from './icons.ts';
+import { closeTop, nativeOpen, startEscape } from './escape.ts';
+import { startLayout } from './layout.ts';
 import { camera, flyTo, grid, retry, setLayer, type SkyLayer } from '../sky/sky.ts';
-import { linkFor } from '../viewer/url.ts';
+import { openShare, startShare } from '../viewer/share.ts';
+import { openAbout, startAbout } from '../page/about.ts';
+
+export { onFrameMove } from './layout.ts';
+export { toast } from './toast.ts';
 
 /** A place to look at, from a place card, a tour stop, search or a saved place. */
 export interface PlaceRef {
@@ -46,68 +50,53 @@ export interface SkyLoad {
 export function startShell(): void {
   fill(
     'wordmark',
-    `<span lang="ar" dir="rtl" style="font:var(--text-wordmark)">سيما</span>
-    <span style="font:var(--text-wordmark-latin)">Sima</span>`,
+    `<span lang="ar" dir="rtl" class="wordmark-ar">سيما</span><span class="wordmark-latin">Sima</span>`,
   );
-  const wordmark = document.getElementById('wordmark');
-  if (wordmark) {
-    wordmark.style.cssText =
-      'display:flex;align-items:center;gap:8px;margin:0;padding:0 14px;color:var(--ink)';
-    wordmark.setAttribute('aria-label', 'Sima');
-  }
+  document.getElementById('wordmark')?.setAttribute('aria-label', 'Sima');
 
   fill(
     'actions',
     `
-    <button class="btn quiet" popovertarget="guide-menu" data-guide="guide-button">${icon('compass')}Guide</button>
-    <button class="btn quiet" popovertarget="places-menu" data-guide="places-button">${icon('pin')}Places</button>
+    <button class="btn quiet" popovertarget="guide-menu" data-guide="guide-button">${icon('compass')}<span class="action-word">Guide</span></button>
+    <button class="btn quiet" popovertarget="places-menu" data-guide="places-button">${icon('pin')}<span class="action-word">Places</span></button>
     <button class="icon-btn" data-open="share" aria-label="Share" data-tip="Share this view" data-guide="share-button">${icon('share')}</button>
     <button class="icon-btn" data-open="about" aria-label="About Sima" data-tip="About Sima" data-guide="about-button">${icon('info')}</button>`,
   );
-  style('actions', 'display:flex;align-items:center;gap:2px;padding:0 5px');
 
   fill(
     'rail',
     `
     <button class="icon-btn" data-zoom="0.5" aria-label="Zoom the sky in" data-tip="Zoom in (+)" data-tip-pos="right" data-guide="zoom-in">${icon('plus')}</button>
     <button class="icon-btn" data-zoom="2" aria-label="Zoom the sky out" data-tip="Zoom out (−)" data-tip-pos="right" data-guide="zoom-out">${icon('minus')}</button>
+    <hr class="rail-rule">
     <button class="icon-btn" popovertarget="sky-layers" aria-label="Sky map" data-tip="Sky map" data-tip-pos="right" data-guide="sky-map-button">${icon('layers')}</button>
     <button class="icon-btn" data-grid aria-pressed="false" aria-label="Coordinate grid" data-tip="Coordinate grid" data-tip-pos="right" data-guide="grid-button">${icon('globe')}</button>`,
   );
-  style('rail', 'display:grid;gap:2px;padding:5px');
 
   fill(
     'sky-layers',
     `
-    <p class="group-label" style="padding:4px 10px">Sky map</p>
-    <button class="menu-item" role="menuitemradio" aria-checked="true" data-layer="spherex" data-guide="sky-map-spherex">SPHEREx, at the wavelength on the bar</button>
-    <button class="menu-item" role="menuitemradio" aria-checked="false" data-layer="wise-w1" data-guide="sky-map-wise-w1">AllWISE 3.4 µm</button>
-    <button class="menu-item" role="menuitemradio" aria-checked="false" data-layer="wise-w2" data-guide="sky-map-wise-w2">AllWISE 4.6 µm</button>`,
+    <p class="group-label layers-label">Sky map</p>
+    <div role="radiogroup" aria-label="Sky map">
+      ${layerItem('spherex', 'SPHEREx', 'At the wavelength on the bar', true)}
+      ${layerItem('wise-w1', 'AllWISE 3.4 µm', 'The WISE all-sky map, band W1', false)}
+      ${layerItem('wise-w2', 'AllWISE 4.6 µm', 'The WISE all-sky map, band W2', false)}
+    </div>`,
   );
 
   fill(
-    'share',
-    `
-    <h2 style="font:var(--text-title);margin:0 0 12px">Share this view</h2>
-    <p style="margin:0 0 6px;color:var(--ink-2);font:var(--text-label)">Link</p>
-    <input class="field" readonly style="width:440px" data-link>
-    <p style="margin:12px 0 0;color:var(--ink-2)">Placeholder (phase 0): the embed code comes here.</p>
-    <form method="dialog" style="margin-top:14px;text-align:right"><button class="btn">Close</button></form>`,
+    'frame-show',
+    `<button class="btn quiet" data-show-frame data-guide="frame-show">${icon('flip')}Show the frame</button>`,
   );
 
-  fill(
-    'about',
-    `
-    <h2 style="font:var(--text-title);margin:0 0 12px">About Sima</h2>
-    <p style="margin:0;max-width:var(--reading-measure)">Placeholder (phase 0): how to use it, the method,
-      the five test targets, Planet X, the challenge, limits, AI use and sources (GEN-6).</p>
-    <form method="dialog" style="margin-top:14px;text-align:right"><button class="btn">Close</button></form>`,
-  );
-
+  startShare();
+  startAbout();
+  startEscape();
+  startLayout();
+  startPopovers();
   document.addEventListener('click', onClick);
   document.addEventListener('keydown', onKey);
   startTooltips();
-  fitChips();
 }
 
 /**
@@ -134,7 +123,8 @@ export function openPlace(place: PlaceRef, opts: { fly?: boolean } = {}): void {
 }
 
 /**
- * Hides or shows the frame (FRM-5). The patch stays on the sky.
+ * Hides or shows the frame (FRM-5). The patch stays on the sky. While the frame is hidden, a
+ * small "Show the frame" card sits in its place.
  * @param hidden True hides, false shows.
  */
 export function hideFrame(hidden = true): void {
@@ -160,68 +150,76 @@ export function greet(): void {
   if (welcome && !document.documentElement.hasAttribute('data-embed')) welcome.hidden = false;
 }
 
+// ----- The sky's loading card (GEN-4) ----------------------------------------------------------
+
+/** What the card shows now, so its percentage never goes back. */
+let sky = { layer: '', pct: 0, timer: 0, firstDone: false };
+
 /**
- * The sky map reports its loading. The card at the top centre shows it only if the wait lasts
- * 0.3 s (GEN-4), with Retry when tiles failed (SKY-7).
- * PHASE 0 STUB: shows the card while not done; no delay.
+ * The sky map reports its loading. The card at the top centre says what is loading, how far it
+ * is, and that the rest of the page works meanwhile. It appears only if the wait lasts 0.3 s,
+ * except for the very first map of the visit, whose card is on screen from the first paint.
+ * Failed tiles show Retry (SKY-7). When done, the card fades out keeping its words.
  */
 export function skyReady(load: SkyLoad): void {
   const card = document.getElementById('sky-loading');
   if (!card) return;
   const done = load.total > 0 && load.loaded >= load.total && load.failed === 0;
-  card.hidden = done;
-  if (done) return;
-  const pct = load.total > 0 ? Math.round((100 * load.loaded) / load.total) : 0;
-  card.style.cssText = 'padding:8px 12px;font:var(--text-label)';
-  card.innerHTML = load.failed
-    ? `Some of the ${load.layer} map did not load. <button class="btn text" data-retry>Retry</button>`
-    : `Loading more sky · ${pct}%`;
+  if (load.layer !== sky.layer) sky = { ...sky, layer: load.layer, pct: 0 };
+  if (done) {
+    clearTimeout(sky.timer);
+    sky.timer = 0;
+    sky.pct = 0;
+    if (!load.first) sky.firstDone = true;
+    if (!card.hidden) {
+      // Say it is done, then fade out with those words.
+      setCard(card, load, 100);
+      card.hidden = true;
+    }
+    return;
+  }
+  const pct =
+    load.total > 0 ? Math.floor((100 * Math.min(load.loaded, load.total)) / load.total) : 0;
+  sky.pct = Math.max(sky.pct, pct);
+  setCard(card, load, sky.pct);
+  if (!card.hidden || sky.timer) return;
+  if (load.first && !sky.firstDone) card.hidden = false;
+  else {
+    sky.timer = window.setTimeout(() => {
+      sky.timer = 0;
+      card.hidden = false;
+    }, 300);
+  }
+}
+
+function setCard(card: HTMLElement, load: SkyLoad, pct: number): void {
+  const name = load.layer ? `${load.layer} ` : '';
+  const failed = load.failed > 0 && load.loaded + load.failed >= load.total;
+  const head = failed
+    ? `Part of the ${name}map did not load`
+    : pct >= 100
+      ? `The ${name}map is in`
+      : `Loading the ${name}map · ${pct}%`;
+  const meanwhile = failed
+    ? 'The rest of the page works.'
+    : load.first
+      ? 'The frame and the bar work meanwhile.'
+      : 'You can keep working meanwhile.';
+  card.innerHTML = `
+    <p class="sky-loading-head"></p>
+    <p class="sky-loading-line"></p>
+    ${failed ? '<button class="btn text" data-retry>Retry</button>' : ''}
+    <span class="sky-loading-bar" aria-hidden="true"><span style="width:${pct}%"></span></span>`;
+  card.querySelector('.sky-loading-head')!.textContent = head;
+  card.querySelector('.sky-loading-line')!.textContent = meanwhile;
   card.querySelector('[data-retry]')?.addEventListener('click', retry);
 }
 
-// ----- Phase 0 helpers --------------------------------------------------------------------------
+// ----- Clicks, keys, popovers and tooltips ------------------------------------------------------
 
-/**
- * The chips row never runs under a card: it gets the room left of the nearest card in its band
- * (the frame, when Measure pushes it left), and chips that do not fit wrap onto a clipped second
- * line (app.css #chips), as in the reference picture at 1366 (spec-img/20). With no room for
- * even one chip, the row hides. Lane G may offer the hidden ones in a "More" menu.
- */
-function fitChips(): void {
-  const chips = document.getElementById('chips');
-  if (!chips) return;
-  const fit = () => {
-    const row = chips.getBoundingClientRect(); // its left, top and height do not depend on its width
-    let right = innerWidth - 16;
-    for (const el of document.querySelectorAll<HTMLElement>('[data-card]')) {
-      if (el.closest('#top-left') || !el.checkVisibility()) continue;
-      const r = el.getBoundingClientRect();
-      if (r.top < row.bottom && r.bottom > row.top && r.right > row.left) {
-        right = Math.min(right, r.left - 10);
-      }
-    }
-    const room = Math.max(0, Math.floor(right - row.left));
-    const width = `${room}px`;
-    const visibility = room < 80 ? 'hidden' : '';
-    if (chips.style.maxWidth !== width) chips.style.maxWidth = width;
-    if (chips.style.visibility !== visibility) chips.style.visibility = visibility;
-  };
-  const watcher = new ResizeObserver(fit);
-  for (const id of ['frame', 'measure', 'tools', 'places-list', 'place-card', 'welcome']) {
-    const el = document.getElementById(id);
-    if (el) watcher.observe(el);
-  }
-  // Cards that appear or move without changing size (the frame when Measure opens).
-  new MutationObserver((records) => {
-    const card = (n: Node) => n instanceof Element && n.matches('[data-card]:not(#top-left *)');
-    if (records.some((r) => card(r.target))) fit();
-  }).observe(document.body, {
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['hidden', 'style'],
-  });
-  addEventListener('resize', fit);
-  fit();
+function layerItem(layer: SkyLayer, name: string, line: string, on: boolean): string {
+  return `<button class="menu-item layer-item" role="radio" aria-checked="${on}" data-layer="${layer}" data-guide="sky-map-${layer}">
+    <span class="layer-ring" aria-hidden="true"></span><span><span>${name}</span><span class="line">${line}</span></span></button>`;
 }
 
 function fill(id: string, html: string): void {
@@ -229,53 +227,94 @@ function fill(id: string, html: string): void {
   if (el) el.innerHTML = html;
 }
 
-function style(id: string, css: string): void {
-  const el = document.getElementById(id);
-  if (el) el.style.cssText = css;
-}
-
 function onClick(e: MouseEvent): void {
   const el = e.target instanceof Element ? e.target : null;
-  const zoom = el?.closest<HTMLElement>('[data-zoom]');
+  if (!el) return;
+  const zoom = el.closest<HTMLElement>('[data-zoom]');
   if (zoom) flyTo({ fov: camera().fov * Number(zoom.dataset.zoom) });
-  const gridBtn = el?.closest<HTMLElement>('[data-grid]');
+  const gridBtn = el.closest<HTMLElement>('[data-grid]');
   if (gridBtn) gridBtn.setAttribute('aria-pressed', String(grid(!grid())));
-  const layer = el?.closest<HTMLElement>('[data-layer]');
+  const layer = el.closest<HTMLElement>('[data-layer]');
   if (layer) {
     setLayer(layer.dataset.layer as SkyLayer);
     for (const item of document.querySelectorAll('#sky-layers [data-layer]')) {
       item.setAttribute('aria-checked', String(item === layer));
     }
+    document.getElementById('sky-layers')?.hidePopover();
   }
-  const open = el?.closest<HTMLElement>('[data-open]');
-  const dialog = open && document.getElementById(open.dataset.open ?? '');
-  if (dialog instanceof HTMLDialogElement) {
-    const link = dialog.querySelector<HTMLInputElement>('[data-link]');
-    if (link) link.value = linkFor();
-    dialog.showModal();
+  const open = el.closest<HTMLElement>('[data-open]');
+  if (open?.dataset.open === 'share') openShare();
+  if (open?.dataset.open === 'about') openAbout();
+  if (el.closest('[data-show-frame]')) hideFrame(false);
+}
+
+/**
+ * Page-wide keys that belong to the shell: `/` goes to search, `+` and `−` zoom the sky, and
+ * Escape closes the topmost open thing (escape.ts). Space and the arrows belong to the bar
+ * (lane D). Not while typing; `/` and the zoom keys not in a dialog either. A part that handled
+ * the key already calls `preventDefault()`.
+ */
+function onKey(e: KeyboardEvent): void {
+  if (e.defaultPrevented || e.isComposing) return;
+  if (e.key === 'Escape') {
+    // Open popovers and dialogs close themselves on Escape; the rest close here.
+    if (!nativeOpen() && closeTop()) e.preventDefault();
+    return;
+  }
+  const t = e.target instanceof HTMLElement ? e.target : null;
+  const typing = t?.closest('input, textarea, select, [contenteditable="true"]');
+  if (typing || e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]')) {
+    return;
+  }
+  if (e.key === '/') {
+    e.preventDefault();
+    document.querySelector<HTMLInputElement>('#search input')?.focus();
+  } else if (e.key === '+' || e.key === '=' || e.key === '-' || e.key === '−') {
+    e.preventDefault();
+    flyTo({ fov: camera().fov * (e.key === '-' || e.key === '−' ? 2 : 0.5) });
   }
 }
 
 /**
- * Page-wide keys (BAR-1 and GEN-1 list them all). PHASE 0 STUB: `/` and Escape only.
- * Escape closes the visible `[data-escape]` element with the highest rank by clicking its
- * `[data-close]` button. Open popovers and modal dialogs close themselves first. A part that
- * handles Escape itself calls `preventDefault()` on the event.
+ * Popovers opened from the shell's buttons hang next to their button: the menus under the top
+ * right card (right-aligned with it), the sky map chooser to the right of the rail.
  */
-function onKey(e: KeyboardEvent): void {
-  if (e.defaultPrevented) return; // a part handled it already (search closes its suggestions)
-  const typing = e.target instanceof HTMLElement && e.target.closest('input, textarea, select');
-  if (e.key === '/' && !typing) {
-    e.preventDefault();
-    document.querySelector<HTMLInputElement>('#search input')?.focus();
+function startPopovers(): void {
+  const under = (id: string, anchor: () => DOMRect | undefined, align: 'left' | 'right') => {
+    const pop = document.getElementById(id);
+    pop?.addEventListener('beforetoggle', (e) => {
+      if ((e as ToggleEvent).newState !== 'open') return;
+      const r = anchor();
+      if (!r) return;
+      pop.style.top = `${r.bottom + 6}px`;
+      if (align === 'right') {
+        pop.style.right = `${innerWidth - r.right}px`;
+        pop.style.left = 'auto';
+      } else {
+        pop.style.left = `${r.left}px`;
+        pop.style.right = 'auto';
+      }
+    });
+  };
+  const actions = () => document.getElementById('actions')?.getBoundingClientRect();
+  under('places-menu', actions, 'right');
+  under('guide-menu', actions, 'right');
+  const layers = document.getElementById('sky-layers');
+  layers?.addEventListener('beforetoggle', (e) => {
+    if ((e as ToggleEvent).newState !== 'open') return;
+    const btn = document.querySelector('[data-guide="sky-map-button"]')?.getBoundingClientRect();
+    const rail = document.getElementById('rail')?.getBoundingClientRect();
+    if (!btn || !rail) return;
+    layers.style.left = `${rail.right + 8}px`;
+    layers.style.top = `${btn.top - 5}px`;
+  });
+  // Menu buttons look pressed while their popover is open.
+  for (const btn of document.querySelectorAll<HTMLElement>('[popovertarget]')) {
+    const pop = document.getElementById(btn.getAttribute('popovertarget') ?? '');
+    pop?.addEventListener('toggle', (e) => {
+      btn.setAttribute('aria-expanded', String((e as ToggleEvent).newState === 'open'));
+    });
   }
-  if (e.key !== 'Escape' || document.querySelector('dialog[open], :popover-open:not(#tooltip)')) {
-    return;
-  }
-  const open = [...document.querySelectorAll<HTMLElement>('[data-escape]')]
-    .filter((el) => !el.hidden)
-    .sort((a, b) => Number(b.dataset.escape) - Number(a.dataset.escape));
-  open[0]?.querySelector<HTMLElement>('[data-close]')?.click();
 }
 
 /** One tooltip for every `[data-tip]`, after 0.35 s, below (or `data-tip-pos`: right, above). */
@@ -290,7 +329,8 @@ function startTooltips(): void {
   const show = (el: HTMLElement) => {
     hide();
     timer = window.setTimeout(() => {
-      tip.textContent = el.dataset.tip ?? '';
+      if (!el.isConnected || !el.dataset.tip) return;
+      tip.textContent = el.dataset.tip;
       tip.showPopover();
       const r = el.getBoundingClientRect();
       const t = tip.getBoundingClientRect();
@@ -321,4 +361,7 @@ function startTooltips(): void {
   });
   document.addEventListener('focusout', hide);
   document.addEventListener('pointerdown', hide);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hide();
+  });
 }
