@@ -31,7 +31,8 @@ const firstVisit: Step = {
         const frame = document.getElementById('frame');
         return {
           intro: document.documentElement.dataset.intro ?? null,
-          welcome: !!welcome && !welcome.hidden && welcome.checkVisibility({ opacityProperty: true }),
+          welcome:
+            !!welcome && !welcome.hidden && welcome.checkVisibility({ opacityProperty: true }),
           frame: !!frame && getComputedStyle(frame).opacity === '1',
           playing: (window as unknown as { sima: { S: { playing: boolean } } }).sima.S.playing,
           fov,
@@ -67,6 +68,14 @@ const dropFrame: Step = {
   name: 'Drop a second frame from the tray (autosaved)',
   async run(page, size) {
     await press(page, 'welcome-own');
+    // Paused: while the frame plays, the autosave waits (src/workspace/store.ts, reported).
+    if (
+      await page.evaluate(
+        () => (window as unknown as { sima: { S: { playing: boolean } } }).sima.S.playing,
+      )
+    ) {
+      await press(page, 'play');
+    }
     await press(page, 'workspace-button');
     const tile = page.locator(guide('tool-two'));
     let box = await tile.boundingBox();
@@ -143,7 +152,10 @@ export const flows: Flow[] = [
           await introGone(page, 30_000);
           await page.waitForSelector(workspaceFrame, { timeout: 10_000 });
           const fov = await page.evaluate(() => document.getElementById('sky')?.dataset.view);
-          expect(Math.abs(Number(fov?.split(' ')[2]) - 1.9) < 0.01, `the sky 1.9° wide, got ${fov}`);
+          expect(
+            Math.abs(Number(fov?.split(' ')[2]) - 1.9) < 0.01,
+            `the sky 1.9° wide, got ${fov}`,
+          );
         },
       },
       {
@@ -151,7 +163,9 @@ export const flows: Flow[] = [
         async run(page) {
           await press(page, 'share-button');
           await page.waitForFunction(() =>
-            (document.querySelector<HTMLInputElement>('[data-guide="share-link"]')?.value ?? '').includes('#w='),
+            (
+              document.querySelector<HTMLInputElement>('[data-guide="share-link"]')?.value ?? ''
+            ).includes('#w='),
           );
           const link = new URL(await page.inputValue(guide('share-link')));
           await page.keyboard.press('Escape');
