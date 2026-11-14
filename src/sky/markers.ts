@@ -68,8 +68,17 @@ let avoidCache: { at: number; boxes: Box[] } | null = null;
 /** How long the last few paints took, ms (PLC-8: under 4 ms a frame). */
 const paintTimes: number[] = [];
 
-onZoom(() => {
+/** The view at the last move, so a redraw of only the patch is not taken for a move. */
+let lastView = '';
+
+onZoom((c) => {
   paint();
+  // The sky also redraws when only the patch changes (each picture during playback): the view
+  // has not moved, so "In this view" lists are not rebuilt (their buttons would keep changing
+  // under the pointer).
+  const view = `${c.ra} ${c.dec} ${c.fov} ${c.width} ${c.height}`;
+  if (view === lastView) return;
+  lastView = view;
   clearTimeout(restTimer);
   restTimer = window.setTimeout(() => restFns.forEach((fn) => fn()), 200);
 });
