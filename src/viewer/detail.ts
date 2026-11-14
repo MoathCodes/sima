@@ -567,7 +567,7 @@ function underText(tab: MeasureTab, h: Headline): string {
     parts.push('<p class="ms-note">A fixed spot has no path. Pick the target, or a mover from Found in this patch.</p>');
   }
   const mover = moverOf(sel);
-  if (tab === 'path' && mover) parts.push(`<p class="ms-note">${moverLine(mover, searchDet())}</p>`);
+  if (tab === 'path' && mover) parts.push(`<p class="ms-note">${moverLine(mover, searchDet(), field.target?.values)}</p>`);
   if (tab === 'exposure') parts.push('<p class="ms-note">The exposures behind the picture on screen, as NASA’s archive gives them.</p>');
   if (hasNumbers()) parts.push('<p class="ms-note"><button type="button" class="link" data-do="csv">Download these numbers (CSV)</button></p>');
   if (sel.kind !== 'target' && field.target) {

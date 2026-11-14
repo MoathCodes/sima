@@ -304,9 +304,10 @@ export function pathLine(t: Target, fit: MotionFit | null): string {
 }
 
 /** A mover from the change search, under its Path chart: measured total, and the catalogue's if known. HTML. */
-export function moverLine(c: Candidate, det: number): string {
+export function moverLine(c: Candidate, det: number, targetValues = ''): string {
   if (!c.motion) return 'Its motion was not measured.';
-  const cat = c.known?.cat === 'gaia' ? 'Gaia DR3' : c.known?.cat === 'catwise' ? 'CatWISE2020' : c.known ? 'the target’s catalogue' : '';
+  const named = (targetValues.split('(')[0] ?? '').trim();
+  const cat = c.known?.cat === 'gaia' ? 'Gaia DR3' : c.known?.cat === 'catwise' ? 'CatWISE2020' : c.known ? named || 'the target’s catalogue' : '';
   return (
     `<b>${term('Measured', 'Fitted from the positions Sima measured on the pixels of this detector: a weighted straight line, east and north, against time.')}: ${num(c.motion.total, 2)} ± ${num(c.motion.totalErr, 2)}″/yr</b>` +
     ` from ${c.path?.length ?? 0} positions in D${det}, the solid line.` +

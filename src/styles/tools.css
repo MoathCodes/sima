@@ -702,6 +702,7 @@
 }
 .tl-cuts canvas {
   width: 100%;
+  max-width: 64px;
   aspect-ratio: 1;
   image-rendering: pixelated;
   background: #000;
@@ -717,7 +718,14 @@
 }
 .tl-mini {
   position: relative;
-  height: 110px;
+  height: 100px;
+}
+/* A short window (1366×768): with a candidate open, the intro gives its room to the candidate's
+   verdict and evidence. The status line stays (O-T3). */
+@media (max-height: 820px) {
+  .tl-find[data-open] .tl-intro {
+    display: none;
+  }
 }
 .tl-mini canvas {
   position: absolute;
