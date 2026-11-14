@@ -496,6 +496,20 @@ function headline(): Headline {
       det: S.color ? undefined : S.det,
     });
   }
+  const mover = moverOf(sel);
+  if (mover?.motion) {
+    // A mover walks out of a fixed circle: it leads with its own measured motion and Path.
+    return {
+      value: `${num(mover.motion.total, 2)}″/yr`,
+      valueTip: 'How far it moves across the sky in a year, fitted from the positions the change search measured on the pixels.',
+      pill: { text: 'candidate to check', tone: '' },
+      sub: moverLine(mover, searchDet(), field.target?.values),
+      chart: 'path',
+      para: candidateLines(mover),
+      det: searchDet(),
+      best: null,
+    };
+  }
   const pts = res.spot?.points ?? null;
   const mine = (pts ?? []).filter((p) => p.det === S.det && !p.flagged && Number.isFinite(p.flux));
   const test = pts ? chi2Test(mine.map((p) => p.flux), mine.map((p) => p.err)) : null;
@@ -570,8 +584,6 @@ function underText(tab: MeasureTab, h: Headline): string {
   if (tab === 'path' && sel.kind !== 'target' && !moverOf(sel)) {
     parts.push('<p class="ms-note">A fixed spot has no path. Pick the target, or a mover from Found in this patch.</p>');
   }
-  const mover = moverOf(sel);
-  if (tab === 'path' && mover) parts.push(`<p class="ms-note">${moverLine(mover, searchDet(), field.target?.values)}</p>`);
   if (tab === 'exposure') parts.push('<p class="ms-note">The exposures behind the picture on screen, as NASA’s archive gives them.</p>');
   // An empty chart other than the headline's points back to the one that has the measurement.
   if (tab !== h.chart && !h.pending && h.value !== 'Not measured' && emptyTab(tab)) {

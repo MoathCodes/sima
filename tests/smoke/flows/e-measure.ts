@@ -23,7 +23,147 @@ async function text(page: Page, selector: string): Promise<string> {
   return (await page.locator(selector).first().textContent()) ?? '';
 }
 
+/** The headline and the chart heading name the same detector (MSR-1, review finding 3). */
+function sameDetector(want?: number): Step {
+  return {
+    name: `Headline and chart are about the same detector${want ? ` (D${want})` : ''}`,
+    async run(page) {
+      await page.waitForFunction(() => !/Measuring/.test(document.querySelector('#measure [data-headline]')?.textContent ?? ''), undefined, { timeout: 15000 });
+      const r = await page.evaluate(() => ({
+        head: document.querySelector('#measure [data-headline]')?.textContent ?? '',
+        chart: document.querySelector('#measure [data-chart-head]')?.textContent ?? '',
+      }));
+      const d = /\bD(\d)\b/.exec(r.head)?.[1];
+      const c = /\bD(\d)\b/.exec(r.chart)?.[1];
+      if (!d || d !== c) throw new Error(`headline "${r.head.trim()}" and chart "${r.chart.trim()}" differ`);
+      if (want && Number(d) !== want) throw new Error(`Measure opened on D${d}, not D${want}`);
+    },
+  };
+}
+
+/** No label of the six views overlaps another or is cut off (review finding 4). */
+const viewsReadable: Step = {
+  name: 'The six views are readable',
+  async run(page) {
+    const bad = await page.evaluate(() => {
+      const bs = [...document.querySelectorAll<HTMLElement>('#frame-views [data-mode]')].map((b) => ({ b, r: b.getBoundingClientRect() }));
+      const out: string[] = [];
+      for (const { b, r } of bs) {
+        const s = b.querySelector('span');
+        if (s && s.getBoundingClientRect().width > r.width + 0.5) out.push(`${b.dataset.mode} is cut off`);
+      }
+      for (let i = 0; i < bs.length; i++)
+        for (let j = i + 1; j < bs.length; j++) {
+          const a = bs[i]!.r;
+          const c = bs[j]!.r;
+          if (a.left < c.right - 1 && c.left < a.right - 1 && a.top < c.bottom - 1 && c.top < a.bottom - 1) out.push(`${bs[i]!.b.dataset.mode} overlaps ${bs[j]!.b.dataset.mode}`);
+        }
+      return out;
+    });
+    if (bad.length) throw new Error(bad.join('; '));
+  },
+};
+
 export const flows: Flow[] = [
+  {
+    name: 'Measure opens on the headline’s detector, and follows the detector (lane E)',
+    owner: 'E',
+    path: '/?target=rw-aur',
+    steps: [
+      ownWay,
+      pressStep('measure', 'Press Measure'),
+      sameDetector(6),
+      viewsReadable,
+      noInnerScroll,
+      pressStep('all-numbers', 'Show all the numbers'),
+      {
+        name: 'Pick D3 on the detector strip',
+        async run(page) {
+          await page.locator('#detectors [data-det="3"]').first().click();
+          await page.locator('#measure [data-chart-head]', { hasText: 'D3' }).waitFor();
+        },
+      },
+      sameDetector(3),
+      {
+        name: 'The headline offers the strongest detector, one click away',
+        async run(page) {
+          await page.locator('#measure [data-headline] [data-do="det"][data-det="6"]').click();
+          await page.locator('#measure [data-chart-head]', { hasText: 'D6' }).waitFor();
+        },
+      },
+      sameDetector(6),
+      noInnerScroll,
+      pressStep('all-numbers', 'Show fewer numbers'),
+    ],
+  },
+  {
+    name: 'Path states the measured total motion (lane E)',
+    owner: 'E',
+    path: '/?target=eps-indi-b',
+    steps: [
+      ownWay,
+      pressStep('measure', 'Press Measure'),
+      pressStep('all-numbers', 'Show all the numbers'),
+      {
+        name: 'Path: "Measured: x ± y″/yr" next to the catalogue',
+        async run(page) {
+          await page.locator('#measure [data-tab="path"]').click();
+          const under = page.locator('#measure [data-under]');
+          await under.filter({ hasText: /Measured: \d+\.\d\d ± \d+\.\d\d″\/yr/ }).waitFor({ timeout: 15000 });
+          await under.filter({ hasText: /Catalogue: \d+\.\d\d″\/yr \(/ }).waitFor();
+        },
+      },
+      noInnerScroll,
+      pressStep('all-numbers', 'Show fewer numbers'),
+    ],
+  },
+  {
+    name: 'Find changes: a mover shows its path in place; the readout wraps (lane E)',
+    owner: 'E',
+    steps: [
+      ownWay,
+      pressStep('measure', 'Press Measure'),
+      pressStep('tools-button', 'Open the picture tools'),
+      {
+        name: 'The Shift-drag box is explained',
+        async run(page) {
+          await page.locator('[data-guide="box-stats"]', { hasText: 'Shift' }).waitFor();
+        },
+      },
+      {
+        name: 'Point at the picture: two lines, nothing cut off (TLS-6)',
+        async run(page) {
+          const r = (await page.locator('#frame-pic canvas').first().boundingBox())!;
+          await page.mouse.move(r.x + r.width / 2, r.y + r.height / 2);
+          const out = page.locator('#pic-tools [data-readout]');
+          await out.waitFor();
+          const ok = await out.evaluate((el) => el.children.length === 2 && el.scrollWidth <= el.clientWidth + 1 && /pixel \(/.test(el.textContent ?? ''));
+          if (!ok) throw new Error(`the readout is cut off or on one line: "${await out.textContent()}"`);
+          await page.mouse.move(r.x - 20, r.y - 20);
+        },
+      },
+      pressStep('tools-tab-find', 'Find changes tab'),
+      {
+        name: 'Open the first mover: its own Path chart and Open in Measure',
+        async run(page) {
+          const row = page.locator('#tools [data-cand]', { hasText: 'Moved?' }).first();
+          await row.waitFor({ timeout: 20000 });
+          await row.click();
+          await page.locator('#tools [data-detail] .tl-mini:not([hidden]) canvas').waitFor();
+          await page.locator('#tools [data-detail]', { hasText: /Measured: \d+\.\d\d ±/ }).waitFor();
+          await page.locator('#tools [data-detail] [data-act="measure"]').waitFor();
+        },
+      },
+      {
+        name: 'Escape closes the tools, then Measure',
+        async run(page) {
+          await page.keyboard.press('Escape');
+          await page.locator('#tools').waitFor({ state: 'hidden' });
+          await press(page, 'measure');
+        },
+      },
+    ],
+  },
   {
     name: 'Measure: calm, all the numbers, remembered (lane E)',
     owner: 'E',

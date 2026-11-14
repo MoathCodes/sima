@@ -382,6 +382,7 @@
   }
   .frame-views.six > button {
     flex: 1 0 30%;
+    height: 28px;
   }
   .frame-views.six > button > .icon {
     display: none;
