@@ -45,9 +45,22 @@ export function startPlace(): void {
     if (f) setAnchor(f, ra, dec);
   });
   addEventListener('resize', () => place(true));
-  onFrameMove(() => soon());
+  // The main frame's layout reports after every check, also when nothing moved (each step).
+  let frameKey = '';
+  onFrameMove(() => {
+    const r = document.getElementById('frame')?.getBoundingClientRect();
+    const key = r ? `${Math.round(r.left)}|${Math.round(r.top)}|${Math.round(r.width)}|${Math.round(r.height)}` : '';
+    if (key === frameKey) return;
+    frameKey = key;
+    soon();
+  });
   // Cards opening and closing (Measure, the tools, a places list) may need the room.
-  new MutationObserver(() => soon()).observe(document.body, {
+  // Only a card itself showing or hiding counts: not the badges inside a card, which change on
+  // every step.
+  new MutationObserver((records) => {
+    const card = (r: MutationRecord) => r.target instanceof Element && !r.target.closest('.wf') && (r.target.matches('[data-card]') || !!r.target.querySelector('[data-card]'));
+    if (records.some(card)) soon();
+  }).observe(document.body, {
     subtree: true,
     attributes: true,
     attributeFilter: ['hidden'],
