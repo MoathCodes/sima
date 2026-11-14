@@ -78,7 +78,6 @@ function irsaTileUrl(ch, k, n) {
 
 async function route(path, clientId) {
   const parts = path.split('/');
-  if (parts[0] === 'blank') return blankRoute(parts.slice(1));
   const soft = parts[0] === 'spherex-soft';
   if (parts[0] !== 'spherex' && !soft) return new Response('Not a sky map', { status: 404 });
   const ch = Number(parts[1]);
@@ -124,36 +123,6 @@ function properties(ch, rev, soft) {
     'moc_sky_fraction = 1',
     '',
   ].join('\n');
-}
-
-/** A see-through map: the layer under the SPHEREx channels, so a channel can fade in over another. */
-async function blankRoute(rest) {
-  if (rest[0] === 'properties') {
-    return text(
-      [
-        'creator_did = ivo://sima/blank',
-        'obs_title = Nothing',
-        'dataproduct_type = image',
-        'hips_version = 1.4',
-        'hips_frame = equatorial',
-        'hips_order = 0',
-        'hips_order_min = 0',
-        'hips_tile_width = 512',
-        'hips_tile_format = png',
-        'moc_sky_fraction = 1',
-        '',
-      ].join('\n'),
-    );
-  }
-  if (rest[0] === 'Moc.fits')
-    return new Response(fullSkyMoc(), { headers: { 'Content-Type': 'application/fits' } });
-  // Allsky of a 512-pixel map: 27 × 64 by 29 × 64 pixels.
-  const allsky = /^Allsky\./.test(rest[1] || '');
-  const canvas = allsky ? new OffscreenCanvas(1728, 1856) : new OffscreenCanvas(512, 512);
-  canvas.getContext('2d');
-  return new Response(await canvas.convertToBlob({ type: 'image/png' }), {
-    headers: { 'Content-Type': 'image/png' },
-  });
 }
 
 /** A MOC (FITS, NUNIQ) that covers the whole sky: the 12 order-0 cells. */

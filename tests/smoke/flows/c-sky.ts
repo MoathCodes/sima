@@ -67,8 +67,14 @@ export const flows: Flow[] = [
       {
         name: 'A click on empty sky only offers "Move the frame here" (FRM-3)',
         async run(page, size) {
-          await page.waitForTimeout(400);
-          const before = await viewOf(page);
+          // Let the zoom finish gliding first.
+          let before = await viewOf(page);
+          for (let i = 0; i < 20; i++) {
+            await page.waitForTimeout(300);
+            const now = await viewOf(page);
+            if (same(before, now)) break;
+            before = now;
+          }
           await page.mouse.click(size.width * 0.3, size.height * 0.62);
           await page.locator(guide('move-frame-here')).waitFor({ state: 'visible' });
           if (!same(before, await viewOf(page))) throw new Error('the sky moved on a click');

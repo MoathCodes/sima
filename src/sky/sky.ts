@@ -15,7 +15,7 @@
  *   moves only when the user moves it: never because pictures arrived.
  */
 import { emit, on, type BusEvents } from '../shell/bus.ts';
-import { frameRect, skyReady } from '../shell/shell.ts';
+import { frameRect, onFrameMove, skyReady } from '../shell/shell.ts';
 import { icon } from '../shell/icons.ts';
 import { formatCoords } from '../core/astro.ts';
 import { CHANNEL_LAM, DEFAULT_LAM, WISE_HIPS, channelFor, detectorOf } from './hips.ts';
@@ -163,6 +163,8 @@ export async function startSky(el: HTMLElement): Promise<void> {
     { replay: true },
   );
   addEventListener('resize', () => requestDraw());
+  // The tether follows the frame: its glide is a transform, which no observer sees.
+  onFrameMove(requestDraw);
   const frame = document.getElementById('frame');
   if (frame) new ResizeObserver(() => requestDraw()).observe(frame);
   new MutationObserver(() => requestDraw()).observe(document.body, {
@@ -188,7 +190,9 @@ export async function startSky(el: HTMLElement): Promise<void> {
   const lift = document.createElement('div');
   lift.className = 'sky-lift';
   el.replaceChildren(host, lift);
-  const base = flags.sw ? `${location.origin}${BASE}sky-hips/blank` : WISE_HIPS['wise-w1'];
+  // The bottom layer: the first channel's soft sky (shipped), which never needs the network.
+  baseChannel = flags.sw ? wantedChannel() : null;
+  const base = flags.sw ? softUrl(wantedChannel()) : WISE_HIPS['wise-w1'];
   al = lib.aladin(host, {
     survey: base,
     hipsList: [],
@@ -255,6 +259,25 @@ async function startWorker(): Promise<boolean> {
  * them softened instead, by about half a map pixel, display only (DESIGN.md Grey Map Rule).
  */
 function softenTiles(): void {
+  // Aladin cuts each Allsky image into 768 tiles with getImageData on a detached canvas. On a
+  // GPU-backed canvas each read is a slow readback (seconds in all); a CPU-backed one is fast.
+  const getContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (
+    this: HTMLCanvasElement,
+    type: string,
+    opts?: unknown,
+  ) {
+    const options =
+      type === '2d' && opts === undefined && !this.isConnected
+        ? { willReadFrequently: true }
+        : opts;
+    return (getContext as (t: string, o?: unknown) => RenderingContext | null).call(
+      this,
+      type,
+      options,
+    );
+  } as typeof getContext;
+
   const proto = WebGL2RenderingContext.prototype;
   const set = proto.texParameteri;
   const store = proto.texStorage3D;
@@ -474,6 +497,12 @@ interface Shown {
   channel: number | null;
 }
 let current: Shown | null = null;
+/** The channel of the bottom layer (its soft sky), which stays for the whole visit. */
+let baseChannel: number | null = null;
+
+function softUrl(channel: number): string {
+  return `${location.origin}${BASE}sky-hips/spherex-soft/${channel}/0`;
+}
 let incoming: Shown | null = null;
 let layerSeq = 0;
 let channelTimer = 0;
@@ -521,9 +550,9 @@ function showLayer(): void {
     : WISE_HIPS[key as keyof typeof WISE_HIPS];
   const name = `sky-${++layerSeq}`;
   let soft: Shown['soft'] = null;
-  if (spherex) {
+  if (spherex && channel !== baseChannel) {
     const softName = `${name}-soft`;
-    const softHips = A.HiPS(`${location.origin}${BASE}sky-hips/spherex-soft/${channel}/0`, {
+    const softHips = A.HiPS(softUrl(channel ?? 0), {
       name: softName,
       imgFormat: 'png',
     });
@@ -682,7 +711,12 @@ function report(): void {
     if (current !== shown || !now || now.done.size + now.failed.size < now.started.size) return;
     roundDone = true;
     firstDone = true;
-    skyReady({ ...load, loaded: now.started.size, total: now.started.size, failed: now.failed.size });
+    skyReady({
+      ...load,
+      loaded: now.started.size,
+      total: now.started.size,
+      failed: now.failed.size,
+    });
   }, 500);
 }
 
