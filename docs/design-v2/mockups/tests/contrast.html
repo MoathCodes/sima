@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../glass.css">
+<style>
+body{overflow:visible;height:auto}
+.row{display:flex;gap:0}
+.bk{width:300px;height:220px;position:relative;background-size:cover;background-position:center}
+.bk .p{position:absolute;inset:40px 30px;border-radius:18px}
+.white{background:#fff}.black{background:#05070d}
+.betel{background-image:url(../img/sky-betelgeuse-1900.jpg);background-size:1900px 1030px;background-position:-800px -380px}
+.mw{background-image:url(../img/sky-milkyway-1900.jpg);background-size:1900px 1030px;background-position:-820px -650px}
+</style></head><body>
+<script>
+const themes=['night','chart'], mats=['glass-thin','glass','glass-raised','slate'], bks=['white','black','betel','mw'];
+for(const t of themes){for(const m of mats){const r=document.createElement('div');r.className='row';r.dataset.theme=t;
+ for(const b of bks){const d=document.createElement('div');d.className='bk '+b;d.innerHTML=`<div class="p ${m}"></div>`;r.appendChild(d);}
+ document.body.appendChild(r);}}
+</script></body></html>
