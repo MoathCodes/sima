@@ -152,7 +152,8 @@ async function runFlow(
   const lines: string[] = [];
   const context = await browser.newContext({ viewport: size, deviceScaleFactor: 1 });
   const page = await context.newPage();
-  page.setDefaultTimeout(10_000);
+  // 20 s: under load one sky frame can take seconds, and a click waits for two steady frames.
+  page.setDefaultTimeout(20_000);
   const errors: string[] = [];
   page.on('console', (m) => {
     if (m.type() !== 'error') return;
