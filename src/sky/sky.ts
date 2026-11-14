@@ -171,9 +171,16 @@ export async function startSky(el: HTMLElement): Promise<void> {
     attributeFilter: ['hidden', 'style', 'class'],
   });
 
-  flags.sw = await startWorker();
-  const lib = (await import('aladin-lite')).default as unknown as AladinLib;
-  await lib.init;
+  // The worker and the map's code load side by side; neither waits for the other.
+  const [sw, lib] = await Promise.all([
+    startWorker(),
+    import('aladin-lite').then(async (m) => {
+      const lib = m.default as unknown as AladinLib;
+      await lib.init;
+      return lib;
+    }),
+  ]);
+  flags.sw = sw;
   A = lib;
   softenTiles();
   const host = document.createElement('div');
@@ -462,6 +469,8 @@ interface Shown {
   key: string;
   name: string;
   hips: HiPSLayer;
+  /** The same channel from the shipped low-resolution sky, under `hips` (SPHEREx only). */
+  soft: { name: string; hips: HiPSLayer } | null;
   channel: number | null;
 }
 let current: Shown | null = null;
@@ -474,9 +483,14 @@ function wantedChannel(): number {
 }
 
 /** The wavelength moved: show its channel, once the scale has rested for a moment. */
+let channelPending = -1;
 function channelSoon(): void {
+  // `shown` comes with every picture; only a new channel restarts the wait.
+  if (wantedChannel() === channelPending) return;
+  channelPending = wantedChannel();
   clearTimeout(channelTimer);
   channelTimer = window.setTimeout(() => {
+    channelPending = -1;
     if (layer === 'spherex' && flags.sw && (incoming ?? current)?.channel !== wantedChannel()) {
       showLayer();
     } else note();
@@ -497,7 +511,7 @@ function showLayer(): void {
   const key = layerKey();
   if (incoming?.key === key || (!incoming && current?.key === key)) return;
   if (incoming) {
-    al.removeImageLayer(incoming.name);
+    removeShown(incoming);
     incoming = null;
   }
   const spherex = key.startsWith('spherex/');
@@ -506,8 +520,18 @@ function showLayer(): void {
     ? `${location.origin}${BASE}sky-hips/${key}`
     : WISE_HIPS[key as keyof typeof WISE_HIPS];
   const name = `sky-${++layerSeq}`;
+  let soft: Shown['soft'] = null;
+  if (spherex) {
+    const softName = `${name}-soft`;
+    const softHips = A.HiPS(`${location.origin}${BASE}sky-hips/spherex-soft/${channel}/0`, {
+      name: softName,
+      imgFormat: 'png',
+    });
+    al.setOverlayImageLayer(softHips, softName);
+    soft = { name: softName, hips: softHips };
+  }
   const hips = A.HiPS(url, { name, imgFormat: spherex ? 'png' : 'jpeg' });
-  const next: Shown = { key, name, hips, channel };
+  const next: Shown = { key, name, hips, soft, channel };
   tellWorker(channel);
   al.setOverlayImageLayer(hips, name);
   if (!current) {
@@ -517,6 +541,7 @@ function showLayer(): void {
     return;
   }
   hips.setOpacity(0.001);
+  soft?.hips.setOpacity(0.001);
   incoming = next;
   note();
   void ready(next).then(() => {
@@ -531,11 +556,12 @@ function fadeIn(next: Shown): void {
     if (incoming !== next) return;
     const t = Math.min(1, (now - start) / CROSSFADE_MS);
     next.hips.setOpacity(Math.max(0.001, t));
+    next.soft?.hips.setOpacity(Math.max(0.001, t));
     if (t < 1) {
       requestAnimationFrame(step);
       return;
     }
-    if (current && al) al.removeImageLayer(current.name);
+    if (current) removeShown(current);
     current = next;
     incoming = null;
     tellWorker(next.channel);
@@ -543,6 +569,11 @@ function fadeIn(next: Shown): void {
     report();
   };
   requestAnimationFrame(step);
+}
+
+function removeShown(shown: Shown): void {
+  al?.removeImageLayer(shown.name);
+  if (shown.soft) al?.removeImageLayer(shown.soft.name);
 }
 
 function tellWorker(channel: number | null): void {

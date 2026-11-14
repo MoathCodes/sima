@@ -79,20 +79,24 @@ function irsaTileUrl(ch, k, n) {
 async function route(path, clientId) {
   const parts = path.split('/');
   if (parts[0] === 'blank') return blankRoute(parts.slice(1));
-  if (parts[0] !== 'spherex') return new Response('Not a sky map', { status: 404 });
+  const soft = parts[0] === 'spherex-soft';
+  if (parts[0] !== 'spherex' && !soft) return new Response('Not a sky map', { status: 404 });
   const ch = Number(parts[1]);
   const rev = parts[2] || '0';
   const rest = parts.slice(3);
   if (!Number.isInteger(ch) || ch < 0 || ch > 101 || BLANK.has(ch)) {
     return new Response('No such channel', { status: 404 });
   }
-  if (rest[0] === 'properties') return text(properties(ch, rev));
+  if (rest[0] === 'properties') return text(properties(ch, rev, soft));
   if (rest[0] === 'Moc.fits')
     return new Response(fullSkyMoc(), { headers: { 'Content-Type': 'application/fits' } });
-  if (/^Allsky\.\w+$/.test(rest[1] || '')) return allskyImage(ch, rev, clientId);
+  if (/^Allsky\.\w+$/.test(rest[1] || '')) {
+    return soft ? softTile(ch, 3, -1) : allskyImage(ch, rev, clientId);
+  }
   const m = /^Norder(\d+)$/.exec(rest[0] || '');
   const t = /^Npix(\d+)\.\w+$/.exec(rest[2] || '');
   if (!m || !t) return new Response('Not a tile', { status: 404 });
+  if (soft) return softTile(ch, Number(m[1]), Number(t[1]));
   return tile(ch, Number(m[1]), Number(t[1]), rev, clientId);
 }
 
@@ -100,16 +104,20 @@ function text(body) {
   return new Response(body, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 }
 
-function properties(ch, rev) {
+/**
+ * A channel as a 2D HiPS. The soft one goes no deeper than order 3 and comes only from the
+ * shipped sky: it lies under the sharp one, so the view is sky while NASA's tiles load.
+ */
+function properties(ch, rev, soft) {
   return [
-    `creator_did = ivo://sima/spherex-dr1-ch${ch}-r${rev}`,
-    `obs_title = SPHEREx DR1 all-sky map, channel ${ch}`,
+    `creator_did = ivo://sima/spherex-dr1-ch${ch}-r${rev}${soft ? '-soft' : ''}`,
+    `obs_title = SPHEREx DR1 all-sky map, channel ${ch}${soft ? ', shipped low resolution' : ''}`,
     'obs_collection = SPHEREx DR1',
     `hips_service_url = ${IRSA}`,
     'dataproduct_type = image',
     'hips_version = 1.4',
     'hips_frame = equatorial',
-    'hips_order = 5',
+    `hips_order = ${soft ? 3 : 5}`,
     'hips_order_min = 0',
     'hips_tile_width = 512',
     'hips_tile_format = png',
@@ -268,6 +276,26 @@ async function allskyImage(ch, rev, clientId) {
     }
   }
   return tile(ch, 3, -1, rev, clientId);
+}
+
+/** A tile of the soft layer: shipped base tiles, else cut from the shipped Allsky image. */
+async function softTile(ch, k, n) {
+  const seed = await manifest();
+  const local =
+    n < 0
+      ? hasAllsky(seed, ch) && `${SEED}allsky/${ch}.webp`
+      : seed?.base?.channel === ch &&
+        seed.base.orders.includes(k) &&
+        `${SEED}tiles/${ch}/Norder${k}/Npix${n}.webp`;
+  if (local) {
+    const res = await fetch(local).catch(() => null);
+    if (res?.ok) return image(await res.blob());
+  }
+  const blob = n >= 0 && hasAllsky(seed, ch) ? await fromAllsky(ch, k, n).catch(() => null) : null;
+  if (blob) return image(blob);
+  const canvas = new OffscreenCanvas(n < 0 ? 1728 : 512, n < 0 ? 1856 : 512);
+  canvas.getContext('2d');
+  return image(await canvas.convertToBlob({ type: 'image/png' }));
 }
 
 function image(blob) {
