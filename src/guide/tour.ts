@@ -23,6 +23,7 @@ import {
   setLevel,
   taskDone,
 } from '../explore/game.ts';
+import { focusPicture } from '../explore/keypick.ts';
 import { findAny, ring, sync } from './ring.ts';
 import { placeBeside, type Box } from './place.ts';
 import { readStore, saveStore, type TourId } from './store.ts';
@@ -122,7 +123,7 @@ const MAIN: Tour = {
     },
     {
       title: 'Find the runaway',
-      body: 'One star moves so fast that it shifts between visits: a white dot beside a dark one. Play, the arrows and the date scale still work.',
+      body: 'One star moves so fast that it shifts between visits: a white dot beside a dark one. Play and the date scale still work.',
       action: 'Tap the star that moves.',
       ring: ['picture'],
       holes: ['bar'],
@@ -406,6 +407,11 @@ function render(): void {
     <h2 class="tour-title" id="tour-title"></h2>
     <p class="tour-body" data-body></p>
     <p class="tour-action${done ? ' done' : ''}" data-guide="tour-action"><span class="tour-check" aria-hidden="true">${done ? icon('check') : ''}</span><span data-action></span></p>
+    ${
+      step.find && !done
+        ? `<p class="tour-keys">No mouse? <button class="btn text" data-pick-keys>Go to the picture</button>, move the crosshair with the arrow keys (Shift: 5 pixels), then press Enter.</p>`
+        : ''
+    }
     <p class="tour-hint" data-hint-text ${hint ? '' : 'hidden'}></p>
     <div class="tour-foot">
       <button class="btn text" data-end>End tour</button>
@@ -424,6 +430,7 @@ function render(): void {
     step.skip?.();
     enter(at + 1);
   });
+  card.querySelector('[data-pick-keys]')?.addEventListener('click', () => focusPicture());
   card.querySelector('[data-hint]')?.addEventListener('click', () => {
     hint = nextHint();
     render();

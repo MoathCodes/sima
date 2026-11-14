@@ -36,18 +36,23 @@ interface Pt {
   y: number;
 }
 
+/** A ring's place and the letter of its date on the date scale. */
+interface Dated extends Pt {
+  letter: string;
+}
+
 function token(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#fff';
 }
 
 /** The object on each date of the flip-book, and on the date on screen, in canvas pixels. */
-function track(view: Readonly<PictureView>): { all: Pt[]; now: Pt | null } {
+function track(view: Readonly<PictureView>): { all: Dated[]; now: Pt | null } {
   const field = view.field;
-  const all: Pt[] = [];
+  const all: Dated[] = [];
   for (const g of S.groups) {
     const at = targetAt(field, S.target, groupDate(field, g));
     const p = at ? view.skyToPic(at.ra, at.dec) : null;
-    if (p) all.push(p);
+    if (p) all.push({ ...p, letter: g.letter });
   }
   const mjd = view.mjd ?? (view.group ? groupDate(field, view.group) : Number.NaN);
   const at = targetAt(field, S.target, Number.isFinite(mjd) ? mjd : (S.groups[0]?.mjd ?? NaN));
@@ -137,7 +142,7 @@ function inset(
   ctx: CanvasRenderingContext2D,
   view: Readonly<PictureView>,
   b: Inset,
-  all: readonly Pt[],
+  all: readonly Dated[],
   now: Pt,
   ringR: number,
   sim: boolean,
@@ -177,6 +182,7 @@ function inset(
   });
   for (const p of all) circle(ctx, inside(p), ringR * 0.75 * zoom * 0.6, token('--st-accent-2'), 1, [3, 3]);
   circle(ctx, inside(now), ringR * zoom * 0.6, token('--mark'), 2, sim ? [5, 4] : []);
+  ends(ctx, all.map((p) => ({ ...inside(p), letter: p.letter })), ringR * zoom * 0.6);
   ctx.restore();
   // Frame and label.
   ctx.save();
@@ -198,4 +204,39 @@ function inset(
   lines.forEach((l, i) => ctx.fillText(l, b.x + 10, b.y + b.side - 4 - h + 11 + 16 * i));
   ctx.restore();
   void view;
+}
+
+/**
+ * The letters of the first and last date beside their rings, to one side of the path (up or right,
+ * away from the label at the bottom), so the close-up reads "from A to C" like the date scale and the task
+ * line.
+ */
+function ends(ctx: CanvasRenderingContext2D, pts: readonly Dated[], r: number): void {
+  const a = pts[0];
+  const b = pts[pts.length - 1];
+  if (!a || !b || a.letter === b.letter) return;
+  const len = Math.hypot(b.x - a.x, b.y - a.y);
+  const ux = len > 0.5 ? (b.x - a.x) / len : 0;
+  const uy = len > 0.5 ? (b.y - a.y) / len : -1;
+  ctx.font = `600 13px ${token('--font')}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  // Across the path, on the side that points up (or right when the path is upright).
+  let px = -uy;
+  let py = ux;
+  if (py > 0.01 || (Math.abs(py) <= 0.01 && px < 0)) {
+    px = -px;
+    py = -py;
+  }
+  for (const p of [a, b]) {
+    const x = p.x + px * (r + 10);
+    const y = p.y + py * (r + 10);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#000';
+    ctx.setLineDash([]);
+    ctx.strokeText(p.letter, x, y);
+    ctx.fillStyle = token('--st-ink');
+    ctx.fillText(p.letter, x, y);
+  }
 }
