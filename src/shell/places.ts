@@ -13,7 +13,7 @@
  * places/room.ts (keeping clear of other cards), places/state.ts (shared), src/data/tours.ts.
  */
 import { addSearchSource, type SearchHit } from '../viewer/omnibox.ts';
-import { setDots, type Dot } from '../sky/markers.ts';
+import { onDotClick, onPinClick, setDots, setPins, type Dot } from '../sky/markers.ts';
 import { camera, flyTo } from '../sky/sky.ts';
 import { openPlace } from './shell.ts';
 import { icon, type IconName } from './icons.ts';
@@ -58,6 +58,11 @@ export async function startPlaces(): Promise<void> {
     })),
   );
   addSearchSource({ name: 'places', search });
+  // A click on a dot opens its card; the dot is on screen already, so the sky stays still.
+  onDotClick((dot) => {
+    const p = cat.places.find((x) => x.id === dot.id);
+    if (p) openCard(p, null, false);
+  });
 }
 
 // ----- Chips ----------------------------------------------------------------------------------
@@ -268,10 +273,17 @@ function fillMenu(): void {
   );
   showSaved(list, menu);
   menu.addEventListener('toggle', () => showSaved(list, menu));
+  // A click on a saved place's pin goes there, as its row in this menu does.
+  onPinClick((pin) => {
+    const s = saved()[Number(pin.id)];
+    if (s) flyTo({ ra: s.ra, dec: s.dec, fov: s.fov });
+  });
 }
 
 function showSaved(box: HTMLElement, menu: HTMLElement): void {
   const all = saved();
+  // Saved places show on the sky as pins, their index in the list as their id.
+  setPins(all.map((s, i) => ({ id: String(i), name: s.name, ra: s.ra, dec: s.dec })));
   box.replaceChildren(
     ...all.map((s, i) => {
       const go = el(
