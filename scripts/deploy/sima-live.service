@@ -1,0 +1,31 @@
+# Sample systemd unit for the live service (docs/live-service.md, "Hosting").
+# Install:
+#   sudo useradd --system --home /opt/sima sima
+#   sudo git clone <this repo> /opt/sima
+#   cd /opt/sima && sudo uv venv .venv && sudo uv pip install --python .venv/bin/python -r scripts/requirements.txt
+#   sudo cp scripts/deploy/sima-live.service /etc/systemd/system/
+#   (edit the --allow-origin line below)
+#   sudo systemctl daemon-reload && sudo systemctl enable --now sima-live
+#   curl http://127.0.0.1:8765/api/health
+
+[Unit]
+Description=Sima live SPHEREx service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sima
+Group=sima
+WorkingDirectory=/opt/sima
+ExecStart=/opt/sima/.venv/bin/python /opt/sima/scripts/live.py --host 127.0.0.1 --port 8765 --cache /var/cache/sima-live --allow-origin https://your-page.example
+Restart=on-failure
+RestartSec=5
+CacheDirectory=sima-live
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

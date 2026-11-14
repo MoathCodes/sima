@@ -33,10 +33,10 @@ public/data/<key>/frames.bin.gz       one target: the pixels of every exposure, 
 
 | Field | Meaning |
 |---|---|
-| `catalogue` | Position (`ra`, `dec`, degrees, at decimal year `ep`) and motion (`pmra`, `pmdec`, mas/yr) used to centre each cutout. Same values as `src/core/targets.ts`. |
+| `catalogue` | Position (`ra`, `dec`, degrees, at decimal year `ep`), motion (`pmra`, `pmdec`, mas/yr, east motion times cos dec) and `parallax` (mas) of the target, used to centre each cutout, and `from`: where the values come from (for example `"Gaia DR3 4472832130942575872 (ESA Gaia archive, gaiadr3.gaia_source)"`). Same values as `src/core/targets.ts`. Cutouts are centred on the position moved by the motion only (parallax is under 0.6″, a tenth of a pixel). |
 | `fov`, `size` | Field width the app opens at (arcmin) and cutout side (degrees). |
-| `units` | Pixel unit: MJy/sr, with the zodiacal light model subtracted. |
-| `flagBits` | Flag bit number → name, read from the FLAGS header of the files. Newer files name bits as `MSKNn`/`MSKMn` pairs, older ones as `MP_<name> = bit`; both give the same numbers. |
+| `units` | Pixel unit, as text: `"MJy/sr, zodiacal light model (ZODI) subtracted"`. |
+| `flagBits` | Flag bit number → name, read from the FLAGS header of the files, as an object keyed by the bit number written as a string (`{"0": "TRANSIENT", …, "21": "SOURCE", …}`). Newer files name bits as `MSKNnnnn` (name) and `MSKMnnnn` (mask) pairs, older ones as `MP_<name> = bit`; both give the same numbers. |
 | `badFlags` | Flag names that make a pixel unfit for measuring (see below). |
 | `perDetPerWindow` | How many exposures per detector per visit were kept. |
 | `monthly` | `true` when each window is one calendar month of a deep field rather than one survey pass (R Draconis). |
@@ -48,22 +48,22 @@ Each entry of `frames`:
 
 | Field | Meaning |
 |---|---|
-| `id` | Observation ID plus detector, as in the IRSA file name, e.g. `2026W39_1A_0371_1D2`. |
+| `id` | Observation ID plus detector, as in the IRSA file name, e.g. `2025W33_2C_0321_3D6`. |
 | `det` | Detector, 1 to 6. |
-| `mjd`, `dateObs` | Middle of the exposure (MJD-AVG, UTC) and the same as text. |
-| `release` | IRSA collection, e.g. `spherex_qr3`. Shown on screen as "QR3". |
-| `pipeline` | Pipeline version from the file name, e.g. `l2b-v27-2026-268`. |
+| `mjd`, `dateObs` | Middle of the exposure (MJD-AVG, UTC) and the same as text (DATE-AVG). |
+| `release` | IRSA collection, e.g. `spherex_qr3` or `spherex_dr1_deep`. Shown on screen as "QR3", "DR1". |
+| `pipeline` | Pipeline version from the file name, e.g. `l2b-v27-2026-228`. |
 | `url` | The full Level 2 file at IRSA. Shown as the "View the full file" link and used for credit. |
 | `cutout` | The exact cutout request that was downloaded (`url?center=RA,DEC&size=DEG`). |
 | `exptime` | Exposure time, seconds (XPOSURE). |
 | `w`, `h` | Cutout width and height in pixels. Not always square: cutouts are clipped at detector edges. |
 | `offset` | Byte offset of this frame inside the decompressed `frames.bin`. |
 | `lam`, `bw` | Central wavelength and bandwidth (µm) at the target's position in this exposure. |
-| `wcs` | Sky ↔ pixel mapping (below). |
+| `wcs` | Sky ↔ pixel mapping (below): `crval`, `crpix`, `cd`. |
 | `wcsErr` | Largest difference between `wcs` and the full pipeline WCS inside the cutout, arcsec. |
-| `zodi` | Median of the zodiacal light model that was subtracted, MJy/sr. |
-| `sigma` | Typical pixel noise: square root of the median VARIANCE of usable pixels, MJy/sr. |
-| `omega` | Median pixel solid angle (OMEGA_MEDIAN), arcsec². |
+| `zodi` | Median of the zodiacal light model that was subtracted, MJy/sr. `null` if the plane has no value. |
+| `sigma` | Typical pixel noise: square root of the median VARIANCE of usable pixels, MJy/sr. `null` if no pixel is usable. |
+| `omega` | Median pixel solid angle (OMEGA_MEDIAN), arcsec². `null` if the header lacks it. |
 | `badFrac` | Fraction of the cutout's pixels that carry a bad flag. |
 | `window` | Visit window, counting from 0 (below). |
 
@@ -114,9 +114,13 @@ it as is.
 ## Sky ↔ pixel mapping
 
 `wcs` is a plain gnomonic (tangent-plane) projection: `crval` = [RA, Dec] in degrees at pixel `crpix`,
-and `cd` = [CD1_1, CD1_2, CD2_1, CD2_2] in degrees per pixel. Pixel (0, 0) is the centre of the first
-stored pixel. The pipeline's own WCS adds distortion terms (TAN-SIP); the script fits this plain
-projection to it over a 9 × 9 grid across the cutout and records the worst mismatch in `wcsErr`.
+and `cd` = [CD1_1, CD1_2, CD2_1, CD2_2] in degrees per pixel, so that the standard coordinates
+(ξ east, η north, degrees, about `crval`) are `ξ = CD1_1·(x − crpix[0]) + CD1_2·(y − crpix[1])` and
+`η = CD2_1·(x − crpix[0]) + CD2_2·(y − crpix[1])`. Pixel (0, 0) is the centre of the first stored
+pixel (0-based, unlike FITS); `crpix` is the centre of the cutout and `crval` the sky there. The
+pipeline's own WCS adds distortion terms (TAN-SIP); the script fits this plain projection to it over a
+9 × 9 grid across the cutout and records the worst mismatch in `wcsErr` (at most 0.09″ for 6′ cutouts
+and 0.34″ for 12′ ones in the shipped data, against 6.15″ pixels).
 `wcsSky2Pix` and `wcsPix2Sky` in `src/core/real.ts` implement it.
 
 ## Choices, and why
@@ -142,11 +146,12 @@ IRSA data-product page points to for the flag definitions:
   Tool sets both to NaN (section 3.4.3 of the supplement). The IRSA photometry tool does not leave
   DICHROIC pixels out, but warns when one is within 2.5 pixels of a source (section 3.3).
 - No file header names bit 29, so the script adds the name itself (`EXTRA_FLAG_BITS`).
-- In the five targets as re-baked, DICHROIC is set within 20 pixels of the target in 7 of 373
-  exposures; SATELLITE_HALO is set in none.
+- In the five targets as baked on 2026-11-14, DICHROIC is set within 20 pixels of the target in
+  6 of 445 exposures; SATELLITE_HALO is set in none.
 - PHANTOM (bit 4) and REFERENCE (bit 5) appear only in the headers of older files and are not in the
-  current table. Phantom pixels and reference rows sit outside the 2040 × 2040 science image, and no
-  pixel in the five baked targets has either bit set, so they stay out of the list.
+  current table (today's DR1 and QR3 headers do not name them). Phantom pixels and reference rows sit
+  outside the 2040 × 2040 science image, and no pixel in the five baked targets has either bit set
+  (all 445 exposures checked), so they stay out of the list.
 
 **Visits.** SPHEREx sweeps each part of the sky about every six months. Exposures are grouped into
 visit windows wherever there is a gap of more than 40 days. Near the ecliptic poles one sweep is
@@ -155,23 +160,25 @@ them together so a window usually has all six detectors.
 
 **R Draconis: months instead of passes.** R Draconis lies in SPHEREx's northern deep field, which is
 seen almost every month, so it also gets the deep-field collections (`spherex_dr1_deep`,
-`spherex_qr3_deep`; `deep=True` in the script). With the 40-day rule all 17 months would merge into one
-window, so its windows are calendar months instead (`monthly=True`, and `monthly` in `frames.json`).
-Each month sees the star in only one or two detector pairs (D1/D4, D2/D5 or D3/D6), so the cap counts
-only the detectors a window has, and the viewer skips months with no exposure in the detector on
-screen (`emptyPasses` in `src/viewer/state.ts`). Result: 17 months, up to 3 exposures per detector,
-132 frames, 3.44 MB (cap 150). A same-colour partner exists in 72% of the other months that have the
-detector. The brightness curve shows the star at its brightest in June 2025, fading to September,
-bright again in January and February 2026 and fading in May 2026 (D4 to D6, 0.6 to 0.8 mag from
-faintest to brightest). A cycle of 8 to 10 months fits, but the detectors disagree on its exact length
-(D6 alone gives about 250 days, all three together about 280; the catalogue says 245.5), because each
-sees the star in only 4 to 8 months: this is not a period measurement.
+`spherex_qr3_deep`; `deep=True` in the script). With the 40-day rule all its months would merge into
+one window, so its windows are calendar months (UTC) instead (`monthly=True`, and `monthly` in
+`frames.json`). Most months see the star in one or two detector pairs (D1/D4, D2/D5 or D3/D6; June
+2025 has all six), so the cap counts only the detectors a window has, and the viewer skips months with
+no exposure in the detector on screen (`emptyPasses` in `src/viewer/state.ts`). Result on 2026-11-14:
+18 months, April 2025 to September 2026, 3 exposures per detector per month (lowered from 4 to stay
+under its cap of 150), 144 frames, 3.77 MB, from all four collections. A same-colour partner exists in
+78% of the other months that have the detector. How much the star changes is for the viewer to
+measure on these frames (SPEC 7.3).
 
 **How many frames.** For each window and detector the script keeps up to 4 exposures
-(`PER_DET_PER_WINDOW`), so at most 24 per window and, with three or four windows, 70 to 96 per target. If a target ever had too many windows for the cap of 96 frames
-(`MAX_FRAMES_PER_TARGET`), fewer per window would be kept, then evenly spaced windows dropped. An
-exposure is skipped if the target lies within 5 pixels of the cutout edge. Cutouts are the field width
-plus 0.01°: 0.11° (about 64 pixels) for 6′ fields and 0.21° (about 123 pixels) for 12′ fields.
+(`PER_DET_PER_WINDOW`), so at most 24 per window and, with three or four windows, 70 to 96 per target.
+If a target has too many windows for its cap (`MAX_FRAMES_PER_TARGET`, 96; 150 for R Draconis), fewer
+per window are kept, then evenly spaced windows dropped (keeping the first and the last). An exposure
+is skipped if the target lies within 5 pixels of the cutout edge (cutouts are clipped at detector
+edges); the next backup of the same window and detector takes its place. Cutouts are the field width
+plus 0.01°: 0.11° (about 64 pixels) for 6′ fields and 0.21° (about 123 pixels) for 12′ fields. Field
+sizes (`fov` in `TARGETS`): 6′ for Barnard's Star, WISE 0855 and RW Aurigae; 12′ for Epsilon Indi B
+and R Draconis.
 
 **Which exposures: the same colour in every pass.** Each exposure sees the target at its own
 wavelength, so exposures picked only by time rarely match in colour between passes. The script picks
@@ -184,45 +191,53 @@ fail come in order of closeness to a chosen wavelength. The plan aims within 0.3
 The wavelength is estimated before any pixels are downloaded (`estimate_lam`), at no extra request
 per exposure:
 
-1. The search result's footprint (`s_region`, the four detector corners) gives where the target falls
-   on the 2040 × 2040 detector. Checked against 379 cutout headers, this is within 4 pixels across and
-   10 pixels along the detector; a channel is about 120 pixels wide.
+1. The search result's footprint (the plane table's `poly`, the same four corners as ObsCore's
+   `s_region`) gives where the target falls on the 2040 × 2040 detector. The corners are the outer
+   edges of pixels (0, 0), (2039, 0), (2039, 2039) and (0, 2039), in that order (checked against the
+   full-frame WCS of a Level 2 file); a projective map between them in the tangent plane leaves out
+   only the small distortion terms. A channel is about 120 pixels wide.
 2. The detector's wavelength table gives the wavelength there. One table per detector and release is
-   kept (`plan-wave-D<n>-<release>.npz` in the cache, about 2 KB each), read once from one file. The
-   tables of one release agree; D5 and D6 shifted by a fifth of a channel between QR2 and QR3.
+   kept (`wave/wave-D<n>-plan-<release>.npz` in the cache, about 2 KB each), read once from the end of
+   one file (below).
 
-Across the 373 previously baked exposures the estimate was within 0.08 channel widths of the value
-read from each file. The value stored in `lam` is still the one read from the downloaded file.
+Across the 445 exposures baked on 2026-11-14 the estimate was within 0.06 channel widths of the
+value read from each file (median 0.01 to 0.04, depending on the target). The value stored in `lam`
+is still the one read for the downloaded file.
 
-Result: an exposure has a same-colour partner in most of the other passes, against 26% when
-exposures were picked evenly in time (Quick Release 2 data). With Data Release 1, re-baked on
-2026-11-12 with the same caps (5.68 MB in all):
+Result, baked on 2026-11-14 (7.96 MB in all):
 
-| Target | Picked by time (QR2) | By colour (QR2) | By colour (DR1) | Best the DR1 data allow |
-|---|---|---|---|---|
-| Barnard's Star | 38% | 100% | 98% | 97% |
-| Epsilon Indi B | 24% | 80% | 75% | 69% |
-| WISE 0855-0714 | 13% | 63% | 63% | 55% |
-| RW Aurigae | 22% | 91% | 90% | 98% |
-| R Draconis (survey only) | 35% | 94% | 71% | 63% |
+| Target | Frames | Windows | Dates (UTC) | Releases (frames) | `frames.bin.gz` | Same-colour partner |
+|---|---|---|---|---|---|---|
+| Barnard's Star | 72 | 3 | 2025-08-15 to 2026-09-02 | DR1 48, QR3 24 | 0.55 MB | 97% |
+| Epsilon Indi B | 87 | 4 | 2025-04-24 to 2026-10-02 | DR1 71, QR3 16 | 2.49 MB | 85% |
+| WISE 0855−0714 | 70 | 3 | 2025-05-05 to 2026-05-14 | DR1 70 | 0.58 MB | 63% |
+| RW Aurigae | 72 | 3 | 2025-09-01 to 2026-09-16 | DR1 48, QR3 24 | 0.57 MB | 90% |
+| R Draconis | 144 | 18 months | 2025-04-27 to 2026-09-25 | DR1 62, DR1 deep 52, QR3 18, QR3 deep 12 | 3.77 MB | 78% |
 
-R Draconis dropped because Data Release 1 ends in April 2026: its third pass then has only D3 and D6,
-and Quick Release 3 has no survey exposures of it. It now uses monthly deep-field windows instead (see
-"R Draconis: months instead of passes" above).
-
-"Best the data allow" is the same share for an average exposure found by the search, counting any
-exposure of the other pass. For WISE 0855 and Epsilon Indi B, SPHEREx simply saw the target in fewer
-matching colours; a larger cap would not change that.
+"Same-colour partner" is the share of pairs (an exposure, another window that has its detector) where
+that other window has an exposure within half a channel width of it. The earlier build measured 26%
+on average when exposures were picked evenly in time (Quick Release 2, now retired). WISE 0855 has no
+QR3 exposures yet: its passes so far are about six months apart (May 2025, October–November 2025
+and April–May 2026), and the next one is not released. Every detector has 11 to 16
+exposures of each six-monthly target (WISE 0855: 12 in D5, 11 in D6, for stacking).
 
 **Wavelength.** Each detector has a filter whose wavelength changes along the image's y axis, so the
 same star is seen at a different wavelength in every exposure. The value is read from the WCS-WAVE
-lookup table (bilinear interpolation between control points, as the archive documentation describes)
-at the target's predicted pixel. That table sits at the end of each file, after a 4 MB PSF table, so
-the script stops each download once IMAGE, FLAGS, VARIANCE and ZODI have arrived (about 135 KB for a
-6′ cutout) and fetches
-one complete cutout per detector and calibration version to get the table. The result matches
-astropy's own lookup-table reader exactly. (Astropy's reader also applies the image distortion terms
-to the wavelength axis when they are present; they have to be removed from the header first.)
+lookup table (FITS `-TAB`: index vectors `X` (9 points) and `Y` (14 points) in full-detector pixels,
+1-based, and bilinear interpolation of `VALUES`, as the archive documentation describes) at the
+target's predicted pixel. The cutout header's `CRPIX1W`/`CRPIX2W` give the cutout's offset on the
+detector. The result matches astropy's own lookup-table reader exactly (a test checks this).
+(Astropy's reader also applies the image distortion terms to the wavelength axis when they are
+present; they have to be removed first, `wcs.sip = None`.)
+
+The table is the last extension of every file, after a 4 MB PSF table. So:
+
+- each cutout download stops once IMAGE, FLAGS, VARIANCE and ZODI have arrived (about 100 KB for a 6′
+  cutout, 400 KB for 12′), and
+- the table itself is read with one byte-range request for the last 11,520 bytes of the full Level 2
+  file (IRSA's file server answers ranges; WCS-WAVE is the last 5,760 bytes). One table per detector
+  and spectral calibration (the `[CALIB] spectral_wcs <id>` line in the cutout's HISTORY) is kept in
+  the cache as `wave/wave-D<n>-<id>.npz`.
 
 ## How the viewer uses the frames
 
@@ -285,20 +300,52 @@ to the wavelength axis when they are present; they have to be removed from the h
 ## Running the script
 
 ```
-pip install -r scripts/requirements.txt
-python scripts/prebake.py --plan          # search only
-python scripts/prebake.py                 # all five targets
-python scripts/prebake.py barnard         # one target
+uv venv .venv && uv pip install -r scripts/requirements.txt    # once
+.venv/bin/python scripts/prebake.py --plan          # search and plan only
+.venv/bin/python scripts/prebake.py                 # all five targets
+.venv/bin/python scripts/prebake.py barnard         # one target
 ```
+
+**Finding exposures.** One TAP query per release, all at once, as in IRSA's SPHEREx cutout notebook:
+
+```
+SELECT o.observationid, p.energy_bandpassname, p.time_bounds_lower, p.time_bounds_upper,
+       p.time_exposure, p.poly, a.uri
+FROM spherex.artifact a
+JOIN spherex.plane p ON a.planeid = p.planeid
+JOIN spherex.observation o ON p.obsid = o.obsid
+WHERE o.collection = '<release>' AND a.producttype = 'science'
+  AND 1 = CONTAINS(POINT('ICRS', <ra>, <dec>), p.poly)
+```
+
+at `https://irsa.ipac.caltech.edu/TAP/sync`, searched at the target's position in 2026.0. `uri` is the
+Level 2 file (`ibe/data/spherex/<release>/level2/…fits`); the cutout is that address plus
+`?center=<ra>,<dec>&size=<deg>`, centred on the target's position at the exposure's own date. An
+exposure found in two releases is kept from the first in the list. The queries run in parallel and
+take about 10 to 30 s (the WISE 0855 search took 180 s while IRSA was busy, including the check of
+IRSA's collection list that runs when a release finds nothing).
 
 Collections, visit grouping, the per-detector count, the cap, the cutout margin and the network
 settings are all in the configuration block at the top of the script. New data releases arrive
 often: add the collection to `RELEASES` and run again. On 2026-11-12 IRSA retired `spherex_qr2` and
 replaced it with `spherex_dr1` (the first year, reprocessed with pipeline v27); the switch was that
-one line and a re-run of about nine minutes. If a collection in `RELEASES` finds nothing and IRSA no
-longer lists it, the script says so in its log with the collections IRSA lists now (`release_note`). Raw cutouts are cached in the system temp
-folder (`--cache` to change it), so a re-run only downloads what is new, and with no new data it writes
-identical frame files (only the date in `manifest.json` changes). Requests are anonymous with a generic User-Agent, at most 8 at a time, and busy
-replies (HTTP 503, about one request in five) are retried with growing waits.
+one line and a re-run. If a collection in `RELEASES` finds nothing and IRSA no longer lists it, the
+script says so in its log with the collections IRSA lists now (`release_note`; IRSA's list comes from
+`SELECT DISTINCT collection FROM spherex.observation`). On 2026-11-14 IRSA listed `spherex_dr1`,
+`spherex_dr1_cal`, `spherex_dr1_deep`, `spherex_qr3` and `spherex_qr3_deep`.
+
+Raw cutouts, wavelength tables and query answers are cached in `~/.cache/sima-rebuild/irsa`
+(`--cache` or `SIMA_CACHE` to change it; searches are reused for 12 hours, catalogue answers for 30
+days), so a re-run only downloads what is new, and with no new data it writes identical frame files
+(only the date in `manifest.json` changes). Requests are anonymous with the generic User-Agent
+`sima-sky-viewer/1.0`, at most 8 at a time, and busy replies (HTTP 503, often one request in five)
+are retried with growing waits (2, 4, 8, 15, 30, 60 s). The whole bake of the five targets took about
+19 minutes on 2026-11-14, with IRSA answering about one cutout request in five with 503.
+
+**Neighbours.** Gaia DR3 from the ESA Gaia archive TAP (`gaiadr3.gaia_source`) and CatWISE2020 from
+IRSA TAP (`catwise_2020`), one cone each holding the target's track and its catalogue positions plus
+100″, then filtered as described under `neighbours`. VizieR at CfA is the fallback; on 2026-11-14 it
+answered CatWISE queries with no rows even where IRSA lists sources, so an empty fallback answer
+counts as a failure and the `neighbours` block is then left out (never written empty).
 
 Credit: SPHEREx data from the NASA/IPAC Infrared Science Archive (IRSA), Caltech/IPAC.

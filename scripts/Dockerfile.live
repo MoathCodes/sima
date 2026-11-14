@@ -1,0 +1,31 @@
+# The live SPHEREx service (scripts/live.py) in a container. Build context is scripts/:
+#
+#   docker build -f scripts/Dockerfile.live -t sima-live scripts/
+#   docker run -d --name sima-live -p 8765:8765 -v sima-live-cache:/cache \
+#       -e SIMA_ALLOW_ORIGIN=https://your-page.example sima-live
+#
+# See docs/live-service.md, "Hosting".
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    SIMA_HOST=0.0.0.0 \
+    SIMA_PORT=8765 \
+    SIMA_CACHE=/cache \
+    SIMA_ALLOW_ORIGIN=http://localhost:5173
+
+WORKDIR /app
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+COPY prebake.py live.py /app/
+
+RUN useradd --system --no-create-home --home-dir /app sima \
+    && mkdir -p /cache && chown sima /cache
+USER sima
+VOLUME /cache
+EXPOSE 8765
+
+HEALTHCHECK --interval=60s --timeout=10s \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/api/health', timeout=5)"
+
+CMD ["python", "/app/live.py"]
