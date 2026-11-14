@@ -105,6 +105,21 @@ Share gives a link and an embed code. A link can hold:
 
 A parameter the page does not understand is named in a short note, never ignored silently.
 
+## Extra frames and workspaces
+
+The last button on the left rail opens the frame tools. Drag a tool onto the sky (or press it) to
+open up to six extra frames beside the main one: Blink, Two dates, Difference, Spectrum,
+Brightness, Stack and Info. Each extra frame loads real pictures the same way the main frame does
+and never falls back to a simulation. Frames can be linked by date, spot and detector; the bar
+drives the main frame and every frame linked to it by date.
+
+The workspace (the extra frames and their links) is saved in the browser as you go
+(`sima-workspace`), and can be saved under a name (`sima-workspaces`), exported and imported as a
+JSON file, or shared. Share adds `#w=` to the link: the workspace as versioned JSON, compressed.
+A link longer than 4,000 characters is offered as a file instead. A damaged or too-new link opens
+the usual view with a plain message. `embed=1` shows no extra frames. The code is in
+`src/workspace/`.
+
 ## Keys
 
 Space plays or pauses, ← and → step through the pictures, + and − zoom the sky, / goes to
@@ -115,7 +130,7 @@ search, Escape closes the topmost open thing (popover, dialog, list, picture too
 `docs/SPEC.md` is the spec (behaviour), `DESIGN.md` the look, `docs/lanes.md` the map of who owns
 which file. In short: `src/core/` science (pure functions), `src/sky/` the sky map, `src/viewer/`
 the frame, the bar and Measure, `src/shell/` the cards on the sky, `src/guide/` and `src/explore/`
-the guide, `scripts/` the data and the service.
+the guide, `src/workspace/` the extra frames and workspaces, `scripts/` the data and the service.
 
 ## Licences
 
