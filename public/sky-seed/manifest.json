@@ -1,0 +1,423 @@
+{
+ "about": "Low-resolution SPHEREx sky shipped with Sima (SPEC 6.2). Built by scripts/seed-tiles.ts.",
+ "source": "https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube",
+ "title": "SPHEREx DR1 all-sky data cube",
+ "release": "SPHEREx DR1",
+ "hipsReleaseDate": "2026-11-01T01:58Z",
+ "fetched": "2026-11-14",
+ "processing": "Holes (bright star centres) filled from their rim; each of the 12 base faces smoothed (Gaussian, σ in pixels); WebP quality 80, filter-strength 0.",
+ "defaultChannel": 42,
+ "channels": [
+  {
+   "index": 0,
+   "lam": 0.753
+  },
+  {
+   "index": 1,
+   "lam": 0.771
+  },
+  {
+   "index": 2,
+   "lam": 0.79
+  },
+  {
+   "index": 3,
+   "lam": 0.809
+  },
+  {
+   "index": 4,
+   "lam": 0.828
+  },
+  {
+   "index": 5,
+   "lam": 0.848
+  },
+  {
+   "index": 6,
+   "lam": 0.868
+  },
+  {
+   "index": 7,
+   "lam": 0.889
+  },
+  {
+   "index": 8,
+   "lam": 0.91
+  },
+  {
+   "index": 9,
+   "lam": 0.932
+  },
+  {
+   "index": 10,
+   "lam": 0.955
+  },
+  {
+   "index": 11,
+   "lam": 0.978
+  },
+  {
+   "index": 12,
+   "lam": 1.001
+  },
+  {
+   "index": 13,
+   "lam": 1.025
+  },
+  {
+   "index": 14,
+   "lam": 1.05
+  },
+  {
+   "index": 15,
+   "lam": 1.075
+  },
+  {
+   "index": 16,
+   "lam": 1.102
+  },
+  {
+   "index": 17,
+   "lam": 1.113
+  },
+  {
+   "index": 18,
+   "lam": 1.139
+  },
+  {
+   "index": 19,
+   "lam": 1.167
+  },
+  {
+   "index": 20,
+   "lam": 1.195
+  },
+  {
+   "index": 21,
+   "lam": 1.224
+  },
+  {
+   "index": 22,
+   "lam": 1.254
+  },
+  {
+   "index": 23,
+   "lam": 1.284
+  },
+  {
+   "index": 24,
+   "lam": 1.315
+  },
+  {
+   "index": 25,
+   "lam": 1.346
+  },
+  {
+   "index": 26,
+   "lam": 1.378
+  },
+  {
+   "index": 27,
+   "lam": 1.412
+  },
+  {
+   "index": 28,
+   "lam": 1.446
+  },
+  {
+   "index": 29,
+   "lam": 1.481
+  },
+  {
+   "index": 30,
+   "lam": 1.517
+  },
+  {
+   "index": 31,
+   "lam": 1.554
+  },
+  {
+   "index": 32,
+   "lam": 1.592
+  },
+  {
+   "index": 33,
+   "lam": 1.631
+  },
+  {
+   "index": 34,
+   "lam": 1.656
+  },
+  {
+   "index": 35,
+   "lam": 1.695
+  },
+  {
+   "index": 36,
+   "lam": 1.735
+  },
+  {
+   "index": 37,
+   "lam": 1.775
+  },
+  {
+   "index": 38,
+   "lam": 1.818
+  },
+  {
+   "index": 39,
+   "lam": 1.861
+  },
+  {
+   "index": 40,
+   "lam": 1.905
+  },
+  {
+   "index": 41,
+   "lam": 1.949
+  },
+  {
+   "index": 42,
+   "lam": 1.995
+  },
+  {
+   "index": 43,
+   "lam": 2.041
+  },
+  {
+   "index": 44,
+   "lam": 2.089
+  },
+  {
+   "index": 45,
+   "lam": 2.139
+  },
+  {
+   "index": 46,
+   "lam": 2.189
+  },
+  {
+   "index": 47,
+   "lam": 2.24
+  },
+  {
+   "index": 48,
+   "lam": 2.292
+  },
+  {
+   "index": 49,
+   "lam": 2.345
+  },
+  {
+   "index": 52,
+   "lam": 2.506
+  },
+  {
+   "index": 53,
+   "lam": 2.575
+  },
+  {
+   "index": 54,
+   "lam": 2.646
+  },
+  {
+   "index": 55,
+   "lam": 2.719
+  },
+  {
+   "index": 56,
+   "lam": 2.794
+  },
+  {
+   "index": 57,
+   "lam": 2.871
+  },
+  {
+   "index": 58,
+   "lam": 2.951
+  },
+  {
+   "index": 59,
+   "lam": 3.033
+  },
+  {
+   "index": 60,
+   "lam": 3.118
+  },
+  {
+   "index": 61,
+   "lam": 3.204
+  },
+  {
+   "index": 62,
+   "lam": 3.293
+  },
+  {
+   "index": 63,
+   "lam": 3.383
+  },
+  {
+   "index": 64,
+   "lam": 3.476
+  },
+  {
+   "index": 65,
+   "lam": 3.57
+  },
+  {
+   "index": 66,
+   "lam": 3.667
+  },
+  {
+   "index": 67,
+   "lam": 3.768
+  },
+  {
+   "index": 68,
+   "lam": 3.833
+  },
+  {
+   "index": 69,
+   "lam": 3.867
+  },
+  {
+   "index": 70,
+   "lam": 3.901
+  },
+  {
+   "index": 71,
+   "lam": 3.935
+  },
+  {
+   "index": 72,
+   "lam": 3.97
+  },
+  {
+   "index": 73,
+   "lam": 4.005
+  },
+  {
+   "index": 74,
+   "lam": 4.04
+  },
+  {
+   "index": 75,
+   "lam": 4.076
+  },
+  {
+   "index": 76,
+   "lam": 4.112
+  },
+  {
+   "index": 77,
+   "lam": 4.148
+  },
+  {
+   "index": 78,
+   "lam": 4.184
+  },
+  {
+   "index": 79,
+   "lam": 4.22
+  },
+  {
+   "index": 80,
+   "lam": 4.257
+  },
+  {
+   "index": 81,
+   "lam": 4.294
+  },
+  {
+   "index": 82,
+   "lam": 4.331
+  },
+  {
+   "index": 83,
+   "lam": 4.368
+  },
+  {
+   "index": 84,
+   "lam": 4.405
+  },
+  {
+   "index": 85,
+   "lam": 4.435
+  },
+  {
+   "index": 86,
+   "lam": 4.467
+  },
+  {
+   "index": 87,
+   "lam": 4.5
+  },
+  {
+   "index": 88,
+   "lam": 4.533
+  },
+  {
+   "index": 89,
+   "lam": 4.566
+  },
+  {
+   "index": 90,
+   "lam": 4.6
+  },
+  {
+   "index": 91,
+   "lam": 4.635
+  },
+  {
+   "index": 92,
+   "lam": 4.669
+  },
+  {
+   "index": 93,
+   "lam": 4.704
+  },
+  {
+   "index": 94,
+   "lam": 4.739
+  },
+  {
+   "index": 95,
+   "lam": 4.773
+  },
+  {
+   "index": 96,
+   "lam": 4.808
+  },
+  {
+   "index": 97,
+   "lam": 4.843
+  },
+  {
+   "index": 98,
+   "lam": 4.879
+  },
+  {
+   "index": 99,
+   "lam": 4.915
+  },
+  {
+   "index": 100,
+   "lam": 4.951
+  },
+  {
+   "index": 101,
+   "lam": 4.988
+  }
+ ],
+ "base": {
+  "channel": 42,
+  "orders": [
+   0,
+   1,
+   2
+  ],
+  "sigma": 1.3,
+  "bytes": 3759364,
+  "filled": 38250
+ }
+}
