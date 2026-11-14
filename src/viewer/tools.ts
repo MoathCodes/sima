@@ -127,6 +127,7 @@ function render(): void {
     // The Find tab keeps its status in view and scrolls only its list (O-T3).
     if (S.toolsTab === 'find') body.removeAttribute('data-scroll');
     else body.setAttribute('data-scroll', '');
+    body.dataset.tab = S.toolsTab;
     PARTS[S.toolsTab][0](body);
     builtTab = S.toolsTab;
   }

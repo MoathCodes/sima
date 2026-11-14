@@ -90,10 +90,18 @@ export function buildFind(root: HTMLElement): void {
     if (row) open(row.dataset.cand ?? null, true);
   });
   list?.addEventListener('keydown', (e) => triage(e));
-  onSearch(() => {
-    if (root.isConnected) updateFind(root);
-  });
+  host = root;
+  if (!listening) {
+    listening = true;
+    onSearch(() => {
+      if (host?.isConnected && host.dataset.tab === 'find') updateFind(host);
+    });
+  }
 }
+
+/** The body the tab was last built in; the one search listener updates it while it shows Find. */
+let host: HTMLElement | null = null;
+let listening = false;
 
 /** Opens a candidate: its details under its row, the frame on its date, marks on the picture. */
 function open(id: string | null, toggle = false): void {

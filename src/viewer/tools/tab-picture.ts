@@ -142,10 +142,18 @@ export function buildPicture(root: HTMLElement): void {
   );
   root.querySelector('[data-png]')?.addEventListener('click', savePng);
   dragHandles(root);
-  onPaint(() => {
-    if (root.isConnected) drawHistogram(root);
-  });
+  host = root;
+  if (!listening) {
+    listening = true;
+    onPaint(() => {
+      if (host?.isConnected && host.dataset.tab === 'picture') drawHistogram(host);
+    });
+  }
 }
+
+/** The body the tab was last built in; the one paint listener updates it while it shows Picture. */
+let host: HTMLElement | null = null;
+let listening = false;
 
 /** The black and white points in force, noise units above the sky; nulls when not known. */
 function pointsInForce(): { black: number; white: number } {
