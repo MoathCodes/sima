@@ -803,6 +803,14 @@ function draw(): void {
   sizeCanvas(marks);
   sizeCanvas(dotsCanvas);
   drawPatch();
+  // The view and the patch box, readable by the guide and the smoke test without the sky's code.
+  if (skyEl) {
+    skyEl.dataset.view = `${cam.ra.toFixed(5)} ${cam.dec.toFixed(5)} ${cam.fov.toFixed(5)}`;
+    const box = outline();
+    skyEl.dataset.patch = box
+      ? `${Math.round(box.x)} ${Math.round(box.y)} ${Math.round(box.width)}`
+      : '';
+  }
   placeClickCard();
   for (const fn of zoomFns) fn({ ...cam });
 }
