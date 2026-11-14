@@ -1,0 +1,10 @@
+{
+  // Node-side files: the Vite config, the tests (which import pure modules from src/) and the
+  // TypeScript scripts. Owner: integrator.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["es2024", "dom", "dom.iterable"],
+    "types": ["node", "vite/client"]
+  },
+  "include": ["vite.config.ts", "tests", "scripts/**/*.ts"]
+}

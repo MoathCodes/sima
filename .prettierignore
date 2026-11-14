@@ -1,0 +1,16 @@
+# Owner: integrator.
+node_modules
+dist
+test-results
+.venv
+package-lock.json
+# Data and binary assets, written by scripts or downloaded.
+public/data
+public/sky-seed
+src/data/places.json
+src/styles/fonts
+# Prose: the spec documents are binding word for word.
+*.md
+docs
+# Python is not Prettier's.
+scripts/**/*.py

@@ -1,0 +1,3 @@
+/* Lane D: the frame's contents (header, picture, views, provenance line) and the bar (play
+   controls, date scale, wavelength scale, detector strip). Style only lane D's own classes here.
+   Tokens and shared components are in app.css. */
