@@ -1022,7 +1022,9 @@ samp {
 
 /* Lane G: lists and place cards open at the left, beside the rail; menus by their button. */
 #places-list,
-#place-card {
+#place-card,
+#finds,
+#sandbox {
   position: fixed;
   top: 112px; /* under the chips row (68 to 98px) */
   left: calc(var(--gutter) + 58px);
@@ -1032,7 +1034,9 @@ samp {
 #places-list {
   max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-room) - 14px);
 }
-#place-card {
+#place-card,
+#finds,
+#sandbox {
   max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-room) - 14px);
 }
 #places-menu {
@@ -1099,6 +1103,8 @@ samp {
   #tools,
   #places-list,
   #place-card,
+  #finds,
+  #sandbox,
   #welcome,
   #sky-click,
   #sky-loading,
@@ -1115,7 +1121,7 @@ samp {
   transition-timing-function: linear, var(--ease-out), linear, linear;
   transition-behavior: allow-discrete;
 }
-:is(#tools, #places-list, #place-card, #frame-show, #toasts > *)[hidden],
+:is(#tools, #places-list, #place-card, #finds, #sandbox, #frame-show, #toasts > *)[hidden],
 :is(#search-results, #sky-layers, #places-menu, #guide-menu):not(:popover-open),
 .dialog:not([open]) {
   opacity: 0;
@@ -1129,7 +1135,7 @@ samp {
   opacity: 0;
 }
 @starting-style {
-  :is(#tools, #places-list, #place-card, #frame-show, #toasts > *):not([hidden]),
+  :is(#tools, #places-list, #place-card, #finds, #sandbox, #frame-show, #toasts > *):not([hidden]),
   :is(#search-results, #sky-layers, #places-menu, #guide-menu):popover-open,
   .dialog[open] {
     opacity: 0;

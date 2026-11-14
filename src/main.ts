@@ -13,16 +13,20 @@ import './styles/tools.css';
 import './styles/places.css';
 import './styles/guide.css';
 import './styles/intro.css';
+import './styles/extras.css';
 import './styles/workspace.css';
 
 import { startShell } from './shell/shell.ts';
 import { startPlaces } from './shell/places.ts';
+import { startFinds } from './shell/finds.ts';
+import { startSandbox } from './shell/sandbox.ts';
 import { startSky } from './sky/sky.ts';
 import { startSearch } from './viewer/omnibox.ts';
 import { startFrame } from './viewer/frame.ts';
 import { startBar } from './viewer/bar.ts';
 import { startMeasure } from './viewer/detail.ts';
 import { startTools } from './viewer/tools.ts';
+import { startMotion } from './viewer/motion.ts';
 import { readLink, startUrl } from './viewer/url.ts';
 import { startGame } from './explore/game.ts';
 import { startGuide } from './guide/index.ts';
@@ -62,6 +66,7 @@ start('frame', startFrame);
 start('bar', startBar);
 start('measure', startMeasure);
 start('tools', startTools);
+start('motion', startMotion);
 start('game', startGame);
 if (!link.embed) start('guide', startGuide);
 // The sky, places and the link start in the next task: starting every part in one task blocked
@@ -71,6 +76,8 @@ if (!link.embed) {
   const sky = document.getElementById('sky');
   if (sky) start('sky', () => startSky(sky));
   start('places', startPlaces);
+  start('finds', startFinds);
+  start('sandbox', startSandbox);
 }
 start('url', () => startUrl(link));
 if (!link.embed) {

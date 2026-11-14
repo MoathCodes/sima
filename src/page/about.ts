@@ -8,6 +8,7 @@
  */
 import { TARGETS } from '../core/targets.ts';
 import { icon } from '../shell/icons.ts';
+import { openSandbox } from '../shell/sandbox.ts';
 import type { Target } from '../core/types.ts';
 
 /** Light-years in a parsec (IAU). */
@@ -40,6 +41,11 @@ export function startAbout(): void {
     </nav>
     <div class="about-body" data-scroll tabindex="0">${body()}</div>`;
   dialog.querySelector('[data-dialog-close]')?.addEventListener('click', () => dialog.close());
+  // "Open the sandbox" in the Planet X section (O-V7).
+  dialog.querySelector('[data-open-sandbox]')?.addEventListener('click', () => {
+    dialog.close();
+    openSandbox();
+  });
   // The contents row scrolls the body to a section; the page's address stays as it is.
   dialog.querySelector('.about-toc')?.addEventListener('click', (e) => {
     const a = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-section]') : null;
@@ -98,7 +104,11 @@ ${link('https://www.spaceappschallenge.org/2026/challenges/planet-x-and-spherex/
   <li><b>Compare dates:</b> Flip plays the pictures. Two dates shows the earlier date in red and the later in cyan.
     Difference shows each date minus the typical sky: a mover is a white and dark pair.</li>
   <li><b>Wavelength:</b> the scale on the bar sets both the sky map's colour and the frame's detector.</li>
-  <li><b>Measure:</b> opens the numbers behind the picture and the picture tools.</li>
+  <li><b>Measure:</b> opens the numbers behind the picture and the picture tools. In its Stack view, drag the arrow
+    to stack the pictures along a speed and direction you choose; two checks (not shifted, and the opposite motion)
+    always show beside it.</li>
+  <li><b>Catalogue search:</b> search “catalogue”, “fast” or “cold”. It lists Gaia DR3 stars that move fast, or CatWISE2020 sources that are very red
+    (cold), in the view, and marks them on the sky. They are catalogue sources, not discoveries.</li>
   <li><b>More frames:</b> the last button on the left rail opens the frame tools. Drag one onto the sky, or press it, to
     open up to six more frames beside the main one: Blink, Two dates, Difference, Spectrum, Brightness, Stack or Info.
     Each has its own date, detector and type. Link frames (the chain button) to share dates, spot or detector; the bar
@@ -133,6 +143,16 @@ apart it would look like a nearby brown dwarf: a faint dot that is in a differen
 <p>Sima does not claim to have found one. The practice “The hidden planet” is made up, and it is labelled
 <span class="pill warn">Simulated</span> everywhere. It shows what such a find would look like. Anything the change
 search lists is a candidate to check, never a discovery.</p>
+<p><b>Could SPHEREx see one?</b> The sandbox answers with a simple model. Place a pretend planet on the frame's
+picture and set its size, its distance and how much light it reflects. Sima works out how bright it would be in each
+of the six detectors (reflected sunlight and its own glow), how far it would shift in a year, and whether one
+exposure, or a stack of them, would show it against the noise measured in that patch. Its reflected sunlight
+fades with the fourth power of its distance: by this model, in the five shipped patches, a Neptune-sized planet 300 AU
+away would show in one exposure, at 500 AU it is about as faint as the noise (only a stack of some 25 exposures
+that follows its path could show it), and at 800 AU it would take about a thousand. Its yearly parallax also moves it
+far between passes. Everything in the
+sandbox is labelled <span class="pill warn">Pretend</span> and a model, is drawn dashed, and never enters a
+measurement, list, chart or download. <button class="link" type="button" data-open-sandbox data-guide="about-sandbox">Open the sandbox</button></p>
 
 <h3 id="about-challenge">The challenge's eight points</h3>
 <table class="about-table">
@@ -142,7 +162,7 @@ search lists is a candidate to check, never a discovery.</p>
     <tr><td>Creative use of the 102 bands</td><td>One wavelength scale drives the sky map and the frame; Measure builds a spectrum as the pictures play.</td></tr>
     <tr><td>Add or subtract pictures taken at different times</td><td>Difference, Two dates and Stack; combining each pass in the picture tools.</td></tr>
     <tr><td>Let users choose the field of view</td><td>Field size from 3 to 48 arcminutes.</td></tr>
-    <tr><td>Overlays from Gaia and WISE</td><td>The Layers tab draws Gaia DR3 and AllWISE sources on the picture.</td></tr>
+    <tr><td>Overlays from Gaia and WISE</td><td>The Layers tab draws Gaia DR3 and AllWISE sources on the picture; Catalogue search lists Gaia DR3 fast movers and CatWISE2020 cold objects in the view.</td></tr>
     <tr><td>Coordinates in the address, for embedding</td><td>Share gives a link and an embed code.</td></tr>
     <tr><td>Show metadata such as contamination flags</td><td>Exposure details in Measure and a pixel-flags layer.</td></tr>
     <tr><td>Use tools like Astropy and Aladin</td><td>Astropy in the data scripts; Aladin Lite draws the sky.</td></tr>
@@ -160,6 +180,11 @@ search lists is a candidate to check, never a discovery.</p>
     and a half.</li>
   <li>Distance (parallax) cannot be measured from a few passes six months apart; Measure shows the catalogue value.</li>
   <li>Bright stars overload the detector. Their centres are flagged and measured from the clean pixels around them.</li>
+  <li>Catalogue search asks VizieR from your browser. It is not always up; when it fails, the list says so. It searches
+    at most 1° around the middle of the view for Gaia and 0.5° for CatWISE2020 (wider searches gave up), and only
+    CatWISE sources brighter than 15 in W2.</li>
+  <li>The sandbox is a simple model: a round planet at one temperature, seen 90° from the Sun, each detector read at
+    the middle of its band, and a stack that adds perfectly. Real planets can be brighter at some wavelengths.</li>
   <li>Sima is made for a desktop screen and has been tested mainly in Chrome.</li>
 </ul>
 
@@ -182,7 +207,10 @@ from an AI. Where a value is a model or a simulation, the page says so.</p>
   <li><b>Gaia DR3:</b> ESA's Gaia archive, ${link('https://gea.esac.esa.int/archive/')}, and VizieR. This work made
     use of data from the ESA mission Gaia, processed by the Gaia Data Processing and Analysis Consortium (DPAC).</li>
   <li><b>VizieR and SIMBAD:</b> CDS, Strasbourg, France, ${link('https://vizier.cds.unistra.fr/')} and
-    ${link('https://simbad.cds.unistra.fr/simbad/')}. Positions and facts of places.</li>
+    ${link('https://simbad.cds.unistra.fr/simbad/')}. Positions and facts of places. Catalogue search asks VizieR's
+    mirrors at the Harvard-Smithsonian CfA and at IDIA, Cape Town.</li>
+  <li><b>Neptune in the sandbox:</b> NASA's Neptune Fact Sheet,
+    ${link('https://nssdc.gsfc.nasa.gov/planetary/factsheet/neptunefact.html')}.</li>
   <li><b>Star names:</b> IAU Working Group on Star Names, ${link('https://www.pas.rochester.edu/~emamajek/WGSN/')}.</li>
   <li><b>Arabic star names:</b> Wikipedia, ${link('https://en.wikipedia.org/wiki/List_of_Arabic_star_names')},
     text under CC BY-SA 4.0.</li>

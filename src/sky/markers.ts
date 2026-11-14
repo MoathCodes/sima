@@ -46,8 +46,35 @@ export interface Pin {
   dec: number;
 }
 
+/**
+ * A catalogue source a filter found (O-V5): drawn as a small reticle, a circle for Gaia and a
+ * square for CatWISE (DESIGN.md: catalogue marks told apart by shape), never as a place.
+ */
+export interface Find {
+  /** Stable id: the catalogue's name. */
+  id: string;
+  /** Degrees. */
+  ra: number;
+  dec: number;
+  /** Shown as a label only while chosen or hovered. */
+  name: string;
+  cat: 'gaia' | 'catwise';
+}
+
+/** The circle a filter searched, drawn dotted so the user sees what was and was not searched. */
+export interface FindArea {
+  ra: number;
+  dec: number;
+  /** Degrees. */
+  radius: number;
+}
+
 let dots: Dot[] = [];
 let pins: Pin[] = [];
+let finds: Find[] = [];
+let findArea: FindArea | null = null;
+let findHot: string | null = null;
+const findClickFns = new Set<(find: Find, p: SkyPoint) => void>();
 let pinInputs: LayoutInput[] = [];
 let pinPlaced: Placed[] = [];
 const pinClickFns = new Set<(pin: Pin, p: SkyPoint) => void>();
@@ -85,6 +112,8 @@ onZoom((c) => {
 
 registerDots({
   pick: (x, y) => {
+    const find = pickFind(x, y);
+    if (find) return { id: `find:${find.id}` };
     const pin = pickPin(x, y);
     return pin ? { id: `pin:${pin.id}` } : pick(x, y);
   },
@@ -94,6 +123,11 @@ registerDots({
     soon();
   },
   click: (id, p) => {
+    if (id.startsWith('find:')) {
+      const find = finds.find((x) => `find:${x.id}` === id);
+      if (find) for (const fn of findClickFns) fn(find, p);
+      return;
+    }
     if (id.startsWith('pin:')) {
       const pin = pins.find((x) => `pin:${x.id}` === id);
       if (pin) for (const fn of pinClickFns) fn(pin, p);
@@ -172,6 +206,31 @@ export function onPinClick(fn: (pin: Pin, p: SkyPoint) => void): () => void {
 }
 
 /**
+ * The sources a catalogue filter found, and the circle it searched (O-V5). Replaces the previous
+ * set; an empty list and a null area remove them.
+ */
+export function setFinds(next: readonly Find[], area: FindArea | null): void {
+  finds = next.map((x) => ({ ...x }));
+  findArea = area ? { ...area } : null;
+  soon();
+}
+
+/** Rings one found source (its row is hovered or chosen in the list); null for none. */
+export function setFindHover(id: string | null): void {
+  findHot = id;
+  soon();
+}
+
+/**
+ * Calls `fn` when the user clicks a found source on the sky.
+ * @returns Unsubscribe.
+ */
+export function onFindClick(fn: (find: Find, p: SkyPoint) => void): () => void {
+  findClickFns.add(fn);
+  return () => findClickFns.delete(fn);
+}
+
+/**
  * With a kind chip on, every dot of those kinds shows at any zoom (PLC-2).
  * @param kinds Kinds to show at every zoom, or null to go back to showing by importance.
  */
@@ -240,6 +299,22 @@ function pickPin(x: number, y: number): Pin | null {
     if (onLabel || Math.hypot(p.x - x, p.y - y) <= 9) return pins[p.index] ?? null;
   }
   return null;
+}
+
+/** The found source under a screen point (within 8 px of its mark), if any. */
+function pickFind(x: number, y: number): Find | null {
+  let best: Find | null = null;
+  let bestD = 8;
+  for (const f of finds) {
+    const p = toScreen(f.ra, f.dec);
+    if (!p) continue;
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (d < bestD) {
+      best = f;
+      bestD = d;
+    }
+  }
+  return best;
 }
 
 /** The dots inside the current view (the lists' "In this view" switch), whatever their tier. */
@@ -466,6 +541,86 @@ function paint(): void {
     }
     ctx.restore();
   }
+  if (finds.length || findArea) paintFinds(ctx, c.width, c.height);
   paintTimes.push(performance.now() - t0);
   if (paintTimes.length > 60) paintTimes.shift();
+}
+
+/** The filter's circle (dotted, faint ink) and its sources (reticles; the hot one ringed and named). */
+function paintFinds(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+  const { ink, mark, halo } = palette();
+  ctx.save();
+  if (findArea) {
+    // The circle on the sky, traced through the projection (it is not a circle on screen far out).
+    const a = findArea;
+    const d2r = Math.PI / 180;
+    ctx.strokeStyle = ink;
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]);
+    ctx.beginPath();
+    let open = false;
+    for (let i = 0; i <= 96; i++) {
+      const t = (i / 96) * 2 * Math.PI;
+      // A point at angular distance r and position angle t from the centre.
+      const r = a.radius * d2r;
+      const dec0 = a.dec * d2r;
+      const dec = Math.asin(Math.sin(dec0) * Math.cos(r) + Math.cos(dec0) * Math.sin(r) * Math.cos(t));
+      const ra =
+        a.ra * d2r +
+        Math.atan2(Math.sin(t) * Math.sin(r) * Math.cos(dec0), Math.cos(r) - Math.sin(dec0) * Math.sin(dec));
+      const p = toScreen(ra / d2r, dec / d2r);
+      if (!p) {
+        open = false;
+        continue;
+      }
+      if (open) ctx.lineTo(p.x, p.y);
+      else ctx.moveTo(p.x, p.y);
+      open = true;
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  ctx.setLineDash([]);
+  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = ink;
+  let hot: { f: Find; x: number; y: number } | null = null;
+  for (const f of finds) {
+    const p = toScreen(f.ra, f.dec);
+    if (!p || p.x < -10 || p.y < -10 || p.x > w + 10 || p.y > h + 10) continue;
+    if (f.id === findHot) hot = { f, x: p.x, y: p.y };
+    ctx.beginPath();
+    if (f.cat === 'gaia') ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
+    else ctx.rect(p.x - 4, p.y - 4, 8, 8);
+    // Four short ticks make it a reticle, unlike any place's glyph.
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      ctx.moveTo(p.x + dx * 6.5, p.y + dy * 6.5);
+      ctx.lineTo(p.x + dx * 9.5, p.y + dy * 9.5);
+    }
+    ctx.stroke();
+  }
+  if (hot) {
+    ctx.strokeStyle = mark;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(hot.x, hot.y, 11, 0, Math.PI * 2);
+    ctx.stroke();
+    // Its name, unless a card covers that spot (labels never go over cards).
+    ctx.font = font;
+    const tw = textWidth(hot.f.name);
+    const box = { left: hot.x + 15, top: hot.y - 8, right: hot.x + 15 + tw, bottom: hot.y + 8 };
+    const blocked = avoidBoxes().some(
+      (b) => b.left < box.right && b.right > box.left && b.top < box.bottom && b.bottom > box.top,
+    );
+    if (!blocked) {
+      ctx.textBaseline = 'middle';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = halo;
+      ctx.strokeText(hot.f.name, box.left, hot.y);
+      ctx.fillStyle = mark;
+      ctx.fillText(hot.f.name, box.left, hot.y);
+    }
+  }
+  ctx.restore();
 }

@@ -457,19 +457,43 @@ export function stackAlong(
   }
 }
 
-/** `stackAlong` in steps (a generator), for core/work.ts (TLS-8, O-T5). */
+/**
+ * Point-source widths already measured, per patch (its exposures, or its grid) and detector: the
+ * width does not depend on the motion, and measuring it is most of a stack's time (the motion
+ * handle, O-V6, stacks again on every move).
+ */
+const widths = new WeakMap<object, Map<Det, number>>();
+function widthFor(field: Field, real: RealSet | null, det: Det): number {
+  const key: object = real ?? field;
+  let m = widths.get(key);
+  if (!m) widths.set(key, (m = new Map()));
+  let w = m.get(det);
+  if (w === undefined) {
+    w = real ? psfWidthReal(real, det) : psfWidth(field, det);
+    m.set(det, w);
+  }
+  return w;
+}
+
+/**
+ * `stackAlong` in steps (a generator), for core/work.ts (TLS-8, O-T5).
+ *
+ * @param motionName What the motion is, for the labels and the note: "catalogue motion" (the
+ *   default), or "trial motion" for the motion handle (O-V6).
+ */
 export function* stackSteps(
   field: Field,
   det: Det,
   track: CatalogueTrack,
   how: CombineHow,
   set?: RealSet | null,
+  motionName = 'catalogue motion',
 ): Generator<void, StackResult> {
   const frames = field.frames.filter((f) => f.det === det && f.sigma > 0);
   const n = field.n;
   const { x, y, epoch, shifts } = stackShifts(field, frames, track);
   const real = set && set.frames.some((f) => f.meta.det === det) ? set : null;
-  const width = !frames.length ? 0.9 : real ? psfWidthReal(real, det) : psfWidth(field, det);
+  const width = !frames.length ? 0.9 : widthFor(field, real, det);
   const forced: ForcedResult[] = [];
   const run = (label: string, sign: number): StackPicture => {
     if (!frames.length) return { label, pix: new Float32Array(n * n).fill(Number.NaN), snr: Number.NaN };
@@ -480,7 +504,7 @@ export function* stackSteps(
     return { label, pix, snr: fr.snr };
   };
   yield;
-  const along = run('Along the catalogue motion', 1);
+  const along = run(`Along the ${motionName}`, 1);
   yield;
   const still = run('Not shifted', 0);
   yield;
@@ -497,7 +521,7 @@ export function* stackSteps(
   } else if (along.snr < 5) {
     note = `Not seen: the stack along the motion is ${fmt(along.snr)} the noise at the object's place, under 5×. This says nothing about whether it is there.`;
   } else if (along.snr >= still.snr + 2 && along.snr >= opposite.snr + 2) {
-    note = `Seen at ${fmt(along.snr)} the noise along the motion; the controls give ${fmt(still.snr)} (not shifted) and ${fmt(opposite.snr)} (opposite motion). Something at this place moves with the catalogue motion.`;
+    note = `Seen at ${fmt(along.snr)} the noise along the motion; the controls give ${fmt(still.snr)} (not shifted) and ${fmt(opposite.snr)} (opposite motion). Something at this place moves with the ${motionName}.`;
   } else {
     note = `Seen at ${fmt(along.snr)} the noise along the motion, but the controls give ${fmt(still.snr)} (not shifted) and ${fmt(opposite.snr)} (opposite motion). It moved about ${travel.toFixed(1)} pixels over these dates, too little for this circle to tell a mover from a still source.`;
   }

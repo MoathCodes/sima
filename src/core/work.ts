@@ -42,7 +42,7 @@ export type Job =
     }
   | { op: 'measure'; set: RealSet; target: Target }
   | { op: 'search'; key: string; det: Det; threshold: number }
-  | { op: 'stack'; key: string; det: Det; track: CatalogueTrack; how: CombineHow }
+  | { op: 'stack'; key: string; det: Det; track: CatalogueTrack; how: CombineHow; name?: string }
   | { op: 'pictures'; key: string; groups: Group[]; p: PicSettings };
 
 /** Where the work ran, and how long it took (added to results). */
@@ -111,7 +111,7 @@ export async function runSteps(
       it = groupPictureSteps(p.field, job.groups, job.p);
       transferResult = true;
     } else {
-      it = stackSteps(p.field, job.det, job.track, job.how, p.set);
+      it = stackSteps(p.field, job.det, job.track, job.how, p.set, job.name);
       transferResult = true;
     }
   } else {
@@ -356,18 +356,22 @@ export function searchChanges(
  * current patch, measured on the original exposures when the patch has them.
  *
  * @param det Detector, 1 to 6.
- * @param track Catalogue position and motion (frames.json `catalogue`).
+ * @param track Catalogue position and motion (frames.json `catalogue`), or a trial one.
  * @param how How the shifted frames are combined.
+ * @param options Also `name`: what the motion is, for the labels ("trial motion" for the motion
+ *   handle, O-V6; "catalogue motion" when left out).
  */
 export function stack(
   det: Det,
   track: CatalogueTrack,
   how: CombineHow,
-  options?: WorkOptions & { field?: Field },
+  options?: WorkOptions & { field?: Field; name?: string },
 ): Promise<StackResult & WorkTiming> {
   const p = options?.field ? patchOf(options.field) : current;
   if (!p) return Promise.reject(new Error('No patch: call usePatch first.'));
-  return run<StackResult>({ op: 'stack', key: p.key, det, track, how }, options);
+  const job: Job = { op: 'stack', key: p.key, det, track, how };
+  if (options?.name) job.name = options.name;
+  return run<StackResult>(job, options);
 }
 
 /**
