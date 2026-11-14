@@ -239,14 +239,16 @@ def _session() -> requests.Session:
     return s
 
 
-def fetch(url: str, *, params=None, data=None, headers=None, stop=None, what: str = "") -> tuple[int, bytes]:
-    """GET (or POST when `data` is given). Busy replies and dropped connections are retried with
-    growing waits. `stop(buffer)` may end a download early once enough bytes have arrived.
-    Returns (status, body). Raises FetchError for any other failure."""
+def fetch(url: str, *, params=None, data=None, headers=None, stop=None, what: str = "",
+          waits: list[float] | None = None) -> tuple[int, bytes]:
+    """GET (or POST when `data` is given). Busy replies and dropped connections are retried after
+    each wait in `waits` (default RETRY_WAITS). `stop(buffer)` may end a download early once enough
+    bytes have arrived. Returns (status, body). Raises FetchError for any other failure."""
+    waits = RETRY_WAITS if waits is None else waits
     last = ""
-    for attempt in range(len(RETRY_WAITS) + 1):
+    for attempt in range(len(waits) + 1):
         if attempt:
-            wait = RETRY_WAITS[attempt - 1] * (1 + 0.25 * random.random())
+            wait = waits[attempt - 1] * (1 + 0.25 * random.random())
             log(f"  retry {attempt} in {wait:.0f}s ({last}) {what or url[:100]}")
             time.sleep(wait)
         with _sem:
@@ -268,7 +270,7 @@ def fetch(url: str, *, params=None, data=None, headers=None, stop=None, what: st
             except (requests.ConnectionError, requests.Timeout, requests.exceptions.ChunkedEncodingError) as e:
                 last = type(e).__name__
                 continue
-    raise FetchError(f"gave up after {len(RETRY_WAITS) + 1} tries ({last}): {what or url[:120]}")
+    raise FetchError(f"gave up after {len(waits) + 1} tries ({last}): {what or url[:120]}")
 
 
 def _cache_path(*parts: str) -> Path:
@@ -379,10 +381,12 @@ def search_release(ra: float, dec: float, release: str, ttl: float | None = SEAR
     return out
 
 
-def search(ra: float, dec: float, releases: list[str], ttl: float | None = SEARCH_TTL):
+def search(ra: float, dec: float, releases: list[str], ttl: float | None = SEARCH_TTL,
+           check_retired: bool = True):
     """All releases at once, one TAP query each, in parallel. An exposure found in more than one
     release is kept from the first release in the list. Returns (exposures sorted by time,
-    {release: count}, [warnings])."""
+    {release: count}, [warnings]). With check_retired=False the caller checks empty releases itself
+    (release_note), so a slow collection-list query does not hold up the search."""
     found: dict[str, list[dict]] = {}
     with ThreadPoolExecutor(max_workers=len(releases)) as pool:
         futs = {pool.submit(search_release, ra, dec, r, ttl): r for r in releases}
@@ -396,7 +400,7 @@ def search(ra: float, dec: float, releases: list[str], ttl: float | None = SEARC
                 exps.append(e)
     exps.sort(key=lambda e: (e["t"], e["det"]))
     counts = {r: len(found[r]) for r in releases}
-    notes = [n for n in (release_note(r) for r, c in counts.items() if c == 0) if n]
+    notes = [n for n in (release_note(r) for r, c in counts.items() if c == 0) if n] if check_retired else []
     return exps, counts, notes
 
 
@@ -731,7 +735,7 @@ def cutout_url(exp: dict, ra: float, dec: float, size: float) -> str:
     return f"{exp['url']}?center={ra:.6f},{dec:.6f}&size={size:.2f}"
 
 
-def download_cutout(url: str) -> bytes:
+def download_cutout(url: str, waits: list[float] | None = None) -> bytes:
     """The first part of a cutout (primary header, IMAGE, FLAGS, VARIANCE, ZODI). Cached on disk."""
     path = _cache_path("cut", hashlib.sha1(url.encode()).hexdigest() + ".fits")
     if path.exists():
@@ -744,7 +748,7 @@ def download_cutout(url: str) -> bytes:
         state["next"] = len(buf) + 2880 * 8
         return scan_hdus(bytes(buf))[1]
 
-    _, body = fetch(url, stop=stop, what="cutout " + url.rsplit("/", 1)[-1][:60])
+    _, body = fetch(url, stop=stop, what="cutout " + url.rsplit("/", 1)[-1][:60], waits=waits)
     if not body.startswith(b"SIMPLE"):
         raise FetchError(f"not a FITS file: {body[:200]!r}")
     hdus, done = scan_hdus(body)
@@ -884,9 +888,10 @@ def make_frame(exp: dict, body: bytes, cat: dict, cutout: str):
 # ---------------------------------------------------------------------------------------------
 
 def fetch_plan(p: dict, cat: dict, size: float, *, limit: int | None = None, groups=None,
-               on_progress=None, lock_groups=None):
+               on_progress=None, waits: list[float] | None = None):
     """Download frames for the plan `p`. Returns (list of frame tuples, list of skip notes).
-    `groups` limits which (win, det) groups are filled and `limit` overrides perDet."""
+    `groups` limits which (win, det) groups are filled, `limit` overrides perDet and `waits` the
+    retry schedule of the cutout downloads."""
     want = limit if limit is not None else p["perDet"]
     todo = {g: list(c) for g, c in p["groups"].items() if groups is None or g in groups}
     got: dict[tuple, list] = {g: [] for g in todo}
@@ -898,7 +903,7 @@ def fetch_plan(p: dict, cat: dict, size: float, *, limit: int | None = None, gro
         tra, tdec = target_at(cat, e["t"])
         url = cutout_url(e, tra, tdec, size)
         try:
-            body = download_cutout(url)
+            body = download_cutout(url, waits)
             res, why = make_frame(e, body, cat, url)
         except Exception as ex:  # noqa: BLE001 - any failure moves on to a backup
             return e, None, f"{type(ex).__name__}: {ex}"
@@ -975,9 +980,13 @@ def _f(v):
         return None
 
 
-def gaia_rows(ra, dec, radius_deg):
-    adql = ("SELECT designation, ra, dec, pmra, pmdec, phot_g_mean_mag FROM gaiadr3.gaia_source "
-            f"WHERE 1 = CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {ra:.6f}, {dec:.6f}, {radius_deg:.5f}))")
+def gaia_rows(ra, dec, radius_deg, limit: int | None = None):
+    """Gaia DR3 rows in a circle (brightest `limit` when given), at epoch 2016.0. Returns (rows, service)."""
+    top = f"TOP {int(limit)} " if limit else ""
+    order = " ORDER BY phot_g_mean_mag" if limit else ""
+    adql = (f"SELECT {top}designation, ra, dec, pmra, pmdec, phot_g_mean_mag FROM gaiadr3.gaia_source "
+            f"WHERE 1 = CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {ra:.6f}, {dec:.6f}, {radius_deg:.5f}))"
+            f"{order}")
     try:
         rows = tap(GAIA_TAP, adql, ttl=NEIGHBOUR_TTL, what="Gaia DR3 neighbours")
         src = "ESA Gaia archive TAP (gaiadr3.gaia_source)"
@@ -985,7 +994,8 @@ def gaia_rows(ra, dec, radius_deg):
                 "pmdec": _f(r["pmdec"]), "mag": _f(r["phot_g_mean_mag"])} for r in rows]
     except FetchError as e:
         log("  Gaia archive failed, trying VizieR:", e)
-        rows = vizier("I/355/gaiadr3", ra, dec, radius_deg, "DR3Name,RA_ICRS,DE_ICRS,pmRA,pmDE,Gmag")
+        rows = vizier("I/355/gaiadr3", ra, dec, radius_deg, "DR3Name,RA_ICRS,DE_ICRS,pmRA,pmDE,Gmag",
+                      limit, "Gmag")
         src = "VizieR at CfA (I/355/gaiadr3)"
         out = [{"id": r["DR3Name"], "ra": _f(r["RA_ICRS"]), "dec": _f(r["DE_ICRS"]), "pmra": _f(r["pmRA"]),
                 "pmdec": _f(r["pmDE"]), "mag": _f(r["Gmag"])} for r in rows]
@@ -994,9 +1004,14 @@ def gaia_rows(ra, dec, radius_deg):
     return out, src
 
 
-def catwise_rows(ra, dec, radius_deg):
-    adql = ("SELECT source_name, ra_pm, dec_pm, pmra, pmdec, w1mpro_pm, w2mpro_pm FROM catwise_2020 "
-            f"WHERE 1 = CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {ra:.6f}, {dec:.6f}, {radius_deg:.5f}))")
+def catwise_rows(ra, dec, radius_deg, limit: int | None = None):
+    """CatWISE2020 rows in a circle (brightest in W1 `limit` when given), positions at MJD 57170,
+    motions converted to mas/yr. Returns (rows, service)."""
+    top = f"TOP {int(limit)} " if limit else ""
+    order = " ORDER BY w1mpro_pm" if limit else ""
+    adql = (f"SELECT {top}source_name, ra_pm, dec_pm, pmra, pmdec, w1mpro_pm, w2mpro_pm FROM catwise_2020 "
+            f"WHERE 1 = CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {ra:.6f}, {dec:.6f}, {radius_deg:.5f}))"
+            f"{order}")
     ep = round(mjd_to_year(CATWISE_EPOCH_MJD), 4)
     try:
         rows = tap(IRSA_TAP, adql, ttl=NEIGHBOUR_TTL, what="CatWISE2020 neighbours")
@@ -1010,7 +1025,8 @@ def catwise_rows(ra, dec, radius_deg):
                         "mag": w1 if w1 is not None else w2})
     except FetchError as e:
         log("  IRSA CatWISE failed, trying VizieR:", e)
-        rows = vizier("II/365/catwise", ra, dec, radius_deg, "Name,RAPMdeg,DEPMdeg,pmRA,pmDE,W1mproPM,W2mproPM")
+        rows = vizier("II/365/catwise", ra, dec, radius_deg, "Name,RAPMdeg,DEPMdeg,pmRA,pmDE,W1mproPM,W2mproPM",
+                      limit, "W1mproPM")
         src = "VizieR at CfA (II/365/catwise)"
         out = []
         for r in rows:
@@ -1024,13 +1040,19 @@ def catwise_rows(ra, dec, radius_deg):
     return out, src
 
 
-def vizier(cat, ra, dec, radius_deg, cols):
+def vizier(cat, ra, dec, radius_deg, cols, limit=None, sort=None):
+    """VizieR at CfA, the fallback when the ESA or IRSA service fails. Tab-separated rows as dicts."""
     params = {"-source": cat, "-c": f"{ra:.6f} {dec:+.6f}", "-c.rd": f"{radius_deg:.5f}", "-out": cols,
-              "-out.max": "unlimited", "-out.form": "|"}
+              "-out.max": str(int(limit)) if limit else "unlimited"}
+    if sort:
+        params["-sort"] = sort
     _, body = fetch(VIZIER, params=params, what=f"VizieR {cat}")
     lines = [ln for ln in body.decode("utf-8", "replace").splitlines() if ln and not ln.startswith("#")]
     if len(lines) < 3:
-        return []
+        # The CfA mirror sometimes answers with column definitions and no rows even where the
+        # catalogue has sources (CatWISE2020, 2026-11-14). An empty field and a failed mirror look
+        # the same here, so this counts as a failure, never as "no neighbours".
+        raise FetchError(f"VizieR returned no rows for {cat}")
     names = [c.strip() for c in lines[0].split("\t")]
     return [dict(zip(names, (v.strip() for v in ln.split("\t")))) for ln in lines[3:] if "\t" in ln]
 
