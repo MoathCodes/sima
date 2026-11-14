@@ -1,14 +1,22 @@
 /**
  * Dots and labels for places on the sky (PLC-2, PLC-3, PLC-8). Owner: lane C. Lane G gives the
- * dots (`setDots`); lane C decides which show at each zoom and where their labels go.
+ * dots (`setDots`); lane C decides which show at each zoom and where their labels go
+ * (layout.ts), and draws them on one canvas under the patch.
  *
  * Labels never cover a card: every visible `[data-card]` is kept clear, and so is anything given
- * to `keepClear` (rule 5 in SPEC 9.4).
- *
- * PHASE 0 STUB: a crude tier rule by zoom (see `maxTier`), labels to the right unless that would
- * touch a card, no collision between labels, every dot drawn as a DOM span.
+ * to `keepClear` (rule 5 in SPEC 9.4), and the patch square.
  */
-import { camera, onZoom, toScreen } from './sky.ts';
+import {
+  camera,
+  currentView,
+  dotLayer,
+  onZoom,
+  outline,
+  registerDots,
+  toScreen,
+  type SkyPoint,
+} from './sky.ts';
+import { layout, LABEL_HEIGHT, type Box, type LayoutInput, type Placed } from './layout.ts';
 import type { PlaceKind } from '../data/schema.ts';
 
 /** One place on the sky. */
@@ -28,14 +36,37 @@ export interface Dot {
   simulated?: boolean;
 }
 
-let dots: readonly Dot[] = [];
-let groups: readonly PlaceKind[] | null = null;
+/** A saved place on the sky: a pale ring with its name (DESIGN.md "Pins"). */
+export interface Pin {
+  /** Stable id, lane G's own. */
+  id: string;
+  name: string;
+  /** Degrees. */
+  ra: number;
+  dec: number;
+}
+
+let dots: Dot[] = [];
+let pins: Pin[] = [];
+let pinInputs: LayoutInput[] = [];
+let pinPlaced: Placed[] = [];
+const pinClickFns = new Set<(pin: Pin, p: SkyPoint) => void>();
+let inputs: LayoutInput[] = [];
+let groups: ReadonlySet<PlaceKind> | null = null;
 let hover: string | null = null;
+let skyHover: string | null = null;
 let chosen: string | null = null;
+let placed: Placed[] = [];
 const clear = new Set<Element>();
 const restFns = new Set<() => void>();
-let layer: HTMLDivElement | null = null;
+const clickFns = new Set<(dot: Dot, p: SkyPoint) => void>();
 let restTimer = 0;
+let queued = false;
+let font = '500 12px Archivo, "Helvetica Neue", Arial, sans-serif';
+let measureCtx: CanvasRenderingContext2D | null = null;
+let avoidCache: { at: number; boxes: Box[] } | null = null;
+/** How long the last few paints took, ms (PLC-8: under 4 ms a frame). */
+const paintTimes: number[] = [];
 
 onZoom(() => {
   paint();
@@ -43,13 +74,85 @@ onZoom(() => {
   restTimer = window.setTimeout(() => restFns.forEach((fn) => fn()), 200);
 });
 
+registerDots({
+  pick: (x, y) => {
+    const pin = pickPin(x, y);
+    return pin ? { id: `pin:${pin.id}` } : pick(x, y);
+  },
+  hover: (id) => {
+    if (id === skyHover) return;
+    skyHover = id;
+    soon();
+  },
+  click: (id, p) => {
+    if (id.startsWith('pin:')) {
+      const pin = pins.find((x) => `pin:${x.id}` === id);
+      if (pin) for (const fn of pinClickFns) fn(pin, p);
+      return;
+    }
+    const dot = dots.find((d) => d.id === id);
+    if (dot) for (const fn of clickFns) fn(dot, p);
+  },
+});
+
+// Cards that appear, move or resize change where labels may go.
+if (typeof MutationObserver !== 'undefined') {
+  new MutationObserver(() => {
+    avoidCache = null;
+    soon();
+  }).observe(document.documentElement, {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['hidden', 'style', 'class', 'open'],
+  });
+  addEventListener('resize', () => {
+    avoidCache = null;
+    soon();
+  });
+}
+
 /**
  * The places to show. Replaces the previous set.
  * @param next Dots, any order. Lane C sorts by tier.
  */
 export function setDots(next: readonly Dot[]): void {
-  dots = next;
-  paint();
+  dots = [...next].sort((a, b) => a.tier - b.tier);
+  inputs = dots.map((d) => ({
+    ra: d.ra,
+    dec: d.dec,
+    tier: d.tier,
+    always: false,
+    width: textWidth(label(d)),
+  }));
+  refreshAlways();
+  soon();
+}
+
+/**
+ * Saved places, drawn as pins at every zoom. Their labels go first and obey the same rules as
+ * the dots' labels: never over each other, a card or the window's edge. Replaces the previous set.
+ * @param next Pins, any order; an empty list removes them.
+ */
+export function setPins(next: readonly Pin[]): void {
+  pins = next.map((x) => ({ ...x }));
+  pinInputs = pins.map((x) => ({
+    ra: x.ra,
+    dec: x.dec,
+    tier: 0,
+    always: true,
+    width: textWidth(x.name),
+    gap: 11,
+  }));
+  soon();
+}
+
+/**
+ * Calls `fn` when the user clicks a pin on the sky.
+ * @returns Unsubscribe.
+ */
+export function onPinClick(fn: (pin: Pin, p: SkyPoint) => void): () => void {
+  pinClickFns.add(fn);
+  return () => pinClickFns.delete(fn);
 }
 
 /**
@@ -57,20 +160,23 @@ export function setDots(next: readonly Dot[]): void {
  * @param kinds Kinds to show at every zoom, or null to go back to showing by importance.
  */
 export function showGroups(kinds: readonly PlaceKind[] | null): void {
-  groups = kinds;
-  paint();
+  groups = kinds ? new Set(kinds) : null;
+  refreshAlways();
+  soon();
 }
 
 /** Highlights the dot of a place the pointer is on in a list; null for none. */
 export function setHover(id: string | null): void {
   hover = id;
-  paint();
+  refreshAlways();
+  soon();
 }
 
 /** Marks the place whose card is open; null for none. */
 export function setChosen(id: string | null): void {
   chosen = id;
-  paint();
+  refreshAlways();
+  soon();
 }
 
 /**
@@ -80,33 +186,47 @@ export function setChosen(id: string | null): void {
  */
 export function keepClear(el: Element): () => void {
   clear.add(el);
-  paint();
+  avoidCache = null;
+  soon();
   return () => {
     clear.delete(el);
-    paint();
+    avoidCache = null;
+    soon();
   };
 }
 
 /**
- * The dot under a screen point, if any.
+ * The dot under a screen point, if any: only dots drawn now can be picked.
  * @param x CSS pixels from the window's left.
  * @param y CSS pixels from the window's top.
  */
 export function pick(x: number, y: number): Dot | null {
   let best: Dot | null = null;
   let bestD = 9; // pixels
-  for (const d of dots) {
-    const p = toScreen(d.ra, d.dec);
-    const dist = p ? Math.hypot(p.x - x, p.y - y) : Infinity;
-    if (dist < bestD) {
-      best = d;
-      bestD = dist;
+  for (const p of placed) {
+    const dist = Math.hypot(p.x - x, p.y - y);
+    const onLabel =
+      p.label && x >= p.label.left && x <= p.label.right && y >= p.label.top && y <= p.label.bottom;
+    const d = onLabel ? Math.min(dist, 4) : dist;
+    if (d < bestD) {
+      best = dots[p.index] ?? null;
+      bestD = d;
     }
   }
   return best;
 }
 
-/** The dots inside the current view (the lists' "In this view" switch). */
+/** The pin under a screen point (its ring or its label), if any. */
+function pickPin(x: number, y: number): Pin | null {
+  for (const p of pinPlaced) {
+    const onLabel =
+      p.label && x >= p.label.left && x <= p.label.right && y >= p.label.top && y <= p.label.bottom;
+    if (onLabel || Math.hypot(p.x - x, p.y - y) <= 9) return pins[p.index] ?? null;
+  }
+  return null;
+}
+
+/** The dots inside the current view (the lists' "In this view" switch), whatever their tier. */
 export function inView(): Dot[] {
   const c = camera();
   return dots.filter((d) => {
@@ -124,49 +244,212 @@ export function onRest(fn: () => void): () => void {
   return () => restFns.delete(fn);
 }
 
-// ----- Phase 0 drawing ------------------------------------------------------------------------
+/**
+ * Calls `fn` when the user clicks a dot on the sky (lane G opens its card). A click on a dot
+ * never opens "Move the frame here".
+ * @returns Unsubscribe.
+ */
+export function onDotClick(fn: (dot: Dot, p: SkyPoint) => void): () => void {
+  clickFns.add(fn);
+  return () => clickFns.delete(fn);
+}
 
-/** Phase 0: the faintest tier shown at a sky width (degrees). Lane C replaces this rule. */
-function maxTier(fov: number): number {
-  return fov > 60 ? 0 : fov > 20 ? 1 : fov > 6 ? 2 : fov > 2 ? 3 : 4;
+/** Paint time of the dots, ms: the median and the worst of the last 60 paints (PLC-8). */
+export function paintStats(): { median: number; worst: number; count: number; drawn: number } {
+  const sorted = [...paintTimes].sort((a, b) => a - b);
+  return {
+    median: sorted[Math.floor(sorted.length / 2)] ?? 0,
+    worst: sorted[sorted.length - 1] ?? 0,
+    count: dots.length,
+    drawn: placed.length,
+  };
+}
+
+// ----- Drawing --------------------------------------------------------------------------------
+
+function label(d: Dot): string {
+  return d.simulated ? `Simulated: ${d.name}` : d.name;
+}
+
+function textWidth(text: string): number {
+  if (!measureCtx) {
+    measureCtx = document.createElement('canvas').getContext('2d');
+    if (measureCtx) measureCtx.font = font;
+  }
+  return Math.ceil(measureCtx?.measureText(text).width ?? text.length * 6.5) + 2;
+}
+
+function refreshAlways(): void {
+  for (let i = 0; i < dots.length; i++) {
+    const d = dots[i] as Dot;
+    const input = inputs[i] as LayoutInput;
+    input.always = !!groups?.has(d.kind) || d.id === hover || d.id === chosen || d.id === skyHover;
+  }
+}
+
+function soon(): void {
+  if (queued) return;
+  queued = true;
+  requestAnimationFrame(() => {
+    queued = false;
+    refreshAlways();
+    paint();
+  });
+}
+
+/** Boxes labels stay off: visible cards, kept-clear elements. Re-read when the page changes. */
+function avoidBoxes(): Box[] {
+  const now = performance.now();
+  if (avoidCache && now - avoidCache.at < 500) return avoidCache.boxes;
+  const boxes = [...document.querySelectorAll('[data-card]'), ...clear]
+    .filter((el) => el.checkVisibility())
+    .map((el) => {
+      const r = el.getBoundingClientRect();
+      return { left: r.left - 4, top: r.top - 4, right: r.right + 4, bottom: r.bottom + 4 };
+    })
+    .filter((b) => b.right > b.left && b.bottom > b.top);
+  avoidCache = { at: now, boxes };
+  return boxes;
+}
+
+const STAR_KINDS = new Set<PlaceKind>([
+  'star',
+  'nearby-star',
+  'fast-star',
+  'brown-dwarf',
+  'variable-star',
+]);
+const CLUSTER_KINDS = new Set<PlaceKind>(['open-cluster', 'globular-cluster']);
+const GALAXY_KINDS = new Set<PlaceKind>(['spiral-galaxy', 'elliptical-galaxy', 'galaxy']);
+
+/** One small glyph per family of kinds, told apart by shape (DESIGN.md: shape, not hue). */
+function glyph(ctx: CanvasRenderingContext2D, kind: PlaceKind, x: number, y: number): void {
+  ctx.beginPath();
+  if (STAR_KINDS.has(kind)) {
+    ctx.arc(x, y, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (CLUSTER_KINDS.has(kind)) {
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (GALAXY_KINDS.has(kind)) {
+    ctx.ellipse(x, y, 5, 2.8, -Math.PI / 6, 0, Math.PI * 2);
+    ctx.stroke();
+  } else {
+    ctx.rect(x - 3.5, y - 3.5, 7, 7);
+    ctx.stroke();
+  }
+}
+
+let colours: { ink: string; amber: string; mark: string; halo: string } | null = null;
+
+/** The tokens the dots use, read once from app.css. */
+function palette(): { ink: string; amber: string; mark: string; halo: string } {
+  if (colours) return colours;
+  const css = getComputedStyle(document.documentElement);
+  const get = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
+  font = `500 12px ${get('--font', 'Archivo, sans-serif')}`;
+  colours = {
+    ink: get('--st-ink', '#eef0f8'),
+    amber: get('--st-accent-2', '#ffb03a'),
+    mark: get('--mark', '#ff4a9c'),
+    halo: get('--note-bg', 'rgba(5, 7, 13, 0.82)'),
+  };
+  return colours;
 }
 
 function paint(): void {
-  const host = document.getElementById('sky-marks');
-  if (!host) return;
-  if (!layer) {
-    layer = document.createElement('div');
-    layer.style.cssText = 'position:absolute;inset:0';
-    host.append(layer);
-  }
-  const avoid = [...document.querySelectorAll('[data-card]'), ...clear]
-    .filter((el) => el.checkVisibility())
-    .map((el) => el.getBoundingClientRect());
-  const parts: string[] = [];
-  const tier = maxTier(camera().fov);
-  for (const d of dots) {
-    if (d.tier > tier && !groups?.includes(d.kind)) continue;
-    const p = toScreen(d.ra, d.dec);
-    if (!p) continue;
-    const label = new DOMRect(p.x + 8, p.y - 8, 8 + d.name.length * 6.5, 16);
-    const hit = avoid.some(
-      (r) =>
-        label.left < r.right &&
-        label.right > r.left &&
-        label.top < r.bottom &&
-        label.bottom > r.top,
-    );
-    const ring = d.id === chosen || d.id === hover ? 'box-shadow:0 0 0 2px var(--mark);' : '';
-    const colour = d.simulated ? 'var(--st-accent-2)' : 'var(--st-ink)';
-    parts.push(
-      `<span style="position:absolute;left:${p.x - 3}px;top:${p.y - 3}px;width:6px;height:6px;border-radius:50%;background:${colour};${ring}"></span>`,
-    );
-    if (!hit) {
-      const text = d.simulated ? `Simulated: ${d.name}` : d.name;
-      parts.push(
-        `<span style="position:absolute;left:${label.left}px;top:${label.top}px;font:var(--text-label);color:${colour};white-space:nowrap">${text.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`)}</span>`,
-      );
+  const canvas = dotLayer();
+  const view = currentView();
+  const ctx = canvas?.getContext('2d');
+  if (!canvas || !ctx || !view) return;
+  const t0 = performance.now();
+  const c = camera();
+  const patch = outline();
+  const avoid = avoidBoxes();
+  const boxes = patch
+    ? [
+        ...avoid,
+        {
+          left: patch.left - 3,
+          top: patch.top - 3,
+          right: patch.right + 3,
+          bottom: patch.bottom + 3,
+        },
+      ]
+    : avoid;
+  const all = layout(
+    pins.length ? [...pinInputs, ...inputs] : inputs,
+    view,
+    c.width,
+    c.height,
+    c.fov,
+    boxes,
+  );
+  pinPlaced = all.filter((p) => p.index < pins.length);
+  placed = pins.length
+    ? all.filter((p) => p.index >= pins.length).map((p) => ({ ...p, index: p.index - pins.length }))
+    : all;
+
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  ctx.clearRect(0, 0, c.width, c.height);
+  const { ink, amber, mark, halo } = palette();
+  ctx.font = font;
+  ctx.lineWidth = 1.4;
+  ctx.textBaseline = 'middle';
+  for (const p of placed) {
+    const d = dots[p.index] as Dot;
+    const colour = d.simulated ? amber : ink;
+    ctx.fillStyle = colour;
+    ctx.strokeStyle = colour;
+    ctx.setLineDash(d.simulated ? [3, 2] : []);
+    glyph(ctx, d.kind, p.x, p.y);
+    if (d.id === chosen || d.id === hover || d.id === skyHover) {
+      ctx.save();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = mark;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (p.label) {
+      const text = label(d);
+      const x = p.label.left + 1;
+      const y = p.label.top + LABEL_HEIGHT / 2;
+      ctx.save();
+      ctx.setLineDash([]);
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = halo;
+      ctx.strokeText(text, x, y);
+      ctx.fillStyle = colour;
+      ctx.fillText(text, x, y);
+      ctx.restore();
     }
   }
-  layer.innerHTML = parts.join('');
+  for (const p of pinPlaced) {
+    const pin = pins[p.index] as Pin;
+    const hot = skyHover === `pin:${pin.id}`;
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = hot ? mark : ink;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 7, 0, Math.PI * 2); // 14 px ring (--pin)
+    ctx.stroke();
+    if (p.label) {
+      const x = p.label.left + 1;
+      const y = p.label.top + LABEL_HEIGHT / 2;
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = halo;
+      ctx.strokeText(pin.name, x, y);
+      ctx.fillStyle = ink;
+      ctx.fillText(pin.name, x, y);
+    }
+    ctx.restore();
+  }
+  paintTimes.push(performance.now() - t0);
+  if (paintTimes.length > 60) paintTimes.shift();
 }
