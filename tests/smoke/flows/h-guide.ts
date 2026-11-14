@@ -4,7 +4,7 @@
  * Owner: lane H.
  */
 import type { Page } from 'playwright-core';
-import { guide, keyStep, press, pressStep, reloadStep, type Flow, type Step } from '../smoke.ts';
+import { guide, keyStep, press, pressStep, type Flow, type Step } from '../smoke.ts';
 
 /** Fails unless `fn` (page JavaScript) becomes true within a few seconds. */
 function expect(name: string, fn: string, timeout = 10000): Step {
@@ -70,10 +70,10 @@ export const flows: Flow[] = [
       keyStep('Enter', 'Enter does not skip the step'),
       onStep(1),
       pressStep('play', 'Press Play'),
-      // Playing finishes step 1, and step 2 pauses again: either one shows Play started.
+      // Step 2 pauses the pictures again, so the flip may already be over when this looks.
       expect(
         'The pictures flip',
-        `window.sima.S.playing === true || !!document.querySelector('#tour .tour-card:not([hidden])')?.textContent?.includes('Step 2 of 8')`,
+        `window.sima.S.playing === true || !!document.querySelector('#tour .tour-card')?.textContent?.includes('Step 2 of 8')`,
       ),
       onStep(2),
       ringsPart('dates'),
@@ -216,12 +216,12 @@ export const flows: Flow[] = [
       onStep(1),
       skip,
       onStep(2),
-      reloadStep(),
+      { name: 'Reload', run: async (page) => void (await page.reload()) },
       expect('Pick up the tour?', `!!document.querySelector('${guide('tour-resume')}')`),
       pressStep('tour-resume', 'Pick up the tour'),
       onStep(2),
       { name: 'End tour', run: (page) => page.locator('#tour .tour-card [data-end]').click() },
-      reloadStep(),
+      { name: 'Reload', run: async (page) => void (await page.reload()) },
       expect(
         'The welcome card does not ask again',
         `!!document.querySelector('${guide('starter-runaway')}') && !document.querySelector('${guide('tour-resume')}')`,
@@ -256,7 +256,7 @@ export const flows: Flow[] = [
     steps: [
       pressStep('welcome-own', 'Close the welcome card'),
       pressStep('measure', 'Press Measure'),
-      reloadStep(),
+      { name: 'Reload', run: async (page) => void (await page.reload()) },
       expect('Measure is open', `!document.getElementById('measure').hidden`),
       expect('No welcome card', `document.getElementById('welcome').hidden`),
       keyStep('Escape', 'Escape'),

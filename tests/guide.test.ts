@@ -139,3 +139,14 @@ test('placeNear: never covers a hover card, even when forced (O-G1)', () => {
   });
   assert.ok(spot && !overlaps(spot.box, hover) && !overlaps(spot.box, target));
 });
+
+test('movedLine: one measured sentence, arcseconds and pixels between the first and last date', () => {
+  const line = copy.movedLine('A (Aug 2025)', 'C (Aug 2026)', 10.5, 0.26, 6.15);
+  assert.equal(
+    line,
+    'Measured: from A (Aug 2025) to C (Aug 2026) it moved 10.5 ± 0.3″, about 1.7 pixels.',
+  );
+  assert.match(copy.movedLine('A', 'B', 6.15, 0.1, 6.15), /about 1\.0 pixel\.$/);
+  // No discovery words (H7).
+  assert.doesNotMatch(line, /discover|new |found a/i);
+});
