@@ -277,9 +277,31 @@ export function buildRealField(
   set: RealSet,
   opts: { ra: number; dec: number; fov: number; target: Target | null },
 ): Field {
+  const it = buildRealFieldSteps(set, opts);
+  for (;;) {
+    const r = it.next();
+    if (r.done) return r.value;
+  }
+}
+
+/**
+ * `buildRealField` in steps (a generator that yields after each exposure), so core/work.ts can
+ * build a large patch in a worker or in slices on the page (TLS-8): R Draconis takes about 0.5 to
+ * 0.8 s in all.
+ */
+export function* buildRealFieldSteps(
+  set: RealSet,
+  opts: { ra: number; dec: number; fov: number; target: Target | null },
+): Generator<void, Field> {
   const grid = fieldGrid(opts.ra, opts.dec, opts.fov);
-  const order = set.frames.map((_, i) => i).sort((a, b) => set.frames[a]!.meta.mjd - set.frames[b]!.meta.mjd);
-  const frames = order.map((src, i) => ({ ...realFrame(set, src, grid), i }));
+  const order = set.frames
+    .map((_, i) => i)
+    .sort((a, b) => set.frames[a]!.meta.mjd - set.frames[b]!.meta.mjd);
+  const frames: Frame[] = [];
+  for (const src of order) {
+    frames.push({ ...realFrame(set, src, grid), i: frames.length });
+    yield;
+  }
   numberVisits(frames);
   const field: Field = {
     ra: opts.ra,

@@ -450,6 +450,21 @@ export function stackAlong(
   how: CombineHow,
   set?: RealSet | null,
 ): StackResult {
+  const it = stackSteps(field, det, track, how, set);
+  for (;;) {
+    const r = it.next();
+    if (r.done) return r.value;
+  }
+}
+
+/** `stackAlong` in steps (a generator), for core/work.ts (TLS-8, O-T5). */
+export function* stackSteps(
+  field: Field,
+  det: Det,
+  track: CatalogueTrack,
+  how: CombineHow,
+  set?: RealSet | null,
+): Generator<void, StackResult> {
   const frames = field.frames.filter((f) => f.det === det && f.sigma > 0);
   const n = field.n;
   const { x, y, epoch, shifts } = stackShifts(field, frames, track);
@@ -464,8 +479,11 @@ export function stackAlong(
     forced.push(fr);
     return { label, pix, snr: fr.snr };
   };
+  yield;
   const along = run('Along the catalogue motion', 1);
+  yield;
   const still = run('Not shifted', 0);
+  yield;
   const opposite = run('Along the opposite motion', -1);
   const travel = shifts.length
     ? Math.max(...shifts.map((s) => Math.hypot(s.dx, s.dy))) * 2
