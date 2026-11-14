@@ -72,7 +72,9 @@ export function startShell(): void {
     <button class="icon-btn" data-zoom="2" aria-label="Zoom the sky out" data-tip="Zoom out (−)" data-tip-pos="right" data-guide="zoom-out">${icon('minus')}</button>
     <hr class="rail-rule">
     <button class="icon-btn" popovertarget="sky-layers" aria-label="Sky map" data-tip="Sky map" data-tip-pos="right" data-guide="sky-map-button">${icon('layers')}</button>
-    <button class="icon-btn" data-grid aria-pressed="false" aria-label="Coordinate grid" data-tip="Coordinate grid" data-tip-pos="right" data-guide="grid-button">${icon('globe')}</button>`,
+    <button class="icon-btn" data-grid aria-pressed="false" aria-label="Coordinate grid" data-tip="Coordinate grid" data-tip-pos="right" data-guide="grid-button">${icon('globe')}</button>
+    <hr class="rail-rule">
+    <button class="icon-btn" popovertarget="workspace" aria-label="Add a frame, workspaces" data-tip="Add a frame · workspaces" data-tip-pos="right" data-guide="workspace-button">${icon('add-frame')}</button>`,
   );
 
   fill(

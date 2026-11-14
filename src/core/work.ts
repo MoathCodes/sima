@@ -33,6 +33,7 @@ import { stackSteps, type StackResult } from './stack.ts';
 /** A job as the worker receives it (internal; exported for core/worker.ts). */
 export type Job =
   | { op: 'patch'; key: string; field: Field; set: RealSet | null }
+  | { op: 'drop'; key: string }
   | { op: 'cancel' }
   | {
       op: 'build';
@@ -91,7 +92,7 @@ function buffersOf(v: unknown, out: Set<ArrayBuffer> = new Set()): ArrayBuffer[]
  */
 export async function runSteps(
   job: Job,
-  patch: () => { key: string; field: Field; set: RealSet | null } | null,
+  patch: (key: string) => { key: string; field: Field; set: RealSet | null } | null,
   slice: number,
   cancelled: () => boolean,
 ): Promise<{ value: unknown; transfer: ArrayBuffer[]; ms: number; longestMs: number }> {
@@ -103,7 +104,7 @@ export async function runSteps(
   } else if (job.op === 'measure') {
     it = measureTargetSteps(job.set, job.target);
   } else if (job.op === 'search' || job.op === 'stack' || job.op === 'pictures') {
-    const p = patch();
+    const p = patch(job.key);
     if (!p || p.key !== job.key) throw new Error('No patch: call usePatch first.');
     if (job.op === 'search') it = changeSteps(p.field, p.set, job.det, job.threshold);
     else if (job.op === 'pictures') {
@@ -148,8 +149,13 @@ let worker: Worker | null = null;
 let workerFailed = false;
 let nextId = 1;
 const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: unknown) => void }>();
-let current: { key: string; field: Field; set: RealSet | null } | null = null;
-let sentKey: string | null = null;
+type Patch = { key: string; field: Field; set: RealSet | null };
+let current: Patch | null = null;
+/** Every patch jobs may name, oldest first: the frame's (`current`) and the workspace's extra
+ * frames' (`keepPatch`). At most MAX_PATCHES; the worker holds a copy of those in `sent`. */
+const patches = new Map<string, Patch>();
+const sent = new Set<string>();
+const MAX_PATCHES = 8;
 
 /** The worker, started on first use; null where Workers are unavailable. */
 function getWorker(): Worker | null {
@@ -174,7 +180,7 @@ function getWorker(): Worker | null {
       workerFailed = true;
       worker?.terminate();
       worker = null;
-      sentKey = null;
+      sent.clear();
       for (const [, p] of pending) p.reject(new Error('The worker stopped; the job will run on the page.'));
       pending.clear();
     };
@@ -192,9 +198,12 @@ async function run<T>(job: Job, opts: WorkOptions = {}): Promise<T & WorkTiming>
   const { signal } = opts;
   if (signal?.aborted) throw abortError();
   const w = getWorker();
-  if (w && (job.op === 'search' || job.op === 'stack' || job.op === 'pictures') && current && sentKey !== current.key) {
-    await post(w, { op: 'patch', key: current.key, field: current.field, set: current.set });
-    sentKey = current.key;
+  if (w && (job.op === 'search' || job.op === 'stack' || job.op === 'pictures') && !sent.has(job.key)) {
+    const p = patches.get(job.key);
+    if (p) {
+      sent.add(p.key);
+      await post(w, { op: 'patch', key: p.key, field: p.field, set: p.set });
+    }
   }
   if (w) {
     try {
@@ -211,7 +220,7 @@ async function run<T>(job: Job, opts: WorkOptions = {}): Promise<T & WorkTiming>
   };
   signal?.addEventListener('abort', onAbort, { once: true });
   try {
-    const r = await runSteps(job, () => current, 20, () => aborted);
+    const r = await runSteps(job, (key) => patches.get(key) ?? null, 20, () => aborted);
     return withTiming(r.value as T, 'page', r.ms, r.longestMs);
   } finally {
     signal?.removeEventListener('abort', onAbort);
@@ -257,8 +266,43 @@ function post(w: Worker, job: Job, signal?: AbortSignal): Promise<unknown> {
  */
 export function usePatch(key: string, field: Field, set: RealSet | null): void {
   if (current && current.key === key && current.field === field && current.set === set) return;
-  current = { key, field, set };
-  sentKey = null;
+  current = keep(key, field, set);
+}
+
+/**
+ * Makes a patch available to `pictures` and `stack` without making it the current one (the
+ * workspace's extra frames, src/workspace). The worker keeps up to eight patches; the oldest
+ * that is not current is dropped first.
+ */
+export function keepPatch(key: string, field: Field, set: RealSet | null): void {
+  const p = patches.get(key);
+  if (p && p.field === field && p.set === set) {
+    patches.delete(key);
+    patches.set(key, p);
+    return;
+  }
+  keep(key, field, set);
+}
+
+function keep(key: string, field: Field, set: RealSet | null): Patch {
+  const p: Patch = { key, field, set };
+  patches.delete(key);
+  if (sent.delete(key) && worker) worker.postMessage({ id: nextId++, op: 'drop', key });
+  patches.set(key, p);
+  for (const old of patches.keys()) {
+    if (patches.size <= MAX_PATCHES) break;
+    if (old === key || old === current?.key) continue;
+    patches.delete(old);
+    if (sent.delete(old) && worker) worker.postMessage({ id: nextId++, op: 'drop', key: old });
+  }
+  return p;
+}
+
+/** The kept patch whose field this is, or null. */
+function patchOf(field: Field): Patch | null {
+  if (current?.field === field) return current;
+  for (const p of patches.values()) if (p.field === field) return p;
+  return null;
 }
 
 /**
@@ -319,10 +363,11 @@ export function stack(
   det: Det,
   track: CatalogueTrack,
   how: CombineHow,
-  options?: WorkOptions,
+  options?: WorkOptions & { field?: Field },
 ): Promise<StackResult & WorkTiming> {
-  if (!current) return Promise.reject(new Error('No patch: call usePatch first.'));
-  return run<StackResult>({ op: 'stack', key: current.key, det, track, how }, options);
+  const p = options?.field ? patchOf(options.field) : current;
+  if (!p) return Promise.reject(new Error('No patch: call usePatch first.'));
+  return run<StackResult>({ op: 'stack', key: p.key, det, track, how }, options);
 }
 
 /**
@@ -337,15 +382,16 @@ export function pictures(
   p: PicSettings,
   options?: WorkOptions,
 ): Promise<Float32Array[] & WorkTiming> {
-  if (!current || current.field !== field) return Promise.reject(new Error('Not the patch given to usePatch.'));
-  return run<Float32Array[]>({ op: 'pictures', key: current.key, groups: [...groups], p: { ...p } }, options);
+  const patch = patchOf(field);
+  if (!patch) return Promise.reject(new Error('Not a patch given to usePatch or keepPatch.'));
+  return run<Float32Array[]>({ op: 'pictures', key: patch.key, groups: [...groups], p: { ...p } }, options);
 }
 
 /** Stops the worker and every job (for tests, or when the page goes away). */
 export function cancelAll(): void {
   worker?.terminate();
   worker = null;
-  sentKey = null;
+  sent.clear();
   for (const [, p] of pending) p.reject(abortError());
   pending.clear();
 }
