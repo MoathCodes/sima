@@ -52,3 +52,20 @@ test('measures the target in slices, the same as measureTarget', async () => {
     measureTarget(set, t).map((m) => m.ra),
   );
 });
+
+test('makes the frame’s cleaned-up pictures, the same as groupPicture, for the patch in use only', async () => {
+  const { pictures } = await import('../src/core/work.ts');
+  const { groupFrames, groupPicture } = await import('../src/core/blink.ts');
+  const { DEFAULT_PIC } = await import('../src/core/picture.ts');
+  const set = await loadSet('wise-0855');
+  const t = target('wise-0855');
+  const field = await buildField(set, { ra: t.ra, dec: t.dec, fov: 6, target: t });
+  const groups = groupFrames(field, 5, 'window').filter((g) => g.frames.length).slice(0, 2);
+  const p = { ...DEFAULT_PIC, background: true, median: true, smooth: 1 as const };
+  await assert.rejects(pictures(field, groups, p), /usePatch/);
+  usePatch('wise-0855-pictures', field, set);
+  const pics = await pictures(field, groups, p);
+  assert.equal(pics.ranOn, 'page');
+  assert.equal(pics.length, 2);
+  groups.forEach((g, i) => assert.deepEqual(pics[i], groupPicture(field, g, p)));
+});
