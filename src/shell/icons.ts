@@ -9,6 +9,8 @@
 
 const PATHS = {
   search: '<circle cx="9" cy="9" r="5.5"/><path d="M13.2 13.2 17 17"/>',
+  filter: '<path d="M3.5 4.5h13l-5 6.2v4.8l-3 1.5v-6.3z"/>',
+  planet: '<circle cx="10" cy="10" r="4.3"/><path d="M5.4 12.6C3.2 14 2.4 15.3 3 16c1 1.1 5.2-.6 9.3-3.8S18.4 5.1 17.4 4c-.6-.6-2 0-3.8 1.3"/>',
   plus: '<path d="M10 4v12M4 10h12"/>',
   minus: '<path d="M4 10h12"/>',
   close: '<path d="m5.5 5.5 9 9m0-9-9 9"/>',

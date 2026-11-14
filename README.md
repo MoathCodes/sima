@@ -75,6 +75,25 @@ there are no pictures here and why, and offers the five targets and a labelled p
 - The page finds the service through `VITE_LIVE_API` (for example `/api/patch`).
 - Routes, limits and timings: `docs/live-service.md`.
 
+## Catalogue search, the motion handle and the sandbox
+
+- **Catalogue search** (search "catalogue", "fast" or "cold"): asks VizieR, from
+  the browser, for Gaia DR3 stars that move fast (proper motion over a cut, up to a 1° circle) or
+  CatWISE2020 sources that look cold (W1−W2 over a cut, W2 under 15, up to 0.5°). It tries the CfA
+  mirror, then the IDIA one, and says so if both fail, with "Try again". An answer takes 5 to 20
+  seconds, sometimes more. Results are catalogue sources, never discoveries: a paged list and marks
+  on the sky, each with "Look with the frame".
+- **Motion handle** (Measure, Stack view): drag the arrow, or use the arrow keys on it (Shift for
+  ten times bigger steps), to try a motion. The stack is redone in the worker as it moves, with
+  its signal-to-noise and the two checks (not shifted, opposite). "Snap to catalogue motion" goes
+  back.
+- **Sandbox** (search "planet x", or About's Planet X section): a pretend planet with a size,
+  distance and reflectivity. A simple model gives its brightness in each detector (reflected
+  sunlight plus its own glow), its yearly shift, and whether one exposure or a stack would show it
+  against the noise measured in the open patch. It is drawn with a "Pretend planet" tag and a
+  dashed outline, and never enters a measurement, list, chart or download
+  (`tests/sandbox.test.ts` checks this).
+
 ## Hosting
 
 The site is static: host `dist/` on any static host.

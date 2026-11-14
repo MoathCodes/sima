@@ -1,0 +1,52 @@
+# Real VizieR answer (IDIA mirror, 14 Nov 2026): I/355/gaiadr3 within 1 deg of 269.452 +4.693, PM>200, -sort=-PM.
+#
+#   VizieR Astronomical Server vizier.idia.ac.za
+#    Date: 2026-11-14T21:04:16 [V7.6.1]
+#   In case of problem, please report to:	cds-question@unistra.fr
+#
+#
+#Coosys	J2000:	eq_FK5 J2000
+#INFO	service_protocol=ASU	  IVOID of the protocol through which the data was retrieved
+#INFO	request_date=2026-11-14T21:04:16	  Query execution date
+#INFO	request=https://vizier.idia.ac.za/viz-bin/asu-tsv?-source=I/355/gaiadr3&-c=269.452000+%2B4.693000&-c.rd=1.00000&-out=DR3Name,RA_ICRS,DE_ICRS,pmRA,pmDE,PM,Gmag,Plx&PM=%3E200&-sort=-PM&-out.max=301	  Full request URL
+#INFO	contact=cds-question@unistra.fr	  Email or URL to contact publisher
+#INFO	server_software=VizieR/7.6.1	  Software version
+#INFO	publisher=CDS	  Data centre that produced the VOTable
+#INFO	-c=269.452000+04.693000,rd=1.	
+#Constraint -out.max=301
+
+#RESOURCE=yCat_1355
+#Name: I/355
+#Title: Gaia DR3 Part 1. Main source (Gaia Collaboration, 2022)
+#INFO	ivoid=ivo://cds.vizier/i/355	    IVOID of underlying data collection
+#INFO	data_ivoid=ivo://cds.vizier/i/355	    IVOID of underlying data collection
+#INFO	creator=Gaia collaboration	    First author or institution
+#INFO	cites=bibcode:2022yCat.1355....0G	    Bibcode of the dataset
+#INFO	journal=yCat	    Journal name
+#INFO	original_date=2022	    Year of the article publication
+#INFO	reference_url=https://cdsarc.cds.unistra.fr/viz-bin/cat/I/355	    Dataset landing page
+#INFO	citation=doi:10.26093/cds/vizier.1355	    Dataset identifier that can be used for citation
+#INFO	publication_date=2024-12-12	    Date of first publication in the data centre
+#INFO	rights_uri=https://cds.unistra.fr/vizier-org/licences_vizier.html	    Licence URI
+#Coosys	H_2016.000:	ICRS
+#Table	I_355_gaiadr3:
+#Name: I/355/gaiadr3
+#Title: Gaia DR3 source catalog (1811709771 sources)
+#Column	DR3Name	(a28)	Unique source designation (unique across all Data Releases) (designation)	[ucd=meta.id]
+#Column	RA_ICRS	(F15.11)	Right ascension (ICRS) at Ep=2016.0 (ra)	[ucd=pos.eq.ra;meta.main]
+#Column	DE_ICRS	(F15.11)	Declination (ICRS) at Ep=2016.0 (dec)	[ucd=pos.eq.dec;meta.main]
+#Column	pmRA	(F9.3)	? Proper motion in right ascension direction, pmRA*cosDE (pmra)	[ucd=pos.pm;pos.eq.ra]
+#Column	pmDE	(F9.3)	? Proper motion in declination direction (pmdec)	[ucd=pos.pm;pos.eq.dec]
+#Column	PM	(F9.3)	? Total proper motion (pm)	[ucd=pos.pm;pos.eq]
+#Column	Gmag	(F9.6)	? G-band mean magnitude (phot_g_mean_mag)	[ucd=phot.mag;em.opt]
+#Column	Plx	(F9.4)	? Parallax (parallax)	[ucd=pos.parallax.trig]
+DR3Name	RA_ICRS	DE_ICRS	pmRA	pmDE	PM	Gmag	Plx
+ 	deg	deg	mas/yr	mas/yr	mas/yr	mag	mas
+----------------------------	---------------	---------------	---------	---------	---------	---------	---------
+Gaia DR3 4472832130942575872	269.44850252544	+04.73942005111	 -801.551	10362.394	10393.349	 8.193974	 546.9759
+Gaia DR3 4472686278139285888	269.03336315985	+04.17659015789	   21.136	 -382.674	  383.257	12.261956	  12.7448
+Gaia DR3 4471326796431765888	270.36878702388	+04.79534101913	 -161.774	 -268.053	  313.086	12.660144	   5.0649
+Gaia DR3 4469771129217769216	269.46680830233	+04.11151453607	 -129.140	 -193.048	  232.260	10.022417	   7.5380
+Gaia DR3 4469769583028555008	269.80492247688	+04.28083731187	 -174.874	 -106.624	  204.816	20.301657	   6.1101
+Gaia DR3 4472689439235251072	269.05606542826	+04.26665437226	 -130.406	 -153.343	  201.295	13.925309	   2.4411
+
