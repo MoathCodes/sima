@@ -107,6 +107,18 @@ export function startLayout(): void {
       if (!moving) place();
     });
   }).observe(frame);
+  // Between 700 and 900 px the bar wraps onto two rows: cards and toasts keep clear of its real
+  // height (--bar-room in app.css), and the frame is placed again above it.
+  const bar = byId('bar');
+  if (bar) {
+    let barH = 0;
+    new ResizeObserver(() => {
+      if (bar.offsetHeight === barH) return;
+      barH = bar.offsetHeight;
+      set(document.documentElement, '--bar-room', `${barH}px`);
+      place();
+    }).observe(bar);
+  }
 }
 
 /** Puts the frame back where it first was, at its first size, and forgets the user's box. */
