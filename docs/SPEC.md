@@ -408,7 +408,7 @@ Full definitions in `docs/tools.md`.
 | PLC-2 | Dots appear by importance with zoom (tiers 0 to 4). With a kind chip on, all dots of that kind show at any zoom. | Brown dwarfs at 70°. |
 | PLC-3 | Labels do not collide with each other or with any card. | Wide and narrow views. |
 | PLC-4 | Search by English name, Arabic name, transliteration, meaning, catalogue number, with small typos. | "shepherd", "الدبران", "m104". |
-| PLC-5 | Cards as in 4.5. Distances are the middle of the listed measurements; disagreement over 30% is stated. | Sombrero: 37 million light-years, 31 to 45. |
+| PLC-5 | Cards as in 4.5. Distances are the middle of the listed measurements; disagreement over 30% is stated. | Sombrero: about 37 million light-years, 28 to 71 (16 SIMBAD measurements, read 14 November 2026; studies disagree). |
 | PLC-6 | Seven tours with Play and Pause, and "Surprise me". | Each stop is found. |
 | PLC-7 | Saved places: the user names where the sky is now; it is kept in the browser. | Reload keeps it. |
 | PLC-8 | Drawing the dots takes under 4 ms a frame. | Profile while panning. |

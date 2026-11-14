@@ -2,6 +2,8 @@
 import json
 import math
 import random
+import re
+from bs4 import BeautifulSoup
 import sys
 import unittest
 import build_places as b
@@ -58,6 +60,24 @@ class Parsing(unittest.TestCase):
         self.assertEqual(b.parse_wgsn(row)[0]["name"],"Aldebaran")
         self.assertAlmostEqual(b.parse_wgsn(row)[0]["dec"],16.509302)
 
+    def test_short_lead_keeps_subject(self):
+        content = BeautifulSoup('<div><p>Polaris is the North Star.</p><p>It is bright. It is nearby.</p></div>', 'html.parser').div
+        self.assertEqual(b.introduction(content), 'Polaris is the North Star. It is bright.')
+        for pronoun in ['It', 'This', 'They', 'These']:
+            self.assertIsNone(b.introduction(BeautifulSoup(f'<div><p>{pronoun} is bright.</p></div>', 'html.parser').div))
+
+    def test_combined_cluster_nebula_uses_simbad(self):
+        for otype, kind in [('HII','emission-nebula'), ('RNe','reflection-nebula'), ('OpC','open-cluster'), ('Cl*','open-cluster')]:
+            self.assertEqual(b.kind_of({'otype':otype}, {'Type':'Cl+N'}), kind)
+        self.assertEqual(b.kind_of({'otype':'OpC'}, {'Type':'Neb'}), 'emission-nebula')
+
+    def test_arabic_identification_links(self):
+        html = '<table class="wikitable"><tr><td><a title="Suhail (star)">Alsuhail</a></td><td>Suhayl</td><td>Glorious</td><td>سهيل</td><td>سّهَيْل</td><td>any of: <a title="Canopus">Canopus</a>, <a title="Lambda Velorum">Lambda Velorum</a></td></tr></table>'
+        rows = b.parse_arabic(html)
+        self.assertEqual(rows['suhail'], rows['canopus'])
+        self.assertEqual(rows['canopus']['transliteration'], 'Suhayl; Suhail')
+        self.assertEqual(rows['canopus'], rows['alsuhail'])
+
     def test_arabic_rowspan(self):
         html='<table class="wikitable"><tr><td>A</td><td rowspan="2">trans</td><td rowspan="2">meaning</td><td rowspan="2">ع</td><td rowspan="2">ع</td><td>one</td></tr><tr><td>B</td><td>two</td></tr></table>'
         rows=b.parse_arabic(html)
@@ -83,6 +103,24 @@ class Catalogue(unittest.TestCase):
         text=json.dumps([p["names"] for p in self.places],ensure_ascii=False).casefold().replace(" ","")
         for term in ["shepherd","الدبران","m104"]:
             self.assertIn(term,text)
+
+    def test_all_texts_keep_subject(self):
+        for p in self.places:
+            self.assertIsNone(re.match(r'^(It|Its|This|That|They|Their|These|Those|He|She)\b', p.get('text',''), re.I), p['id'])
+        polaris = next(p for p in self.places if p['names'].get('common') == 'Polaris')
+        self.assertTrue(polaris['text'].startswith('Polaris'))
+
+    def test_famous_nebulae_and_clusters(self):
+        for alias in ['M 8','M 16','M 17','M 20','M 42','M 43','NGC 2070','M 44','M 45']:
+            p = next(p for p in self.places if alias in p['names']['catalogue'])
+            self.assertEqual(p['kind'], 'open-cluster' if alias in ['M 44','M 45'] else 'emission-nebula', alias)
+
+    def test_star_transliterations(self):
+        for common, terms in [('Canopus',['Suhail','Suhayl']), ('Aldebaran',['ad-Dabarān']), ('Vega',['an-Nisr']), ('Altair',['an-Nisr'])]:
+            p = next(p for p in self.places if p['names'].get('common') == common)
+            for term in terms:
+                self.assertIn(term, p['names']['transliteration'])
+            self.assertEqual(p['sources']['transliteration'], [3])
 
     def test_sombrero_snapshot(self):
         p=next(p for p in self.places if "M 104" in p["names"]["catalogue"])

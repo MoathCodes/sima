@@ -1,2 +1,341 @@
 /* Lane G: chips, the Places menu, lists, place cards, tours and saved places.
-   Style only lane G's own classes here. Tokens and shared components are in app.css. */
+   Style only lane G's own classes here (prefix pl-). Tokens and shared components are in app.css;
+   app.css ("Lane G") places #places-list, #place-card and #places-menu. */
+
+/* ----- Chips: 30px cards on the sky, one Lift each; on = Ultramarine Wash. ----- */
+.pl-chip {
+  height: 30px;
+  padding: 0 10px 0 8px;
+  gap: 5px;
+  background: var(--card);
+  box-shadow: var(--lift);
+}
+.pl-chip:hover {
+  background: var(--card-2);
+}
+.pl-chip > .icon {
+  width: 16px;
+  height: 16px;
+}
+.pl-chip[hidden] {
+  display: none;
+}
+.pl-more-menu {
+  min-width: 180px;
+}
+.pl-more-menu .icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* ----- The list and the card: one panel at the left, a header and a body that scrolls. ----- */
+.pl-panel {
+  --settle-x: -8px;
+  --settle-y: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-tight);
+  padding: 12px 6px 6px 16px;
+  overflow: hidden;
+}
+.pl-panel[hidden] {
+  display: none;
+}
+#place-card.pl-panel {
+  /* app.css gives the card a max-height; it grows with its content up to that. */
+  height: auto;
+}
+.pl-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-right: 4px;
+}
+.pl-title-box {
+  flex: 1;
+  min-width: 0;
+}
+.pl-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding-top: 4px;
+  font: var(--text-title);
+  overflow-wrap: anywhere;
+}
+.pl-kind {
+  margin: 2px 0 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.pl-back {
+  align-self: flex-start;
+  margin: -6px 0 -2px -8px;
+}
+.pl-body {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  padding-right: 10px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.pl-note {
+  margin: 0;
+  padding-right: 10px;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.pl-caption {
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+
+/* Sub-filters: small text buttons that wrap; the chosen one is on. */
+.pl-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-group);
+  margin-left: -8px;
+}
+.pl-filter[aria-pressed='true'] {
+  background: var(--action-soft);
+  color: var(--action);
+}
+.pl-where {
+  display: flex;
+  margin-right: 10px;
+}
+
+/* Rows: dark tile, name (with its Arabic name), one supporting line. */
+.pl-rows {
+  display: grid;
+  gap: var(--gap-group);
+  margin-left: -10px;
+}
+.pl-row {
+  align-items: center;
+  padding: 6px 8px;
+}
+.pl-tile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+}
+.pl-tile > .icon {
+  width: 16px;
+  height: 16px;
+}
+.pl-row-text,
+.pl-stop-text {
+  display: grid;
+  min-width: 0;
+}
+.pl-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pl-row .line,
+.pl-clip {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pl-ar {
+  color: var(--ink-2);
+  font-weight: 400;
+}
+.pl-more-rows {
+  justify-self: start;
+  margin: 4px 0 0 2px;
+}
+.pl-body > .pl-row {
+  margin-left: -10px;
+  width: calc(100% + 10px);
+}
+
+/* ----- A place's card ----- */
+.pl-arabic {
+  margin: 0;
+  font: var(--text-label);
+  color: var(--ink-2);
+}
+.pl-label {
+  color: var(--ink-3);
+  font: var(--text-group);
+}
+.pl-ar-big {
+  color: var(--ink);
+  font: var(--text-control);
+}
+.pl-from {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.pl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-tight);
+}
+.pl-text p {
+  margin: 0;
+}
+.pl-text p + p {
+  margin-top: 4px;
+}
+.pl-facts {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 8px 10px;
+  margin: 0;
+  padding: 10px 0;
+  border-block: 1px solid var(--rule);
+}
+.pl-facts dt {
+  color: var(--ink-2);
+  font: var(--text-label);
+  padding-top: 2px;
+}
+.pl-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.pl-detail {
+  display: block;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.pl-spherex {
+  padding: 10px 12px;
+  border-radius: var(--r-control);
+  background: var(--card-2);
+}
+.pl-spherex p {
+  margin: 0;
+}
+.pl-spherex .group-label {
+  /* Faint Ink on Card Shade is too weak (DESIGN.md Don'ts): Soft Ink here. */
+  color: var(--ink-2);
+  margin-bottom: 2px;
+}
+.pl-sources {
+  margin: 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+
+/* ----- Tours ----- */
+.pl-tour-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pl-play > .icon {
+  width: 16px;
+  height: 16px;
+}
+.pl-stop {
+  display: flex;
+  gap: 10px;
+  margin-left: -8px;
+  padding: 6px 8px;
+  border-radius: var(--r-control);
+  cursor: pointer;
+}
+.pl-stop:hover {
+  background: var(--card-2);
+}
+.pl-stop[aria-current] {
+  background: var(--action-soft);
+  cursor: default;
+}
+.pl-stop:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+.pl-cut-box {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+}
+.pl-cut {
+  display: block;
+  width: 56px;
+  height: 56px;
+  image-rendering: pixelated;
+}
+.pl-cut-none {
+  padding: 4px;
+  color: var(--st-ink-2);
+  font: var(--text-label);
+  text-align: center;
+}
+.pl-stop-note,
+.pl-stop-look {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.pl-stop-look {
+  margin-top: 4px;
+  color: var(--ink);
+}
+.pl-stop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-group);
+  margin: 4px 0 0 -8px;
+}
+
+/* ----- The Places menu ----- */
+.pl-menu {
+  max-height: calc(100vh - var(--top) - var(--h-top) - 16px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.pl-menu-item {
+  display: block;
+  padding: 6px 10px;
+}
+.pl-menu-item .pill {
+  margin-right: 2px;
+}
+.pl-menu-label {
+  margin: 0;
+  padding: 8px 10px 2px;
+}
+.pl-menu-label:first-child {
+  padding-top: 4px;
+}
+.pl-rule {
+  margin: 6px 0 0;
+  border: 0;
+  border-top: 1px solid var(--rule);
+}
+.pl-save {
+  display: flex;
+  gap: var(--gap-tight);
+  padding: 4px 5px 5px;
+}
+.pl-save .field {
+  flex: 1;
+  min-width: 0;
+}
+.pl-saved-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-group);
+  padding-right: 3px;
+}
+.pl-saved-go {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+}
