@@ -475,7 +475,7 @@ The first visit opens with about six seconds of motion (6.25 s, then the cards' 
 2. **The name** inside the disc, in `st-ink`: سيما (Reem Kufi 600, 30% of the disc's radius, 40 to 84px), Sima under it (Reem Kufi, 19 to 30px), and one line in Reading size and `st-ink-2`: "The infrared sky, as NASA's SPHEREx sees it." Each fades and rises 8px into place.
 3. **The diamond ring** (about 2.35 s). A small white flare on the edge, up and to the right, where Barnard's Star sits: the spot the page will land on. Its name is beside it in Label size and `st-ink-2`, only when the frame's patch is a named target at the landing's centre.
 4. **The shadow slides off** (from 2.9 s, 1.45 s long), away from the flare, as at the end of an eclipse. The globe under it is the real map in the channel the sky map shows, grey and lifted as the Grey Map Rule says. The ring fades as the globe lights. The name leaves first.
-5. **The turn and the dive** (3.2 to 4.95 s). The globe turns until Barnard's Star faces us, then grows until the sky fills the window, changing from a globe to the sky map's own projection on the way.
+5. **The turn and the dive** (3.2 to 4.95 s). The globe turns until Barnard's Star faces us, then grows until the sky fills the window. It is the same globe the sky map shows zoomed right out (orthographic), so nothing changes shape on the way.
 6. **The landing** (4.95 to 6.25 s). The sky map takes over at about 55° wide (exactly matched: same projection, scale and centre) and glides in to its own view in 1.3 s; the intro fades over it in the first 0.4 s. The page's cards then fade in (0.45 s) on the normal first visit: the frame playing, the welcome card open.
 
 **Rules.**

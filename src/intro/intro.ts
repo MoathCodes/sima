@@ -32,7 +32,7 @@ import {
   globeRadius,
   handFov,
   sceneAt,
-  stgScale,
+  mapScale,
   type Landing,
   type Plan,
 } from './scene.ts';
@@ -487,7 +487,7 @@ function landing(w: number, h: number, ownFov: number): Landing {
     x: p?.x ?? w / 2,
     y: p?.y ?? h / 2,
     from,
-    fromScale: stgScale(w, from),
+    fromScale: mapScale(w, from),
   };
 }
 
@@ -499,18 +499,18 @@ function landing(w: number, h: number, ownFov: number): Landing {
 function prefetch(channel: number, land: Landing, w: number, h: number): void {
   if (!navigator.serviceWorker?.controller) return;
   const fov = Math.max(land.fov * 2.5, 4); // the landing's slow, last part
-  const scale = stgScale(w, fov);
+  const scale = mapScale(w, fov);
   const tiles = new Map<number, number>();
   const steps = 8;
   for (let i = 0; i <= steps; i++) {
     for (let j = 0; j <= steps; j++) {
       const dx = (i / steps - 0.5) * w;
       const dy = (j / steps - 0.5) * h;
-      const rho = Math.hypot(dx, dy) / scale;
-      const th = 2 * Math.atan(rho / 2);
-      const k = rho > 0 ? Math.sin(th) / rho : 0;
+      // Orthographic, as the map: a point rho globe radii from the centre is asin(rho) away.
+      const rho = Math.min(1, Math.hypot(dx, dy) / scale);
+      const th = Math.asin(rho);
       // View space: x east (screen left), y north (screen up).
-      const p = radec(toSky(land.q, [(-dx / scale) * k, (-dy / scale) * k, Math.cos(th)]));
+      const p = radec(toSky(land.q, [-dx / scale, -dy / scale, Math.cos(th)]));
       const n = nestPixel(32, p.ra, p.dec);
       tiles.set(n, Math.min(tiles.get(n) ?? Infinity, Math.hypot(dx, dy)));
     }

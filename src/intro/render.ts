@@ -116,7 +116,6 @@ export function startPainter(
       cx: s.cx,
       cy: s.cy,
       radius: s.radius,
-      proj: s.proj,
       rot: s.rot,
       globe: s.globe === null ? null : (loaded.get(s.globe)?.tex ?? null),
       ringA: a?.tex ?? null,
@@ -192,8 +191,6 @@ interface DrawArgs {
   cx: number;
   cy: number;
   radius: number;
-  /** 0: a globe (orthographic); 1: the sky map's stereographic projection. */
-  proj: number;
   rot: Float32Array;
   globe: WebGLTexture | null;
   ringA: WebGLTexture | null;
@@ -228,7 +225,6 @@ precision highp float;
 uniform vec2 uRes;
 uniform vec2 uCentre;
 uniform float uR;
-uniform float uProj;
 uniform float uDpr;
 uniform mat3 uRot;
 uniform sampler2D uGlobe;
@@ -310,20 +306,19 @@ void main() {
   float px = 1.0 / uR; // one CSS pixel, in globe radii
   vec3 col = vec3(0.0);
 
-  // The globe: the real sky, where the shadow has left it. Orthographic while it is a globe,
-  // stereographic (as the sky map) once it fills the window.
-  if ((r < 1.0 + 2.0 * px || uProj > 0.0) && uHasGlobe > 0.5) {
-    float ts = asin(min(r, 1.0));
-    float theta = mix(ts, 2.0 * atan(0.5 * r), uProj);
+  // The globe: the real sky, where the shadow has left it. Orthographic, as the sky map is, so
+  // the two match when the map takes over.
+  if (r < 1.0 + 2.0 * px && uHasGlobe > 0.5) {
+    float theta = asin(min(r, 1.0));
     vec2 dir = r > 1e-6 ? p / r : vec2(0.0);
     vec3 v = vec3(-dir.x * sin(theta), dir.y * sin(theta), cos(theta));
     vec3 d = uRot * v;
     // Texture detail: Allsky pixels (~0.002 rad) per screen pixel, more toward the globe's edge.
-    float stretchOut = mix(1.0 / max(cos(ts), 0.08), 1.0 / (1.0 + 0.25 * r * r), uProj);
+    float stretchOut = 1.0 / max(cos(theta), 0.08);
     float lod = clamp(log2(500.0 / (uR * uDpr)) + log2(max(stretchOut, 0.01)) * 0.5, 0.0, 6.0);
     float g = sky(uGlobe, d, lod);
     float lit = smoothstep(0.99, 1.01, length(p - uShadow));
-    float inside = uProj > 0.0 ? 1.0 : 1.0 - smoothstep(1.0 - px, 1.0 + px, r);
+    float inside = 1.0 - smoothstep(1.0 - px, 1.0 + px, r);
     col = vec3(g) * lit * inside;
   }
 
@@ -416,7 +411,6 @@ function makeGl(canvas: HTMLCanvasElement | OffscreenCanvas, skyRgb: Rgb): Gl | 
       res: u('uRes'),
       centre: u('uCentre'),
       r: u('uR'),
-      proj: u('uProj'),
       dpr: u('uDpr'),
       rot: u('uRot'),
       globe: u('uGlobe'),
@@ -476,7 +470,6 @@ function makeGl(canvas: HTMLCanvasElement | OffscreenCanvas, skyRgb: Rgb): Gl | 
       gl.uniform2f(U.res, w, h);
       gl.uniform2f(U.centre, a.cx, a.cy);
       gl.uniform1f(U.r, a.radius);
-      gl.uniform1f(U.proj, a.proj);
       gl.uniform1f(U.dpr, dpr);
       gl.uniformMatrix3fv(U.rot, false, a.rot);
       gl.uniform1f(U.hasGlobe, a.globe ? 1 : 0);

@@ -6,6 +6,22 @@
   position: absolute;
   inset: 0;
 }
+/* Zoomed out to the whole globe: outside its disc Aladin paints a fixed grey, so its canvas is
+   cut to the disc and space shows the black under it, lifted like the darkest sky. */
+#sky .sky-map {
+  background: #000;
+}
+#sky[data-globe='1'] .aladin-imageCanvas {
+  mask-image: radial-gradient(
+    circle var(--globe-r) at 50% 50%,
+    #000 calc(var(--globe-r) - 0.75px),
+    transparent calc(var(--globe-r) + 0.75px)
+  );
+}
+/* Aladin's own centre mark (its "reticle") is never shown: the patch marks the spot. */
+#sky .aladin-reticle {
+  display: none !important;
+}
 /* The Grey Map Rule: a screen-blend layer lifts the map's black to blue-black and leaves its
    whites white. Marks ride above it and never recolour the map. */
 #sky .sky-lift {
