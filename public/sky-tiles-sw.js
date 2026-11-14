@@ -225,7 +225,7 @@ async function tile(ch, k, n, rev, clientId) {
       n >= 0 && hasAllsky(seed, ch) ? await fromAllsky(ch, k, n).catch(() => null) : null;
     if (soft) return image(soft);
     const canvas = new OffscreenCanvas(512, 512);
-    canvas.getContext('2d');
+    canvas.getContext('2d', { willReadFrequently: true });
     return image(await canvas.convertToBlob({ type: 'image/png' }));
   }
 }
@@ -263,7 +263,7 @@ async function softTile(ch, k, n) {
   const blob = n >= 0 && hasAllsky(seed, ch) ? await fromAllsky(ch, k, n).catch(() => null) : null;
   if (blob) return image(blob);
   const canvas = new OffscreenCanvas(n < 0 ? 1728 : 512, n < 0 ? 1856 : 512);
-  canvas.getContext('2d');
+  canvas.getContext('2d', { willReadFrequently: true });
   return image(await canvas.convertToBlob({ type: 'image/png' }));
 }
 
@@ -411,7 +411,8 @@ function allsky(ch) {
 async function fromAllsky(ch, k, n) {
   const bmp = await allsky(ch);
   const canvas = new OffscreenCanvas(512, 512);
-  const ctx = canvas.getContext('2d');
+  // CPU-backed: a GPU canvas makes convertToBlob read pixels back, which stalls the page's drawing.
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   if (k <= 3) {
