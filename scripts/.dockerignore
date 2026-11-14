@@ -1,0 +1,5 @@
+# Build context for Dockerfile.live is scripts/: send only what the image needs.
+*
+!requirements.txt
+!prebake.py
+!live.py

@@ -1,0 +1,5 @@
+# Sample Caddy site (automatic HTTPS) in front of the live service on 127.0.0.1:8765.
+# Replace the host name. Do not add "encode": frames.bin.gz is already gzip.
+live.your-domain.example {
+	reverse_proxy /api/* 127.0.0.1:8765
+}
