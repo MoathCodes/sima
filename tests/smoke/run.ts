@@ -5,9 +5,13 @@
  * the page in headless Chromium (the build in ~/.cache/ms-playwright that playwright-core
  * 1.63.0 expects, chromium_headless_shell-1243: nothing is downloaded) and runs every flow in
  * tests/smoke/flows/ at 1900×1030 and 1366×768. smoke.ts says what a flow is and what is
- * checked after each step.
+ * checked after each step. Runs go three at a time, each in its own browser context of one
+ * browser; each run's lines print together when it ends.
  *
  * `npm run smoke -- measure` runs only the flows whose name contains "measure".
+ * `npm run smoke -- --only=g` runs only lane G's flows (a lane letter, or `integrator`);
+ * `--only=<words>` with more than one letter matches flow names, as above.
+ * `npm run smoke -- --workers=1` runs one at a time (default 3, or SMOKE_WORKERS).
  * `SMOKE_SHOTS=1 npm run smoke` saves a screenshot of every step in test-results/smoke/.
  *
  * Exit code 0 when every check passed, 1 otherwise. Servers and the browser are always stopped.
@@ -17,12 +21,18 @@ import { createServer, type ViteDevServer } from 'vite';
 import { createServer as createNetServer } from 'node:net';
 import { mkdir, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { SIZES, settle, type Flow, type Size, type Step } from './smoke.ts';
+import { SIZES, openPage, settle, type Flow, type Size, type Step } from './smoke.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const SHOTS = fileURLToPath(new URL('../../test-results/smoke/', import.meta.url));
 const SAVE_EVERY_STEP = process.env.SMOKE_SHOTS === '1';
-const ONLY = process.argv.slice(2).join(' ').toLowerCase();
+const ARGS = process.argv.slice(2);
+const flag = (name: string) =>
+  ARGS.find((a) => a.startsWith(`--${name}=`))
+    ?.slice(name.length + 3)
+    .toLowerCase();
+const ONLY = (flag('only') ?? ARGS.filter((a) => !a.startsWith('--')).join(' ')).toLowerCase();
+const WORKERS = Math.max(1, Number(flag('workers') ?? process.env.SMOKE_WORKERS ?? 3) || 3);
 
 /** A TCP port nothing listens on right now. */
 function freePort(): Promise<number> {
@@ -48,7 +58,11 @@ async function loadFlows(): Promise<Flow[]> {
       throw new Error(`tests/smoke/flows/${file}: export flows: Flow[]`);
     flows.push(...(mod.flows as Flow[]));
   }
-  return flows.filter((f) => !ONLY || f.name.toLowerCase().includes(ONLY));
+  // A lane letter (or "integrator") picks that lane's flows; other words match flow names.
+  const lane = ONLY.length === 1 || ONLY === 'integrator';
+  return flows.filter(
+    (f) => !ONLY || (lane ? f.owner.toLowerCase() === ONLY : f.name.toLowerCase().includes(ONLY)),
+  );
 }
 
 /** What is wrong with the page right now: scrolling, cards that overlap or leave the window. */
@@ -115,8 +129,17 @@ const slug = (text: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 
-/** Runs one flow at one size on a fresh page. Returns the number of failed steps (0 or 1). */
-async function runFlow(browser: Browser, base: string, flow: Flow, size: Size): Promise<number> {
+/**
+ * Runs one flow at one size on a fresh page. Returns the number of failed steps (0 or 1) and the
+ * lines to print, so runs going at the same time do not mix their lines.
+ */
+async function runFlow(
+  browser: Browser,
+  base: string,
+  flow: Flow,
+  size: Size,
+): Promise<{ failed: number; lines: string[] }> {
+  const lines: string[] = [];
   const context = await browser.newContext({ viewport: size, deviceScaleFactor: 1 });
   const page = await context.newPage();
   page.setDefaultTimeout(10_000);
@@ -130,14 +153,10 @@ async function runFlow(browser: Browser, base: string, flow: Flow, size: Size): 
 
   const load: Step = {
     name: 'Load the page',
-    async run(p) {
-      await p.goto(base + (flow.path ?? '/'));
-      await p.waitForSelector('html[data-ready]', { state: 'attached' });
-      await p.evaluate(() => document.fonts.ready.then(() => undefined));
-    },
+    run: (p) => openPage(p, base + (flow.path ?? '/')),
   };
   const where = `${flow.name} @ ${size.width}×${size.height}`;
-  console.log(`\n${where} (owner: ${flow.owner})`);
+  lines.push(`\n${where} (owner: ${flow.owner})`);
   let failed = 0;
   for (const [i, step] of [load, ...flow.steps].entries()) {
     const problems: string[] = [];
@@ -154,15 +173,15 @@ async function runFlow(browser: Browser, base: string, flow: Flow, size: Size): 
       await page.screenshot({ path: file }).catch(() => undefined);
       if (problems.length) problems.push(`screenshot: ${file}`);
     }
-    console.log(`  ${problems.length ? '✗' : '✓'} ${step.name}`);
-    for (const p of problems) console.log(`      ${p}`);
+    lines.push(`  ${problems.length ? '✗' : '✓'} ${step.name}`);
+    for (const p of problems) lines.push(`      ${p}`);
     if (problems.length) {
       failed = 1; // the next steps build on this one
       break;
     }
   }
   await context.close();
-  return failed;
+  return { failed, lines };
 }
 
 async function main(): Promise<void> {
@@ -190,13 +209,21 @@ async function main(): Promise<void> {
       args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
     });
     const base = `http://127.0.0.1:${port}`;
-    console.log(`Smoke test on ${base}, ${flows.length} flows`);
-    for (const flow of flows) {
-      for (const size of flow.sizes ?? SIZES) {
-        runs += 1;
-        failed += await runFlow(browser, base, flow, size);
+    const queue = flows.flatMap((flow) => (flow.sizes ?? SIZES).map((size) => ({ flow, size })));
+    runs = queue.length;
+    console.log(
+      `Smoke test on ${base}, ${flows.length} flows, ${runs} runs, ${Math.min(WORKERS, runs)} at a time`,
+    );
+    const started = Date.now();
+    const worker = async (b: Browser) => {
+      for (let next = queue.shift(); next; next = queue.shift()) {
+        const result = await runFlow(b, base, next.flow, next.size);
+        failed += result.failed;
+        console.log(result.lines.join('\n'));
       }
-    }
+    };
+    await Promise.all(Array.from({ length: Math.min(WORKERS, runs) }, () => worker(browser!)));
+    console.log(`\n${runs} runs in ${Math.round((Date.now() - started) / 1000)} s`);
   } finally {
     await browser?.close();
     await server?.close();

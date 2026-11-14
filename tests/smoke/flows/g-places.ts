@@ -3,7 +3,7 @@
  * (PLC-4 to PLC-7), at both sizes, with the frame and with Measure open. Owner: lane G.
  */
 import type { Page } from 'playwright-core';
-import { guide, keyStep, press, pressStep, type Flow, type Step } from '../smoke.ts';
+import { guide, keyStep, openPage, press, pressStep, type Flow, type Step } from '../smoke.ts';
 
 const ownWay = pressStep('welcome-own', 'Close the welcome card ("Or explore the sky on my own")');
 
@@ -139,8 +139,7 @@ export const flows: Flow[] = [
       {
         name: 'Reload: the saved place is still there',
         async run(page) {
-          await page.reload();
-          await page.waitForSelector('html[data-ready]');
+          await openPage(page);
           await press(page, 'welcome-own');
           await press(page, 'places-button');
           await page.locator(guide('saved-place'), { hasText: 'My smoke spot' }).waitFor();

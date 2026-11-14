@@ -7,7 +7,7 @@
  * console errors, page scroll and overlapping cards after each one (smoke.ts).
  */
 import type { Page } from 'playwright-core';
-import { guide, keyStep, press, pressStep, type Flow, type Step } from '../smoke.ts';
+import { guide, keyStep, openPage, press, pressStep, settle, type Flow, type Step } from '../smoke.ts';
 
 const ownWay = pressStep('welcome-own', 'Close the welcome card');
 
@@ -38,7 +38,7 @@ function escapeStep(closes: string, stays: string[]): Step {
     name: `Escape closes ${closes}`,
     async run(page) {
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(400);
+      await settle(page);
       expect(!(await shown(page, closes)), `${closes} to close`);
       for (const s of stays) expect(await shown(page, s), `${s} to stay open`);
     },
@@ -74,7 +74,7 @@ export const flows: Flow[] = [
           );
           expect(active === 'search-row-0', 'the first row to be chosen again');
           await page.keyboard.press('Enter');
-          await page.waitForTimeout(300);
+          await settle(page);
           expect(
             (await state<string>(page, 'target')) === 'barnard',
             "Barnard's Star in the frame",
@@ -122,7 +122,7 @@ export const flows: Flow[] = [
         name: 'Escape closes the popover only',
         async run(page) {
           await page.keyboard.press('Escape');
-          await page.waitForTimeout(400);
+          await settle(page);
           const open = await page.evaluate(() =>
             document.getElementById('places-menu')?.matches(':popover-open'),
           );
@@ -136,7 +136,7 @@ export const flows: Flow[] = [
         name: 'Escape closes the dialog only',
         async run(page) {
           await page.keyboard.press('Escape');
-          await page.waitForTimeout(400);
+          await settle(page);
           expect(
             !(await page.evaluate(() => !!document.querySelector('dialog[open]'))),
             'Share to close',
@@ -170,7 +170,7 @@ export const flows: Flow[] = [
             .first()
             .focus();
           await page.keyboard.press('Escape');
-          await page.waitForTimeout(400);
+          await settle(page);
           expect(!(await shown(page, 'places-list')), 'the list to close');
           expect(await shown(page, 'measure-panel'), 'Measure to stay open');
         },
@@ -213,8 +213,7 @@ export const flows: Flow[] = [
           const code = await page.locator(guide('share-embed-code')).inputValue();
           expect(code.startsWith('<iframe') && code.includes('embed=1'), 'an iframe with embed=1');
           await page.keyboard.press('Escape');
-          await page.goto(link);
-          await page.waitForSelector('html[data-ready]', { state: 'attached' });
+          await openPage(page, link);
           // The view and the date apply once the pictures are in.
           await page
             .waitForFunction(
@@ -315,8 +314,7 @@ export const flows: Flow[] = [
           expect(after.width < before.width - 20, 'a smaller frame');
           const saved = await page.evaluate(() => localStorage.getItem('frame-box'));
           expect(!!saved, 'the box in frame-box');
-          await page.reload();
-          await page.waitForSelector('html[data-ready]', { state: 'attached' });
+          await openPage(page);
           const again = (await page.locator('#frame').boundingBox())!;
           expect(Math.abs(again.width - after.width) < 2, 'the same width after a reload');
         },
