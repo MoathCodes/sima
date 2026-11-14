@@ -374,8 +374,17 @@
   opacity: 0.4;
   cursor: default;
 }
-/* Six views fit the 1366 frame: in Measure they drop their icons when narrow. */
+/* Six views in the 1366 frame: in Measure they drop their icons when narrow, and wrap into two
+   rows of three so every label stays whole and apart. */
 @media (max-width: 1420px) {
+  .frame-views.six {
+    flex-wrap: wrap;
+    margin-top: 2px;
+  }
+  .frame-views.six > button {
+    flex: 1 0 30%;
+    height: 26px;
+  }
   .frame-views.six > button > .icon {
     display: none;
   }

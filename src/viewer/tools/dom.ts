@@ -106,8 +106,23 @@ export function sizeCanvas(canvas: HTMLCanvasElement): CanvasRenderingContext2D 
   return ctx;
 }
 
-/** Reads a colour token from app.css (canvases cannot use var()). */
+/**
+ * Reads a colour token from app.css (canvases cannot use var()). Kept once read: reading the
+ * computed style forces the page's style and layout, and charts read tokens on every paint
+ * (TLS-8). Dropped when the colour scheme changes, as the tokens may.
+ */
+const tokens = new Map<string, string>();
+let schemeWatched = false;
+
 export function token(name: string, fallback = '#888'): string {
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  if (!schemeWatched && typeof matchMedia === 'function') {
+    schemeWatched = true;
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => tokens.clear());
+  }
+  let v = tokens.get(name);
+  if (v === undefined) {
+    v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    if (v) tokens.set(name, v);
+  }
   return v || fallback;
 }

@@ -40,6 +40,7 @@ const CMAPS: [ColourMap, string][] = [
 export function buildPicture(root: HTMLElement): void {
   root.innerHTML = `
     <p class="tl-intro">How pixel values become brightness on screen. The values themselves do not change.</p>
+    <p class="tl-line" data-guide="box-stats">Point at the picture to read one pixel. Hold <span class="kbd">Shift</span> and drag a box for its statistics; pixels flagged on every exposure are left out and counted.</p>
     <p class="group-label tl-group">Stretch</p>
     ${seg('stretch', 'Stretch', [
       ['linear', 'Linear'],

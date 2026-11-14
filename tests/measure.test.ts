@@ -4,7 +4,7 @@
 // not lane B's numbers.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { targetHeadline, spotHeadline, targetStats, type TargetInput } from '../src/viewer/measure/model.ts';
+import { moverLine, pathLine, targetHeadline, spotHeadline, targetStats, type TargetInput } from '../src/viewer/measure/model.ts';
 import { chance, plainP, verdictOf, trendWords } from '../src/viewer/measure/words.ts';
 import { targetByKey } from '../src/core/targets.ts';
 import type { MotionFit } from '../src/core/types.ts';
@@ -158,4 +158,63 @@ test('the stats column labels each number measured or catalogue (H4)', () => {
   assert.equal(none.find((r) => r.name === 'Motion RA (measured)')?.value, 'Not measured');
   assert.equal(none.find((r) => r.name === 'RA')?.from, 'catalogue');
   for (const r of rows) assert.ok(r.tip.length > 10, `${r.name} explains itself`);
+});
+
+test('the headline is about the detector on screen, and offers the strongest (MSR-1, O-T6)', () => {
+  const rdra = targetByKey('r-dra')!;
+  const curve = (det: number, dmags: number[], p: number, shown = true): DetectorCurve => ({
+    det,
+    points: [],
+    visits: dmags.map((dmag, w) => ({ window: w, mjd: 61000 + 30 * w, dmag, err: 0.01 })),
+    test: { chi2: 3, dof: dmags.length - 1, p },
+    widenedBy: 1,
+    trend: null,
+    shown,
+    note: shown ? null : 'The core is saturated on every exposure.',
+  });
+  const curves = [curve(3, [0, 0.1], 0.5), curve(6, [-0.5, 0.48], 1e-9), curve(4, [0, 0], 0.5, false)];
+  const best = targetHeadline(input({ target: rdra, curves }));
+  assert.equal(best.det, 6);
+  assert.equal(best.best, 6);
+  const d3 = targetHeadline(input({ target: rdra, curves, det: 3 }));
+  assert.equal(d3.value, '0.10 mag');
+  assert.equal(d3.pill.text, 'steady within noise');
+  assert.equal(d3.det, 3);
+  assert.equal(d3.best, 6);
+  assert.match(d3.sub, /data-do="det" data-det="6"/);
+  const d4 = targetHeadline(input({ target: rdra, curves, det: 4 }));
+  assert.equal(d4.value, 'Not measured');
+  assert.match(visibleText(d4.sub), /Not measured in D4: The core is saturated on every exposure\./);
+  assert.match(d4.sub, /data-det="6"/);
+});
+
+test('still working says "Measuring…", never "Not measured" (H5)', () => {
+  const h = targetHeadline(input({ target: targetByKey('rw-aur')! }));
+  assert.equal(h.value, 'Measuring…');
+  assert.equal(h.pending, true);
+  assert.equal(h.pill.text, '');
+  assert.equal(targetHeadline(input()).value, 'Measuring…');
+});
+
+test('Path states the fitted total with its error, next to the named catalogue (MSR-3)', () => {
+  const eps = targetByKey('eps-indi-b')!;
+  const line = visibleText(pathLine(eps, fit({ total: 4.56, totalErr: 0.09, catalogue: { total: 4.68, pmra: 0, pmdec: 0, source: 'Gaia DR3' } })));
+  assert.match(line, /Measured: 4\.56 ± 0\.09″\/yr/);
+  assert.match(line, /Catalogue: 4\.68″\/yr \(Gaia DR3\)/);
+  const not = visibleText(pathLine(eps, fit({ ok: false, reason: 'Too faint on single exposures.' })));
+  assert.match(not, /Motion not measured: Too faint on single exposures\./);
+  assert.doesNotMatch(not, /Measured:/);
+  const rows = targetStats(eps, fit({ total: 4.56, totalErr: 0.09 }), 3, (a, b) => [String(a), String(b)]);
+  assert.equal(rows.find((r) => r.name === 'Motion (measured)')?.value, '4.56 ± 0.09″/yr');
+});
+
+test('a mover candidate states its measured motion and the catalogue it matches', () => {
+  const c = {
+    motion: { pmra: 0, pmdec: 0, total: 11.47, totalErr: 0.73 },
+    path: [{ frame: 0, mjd: 61000, east: 0, north: 0, err: 1 }],
+    known: { cat: 'gaia' as const, id: 'Gaia DR3 1', pmTotal: 10.39 },
+  } as unknown as Parameters<typeof moverLine>[0];
+  const t = visibleText(moverLine(c, 3));
+  assert.match(t, /Measured: 11\.47 ± 0\.73″\/yr from 1 position in D3/);
+  assert.match(t, /Catalogue: 10\.39″\/yr \(Gaia DR3\)/);
 });
