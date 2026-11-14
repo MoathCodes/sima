@@ -161,6 +161,7 @@ async function runFlow(
     errors.push(`console error: ${m.text()}${at.url ? ` (${at.url}:${at.lineNumber})` : ''}`);
   });
   page.on('pageerror', (err) => errors.push(`uncaught exception: ${err.message}`));
+  page.on('crash', () => errors.push('the page crashed (the browser tab died)'));
 
   const load: Step = {
     name: 'Load the page',
@@ -178,7 +179,12 @@ async function runFlow(
       problems.push(`the step failed: ${err instanceof Error ? err.message.split('\n')[0] : err}`);
     }
     problems.push(...errors.splice(0));
-    problems.push(...(await check(page, flow.scrolls ?? false)));
+    // A crashed page is this run's failure; the other runs go on.
+    problems.push(
+      ...(await check(page, flow.scrolls ?? false).catch((err: unknown) => [
+        `the page could not be checked: ${err instanceof Error ? err.message.split('\n')[0] : err}`,
+      ])),
+    );
     if (problems.length || SAVE_EVERY_STEP) {
       const file = `${SHOTS}${slug(flow.name)}-${size.width}-${String(i).padStart(2, '0')}-${slug(step.name)}.png`;
       await page.screenshot({ path: file }).catch(() => undefined);
@@ -191,7 +197,7 @@ async function runFlow(
       break;
     }
   }
-  await context.close();
+  await context.close().catch(() => undefined);
   return { failed, lines };
 }
 
