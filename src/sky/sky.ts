@@ -18,13 +18,7 @@ import { emit, on, type BusEvents } from '../shell/bus.ts';
 import { frameRect, skyReady } from '../shell/shell.ts';
 import { icon } from '../shell/icons.ts';
 import { formatCoords } from '../core/astro.ts';
-import {
-  CHANNEL_LAM,
-  DEFAULT_LAM,
-  WISE_HIPS,
-  channelFor,
-  detectorOf,
-} from './hips.ts';
+import { CHANNEL_LAM, DEFAULT_LAM, WISE_HIPS, channelFor, detectorOf } from './hips.ts';
 import { calibrate, makeView, project, separation, wrapRa, type View } from './project.ts';
 
 /** What the sky shows: its centre and zoom. */
@@ -139,7 +133,10 @@ export async function startSky(el: HTMLElement): Promise<void> {
     'patch',
     (p) => {
       patch = p;
-      if (dropped && (separation(p.ra, p.dec, dropped.ra, dropped.dec) < 1e-3 || Date.now() > dropped.until)) {
+      if (
+        dropped &&
+        (separation(p.ra, p.dec, dropped.ra, dropped.dec) < 1e-3 || Date.now() > dropped.until)
+      ) {
         dropped = null;
       }
       // Before the user has moved the sky, the first patch decides where the sky opens. After
@@ -549,7 +546,9 @@ function fadeIn(next: Shown): void {
 }
 
 function tellWorker(channel: number | null): void {
-  const channels = [current?.channel, channel].filter((c): c is number => c !== null && c !== undefined);
+  const channels = [current?.channel, channel].filter(
+    (c): c is number => c !== null && c !== undefined,
+  );
   navigator.serviceWorker?.controller?.postMessage({ type: 'sky-active', channels });
 }
 
@@ -684,8 +683,12 @@ function watchContext(host: HTMLElement): void {
 // ----- Drawing: one loop, one frame at a time ---------------------------------------------------
 
 let drawQueued = false;
-let glide: { from: Camera; to: { ra: number; dec: number; fov: number }; start: number; ms: number } | null =
-  null;
+let glide: {
+  from: Camera;
+  to: { ra: number; dec: number; fov: number };
+  start: number;
+  ms: number;
+} | null = null;
 /** Zooming toward a screen point: the wheel, double-click (SKY-3). */
 let zoomTo: { fov: number; x: number; y: number; ra: number; dec: number } | null = null;
 
@@ -836,7 +839,11 @@ function drawPatch(): void {
       const dx = tx - cx;
       const dy = ty - cy;
       const half = box.width / 2;
-      const s = Math.min(Math.abs(dx) > 0 ? half / Math.abs(dx) : 1, Math.abs(dy) > 0 ? half / Math.abs(dy) : 1, 1);
+      const s = Math.min(
+        Math.abs(dx) > 0 ? half / Math.abs(dx) : 1,
+        Math.abs(dy) > 0 ? half / Math.abs(dy) : 1,
+        1,
+      );
       ctx.save();
       ctx.strokeStyle = colours.mark ?? '';
       ctx.lineWidth = 1.5;
@@ -858,7 +865,9 @@ function drawPatch(): void {
   // The patch label: only when nothing else names the patch (DESIGN.md Marks on the sky).
   const loading = !!(dragging || dropped) || patch.source === 'loading';
   if (loading || !f) {
-    const text = loading ? `${dropped || dragging ? 'Moving here' : patch.label} · loading` : patch.label;
+    const text = loading
+      ? `${dropped || dragging ? 'Moving here' : patch.label} · loading`
+      : patch.label;
     ctx.font = colours.font ?? '';
     const w = ctx.measureText(text).width + 10;
     const y = box.top - 20 < 4 ? box.bottom + 3 : box.top - 19;
@@ -871,7 +880,14 @@ function drawPatch(): void {
   }
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+): void {
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
 }

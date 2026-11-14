@@ -6,7 +6,16 @@
  * Labels never cover a card: every visible `[data-card]` is kept clear, and so is anything given
  * to `keepClear` (rule 5 in SPEC 9.4), and the patch square.
  */
-import { camera, currentView, dotLayer, onZoom, outline, registerDots, toScreen, type SkyPoint } from './sky.ts';
+import {
+  camera,
+  currentView,
+  dotLayer,
+  onZoom,
+  outline,
+  registerDots,
+  toScreen,
+  type SkyPoint,
+} from './sky.ts';
 import { layout, LABEL_HEIGHT, type Box, type LayoutInput, type Placed } from './layout.ts';
 import type { PlaceKind } from '../data/schema.ts';
 
@@ -27,7 +36,21 @@ export interface Dot {
   simulated?: boolean;
 }
 
+/** A saved place on the sky: a pale ring with its name (DESIGN.md "Pins"). */
+export interface Pin {
+  /** Stable id, lane G's own. */
+  id: string;
+  name: string;
+  /** Degrees. */
+  ra: number;
+  dec: number;
+}
+
 let dots: Dot[] = [];
+let pins: Pin[] = [];
+let pinInputs: LayoutInput[] = [];
+let pinPlaced: Placed[] = [];
+const pinClickFns = new Set<(pin: Pin, p: SkyPoint) => void>();
 let inputs: LayoutInput[] = [];
 let groups: ReadonlySet<PlaceKind> | null = null;
 let hover: string | null = null;
@@ -52,13 +75,21 @@ onZoom(() => {
 });
 
 registerDots({
-  pick: (x, y) => pick(x, y),
+  pick: (x, y) => {
+    const pin = pickPin(x, y);
+    return pin ? { id: `pin:${pin.id}` } : pick(x, y);
+  },
   hover: (id) => {
     if (id === skyHover) return;
     skyHover = id;
     soon();
   },
   click: (id, p) => {
+    if (id.startsWith('pin:')) {
+      const pin = pins.find((x) => `pin:${x.id}` === id);
+      if (pin) for (const fn of pinClickFns) fn(pin, p);
+      return;
+    }
     const dot = dots.find((d) => d.id === id);
     if (dot) for (const fn of clickFns) fn(dot, p);
   },
@@ -95,6 +126,33 @@ export function setDots(next: readonly Dot[]): void {
   }));
   refreshAlways();
   soon();
+}
+
+/**
+ * Saved places, drawn as pins at every zoom. Their labels go first and obey the same rules as
+ * the dots' labels: never over each other, a card or the window's edge. Replaces the previous set.
+ * @param next Pins, any order; an empty list removes them.
+ */
+export function setPins(next: readonly Pin[]): void {
+  pins = next.map((x) => ({ ...x }));
+  pinInputs = pins.map((x) => ({
+    ra: x.ra,
+    dec: x.dec,
+    tier: 0,
+    always: true,
+    width: textWidth(x.name),
+    gap: 11,
+  }));
+  soon();
+}
+
+/**
+ * Calls `fn` when the user clicks a pin on the sky.
+ * @returns Unsubscribe.
+ */
+export function onPinClick(fn: (pin: Pin, p: SkyPoint) => void): () => void {
+  pinClickFns.add(fn);
+  return () => pinClickFns.delete(fn);
 }
 
 /**
@@ -156,6 +214,16 @@ export function pick(x: number, y: number): Dot | null {
     }
   }
   return best;
+}
+
+/** The pin under a screen point (its ring or its label), if any. */
+function pickPin(x: number, y: number): Pin | null {
+  for (const p of pinPlaced) {
+    const onLabel =
+      p.label && x >= p.label.left && x <= p.label.right && y >= p.label.top && y <= p.label.bottom;
+    if (onLabel || Math.hypot(p.x - x, p.y - y) <= 9) return pins[p.index] ?? null;
+  }
+  return null;
 }
 
 /** The dots inside the current view (the lists' "In this view" switch), whatever their tier. */
@@ -244,7 +312,13 @@ function avoidBoxes(): Box[] {
   return boxes;
 }
 
-const STAR_KINDS = new Set<PlaceKind>(['star', 'nearby-star', 'fast-star', 'brown-dwarf', 'variable-star']);
+const STAR_KINDS = new Set<PlaceKind>([
+  'star',
+  'nearby-star',
+  'fast-star',
+  'brown-dwarf',
+  'variable-star',
+]);
 const CLUSTER_KINDS = new Set<PlaceKind>(['open-cluster', 'globular-cluster']);
 const GALAXY_KINDS = new Set<PlaceKind>(['spiral-galaxy', 'elliptical-galaxy', 'galaxy']);
 
@@ -293,9 +367,28 @@ function paint(): void {
   const patch = outline();
   const avoid = avoidBoxes();
   const boxes = patch
-    ? [...avoid, { left: patch.left - 3, top: patch.top - 3, right: patch.right + 3, bottom: patch.bottom + 3 }]
+    ? [
+        ...avoid,
+        {
+          left: patch.left - 3,
+          top: patch.top - 3,
+          right: patch.right + 3,
+          bottom: patch.bottom + 3,
+        },
+      ]
     : avoid;
-  placed = layout(inputs, view, c.width, c.height, c.fov, boxes);
+  const all = layout(
+    pins.length ? [...pinInputs, ...inputs] : inputs,
+    view,
+    c.width,
+    c.height,
+    c.fov,
+    boxes,
+  );
+  pinPlaced = all.filter((p) => p.index < pins.length);
+  placed = pins.length
+    ? all.filter((p) => p.index >= pins.length).map((p) => ({ ...p, index: p.index - pins.length }))
+    : all;
 
   ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
   ctx.clearRect(0, 0, c.width, c.height);
@@ -334,6 +427,28 @@ function paint(): void {
       ctx.fillText(text, x, y);
       ctx.restore();
     }
+  }
+  for (const p of pinPlaced) {
+    const pin = pins[p.index] as Pin;
+    const hot = skyHover === `pin:${pin.id}`;
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = hot ? mark : ink;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 7, 0, Math.PI * 2); // 14 px ring (--pin)
+    ctx.stroke();
+    if (p.label) {
+      const x = p.label.left + 1;
+      const y = p.label.top + LABEL_HEIGHT / 2;
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = halo;
+      ctx.strokeText(pin.name, x, y);
+      ctx.fillStyle = ink;
+      ctx.fillText(pin.name, x, y);
+    }
+    ctx.restore();
   }
   paintTimes.push(performance.now() - t0);
   if (paintTimes.length > 60) paintTimes.shift();

@@ -63,7 +63,12 @@ export function plane(v: View, ra: number, dec: number): { x: number; y: number 
  * Screen point of a sky position (CSS pixels), or null when it is behind the viewer.
  * Allocation-free variant: writes into `out` and returns true.
  */
-export function projectInto(v: View, ra: number, dec: number, out: { x: number; y: number }): boolean {
+export function projectInto(
+  v: View,
+  ra: number,
+  dec: number,
+  out: { x: number; y: number },
+): boolean {
   const d = dec * RAD;
   const h = (ra - v.ra) * RAD;
   const sd = Math.sin(d);

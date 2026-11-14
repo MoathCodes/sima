@@ -199,14 +199,16 @@ function smooth(g: Grey, sigma: number): Grey {
   for (let y = 0; y < g.h; y++) {
     for (let x = 0; x < g.w; x++) {
       let s = 0;
-      for (let i = -r; i <= r; i++) s += (kern[i + r] ?? 0) * (g.v[y * g.w + mirror(x + i, g.w)] ?? 0);
+      for (let i = -r; i <= r; i++)
+        s += (kern[i + r] ?? 0) * (g.v[y * g.w + mirror(x + i, g.w)] ?? 0);
       tmp[y * g.w + x] = s;
     }
   }
   for (let y = 0; y < g.h; y++) {
     for (let x = 0; x < g.w; x++) {
       let s = 0;
-      for (let i = -r; i <= r; i++) s += (kern[i + r] ?? 0) * (tmp[mirror(y + i, g.h) * g.w + x] ?? 0);
+      for (let i = -r; i <= r; i++)
+        s += (kern[i + r] ?? 0) * (tmp[mirror(y + i, g.h) * g.w + x] ?? 0);
       out[y * g.w + x] = s;
     }
   }
@@ -374,11 +376,17 @@ function propertiesOf(text: string): Record<string, string> {
 
 async function main(): Promise<void> {
   const what = process.argv[2] ?? 'all';
-  if (!['all', 'allsky', 'base'].includes(what)) throw new Error('usage: seed-tiles.ts [all|allsky|base]');
+  if (!['all', 'allsky', 'base'].includes(what))
+    throw new Error('usage: seed-tiles.ts [all|allsky|base]');
   const props = propertiesOf((await download(`${SPHEREX_HIPS}/properties`)).toString());
   const lams = (props.data_cube_crval3_arr ?? '').split(/\s+/).map(Number);
-  if (lams.length !== CHANNEL_LAM.length || lams.some((l, i) => Math.abs(l - (CHANNEL_LAM[i] ?? 0)) > 1e-6)) {
-    throw new Error('IRSA lists other channel wavelengths than src/sky/hips.ts: update CHANNEL_LAM');
+  if (
+    lams.length !== CHANNEL_LAM.length ||
+    lams.some((l, i) => Math.abs(l - (CHANNEL_LAM[i] ?? 0)) > 1e-6)
+  ) {
+    throw new Error(
+      'IRSA lists other channel wavelengths than src/sky/hips.ts: update CHANNEL_LAM',
+    );
   }
   mkdirSync(OUT, { recursive: true });
   const manifestFile = join(OUT, 'manifest.json');

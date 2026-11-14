@@ -11,7 +11,7 @@ const H = 1030;
 
 /** The view Aladin shows `fov` degrees wide: STG puts fov/2 from the centre at the edge. */
 function viewOf(ra: number, dec: number, fov: number) {
-  const scale = W / 2 / (2 * Math.tan((fov / 2) * (Math.PI / 180) / 2));
+  const scale = W / 2 / (2 * Math.tan(((fov / 2) * (Math.PI / 180)) / 2));
   return makeView(ra, dec, scale, W / 2, H / 2, -1);
 }
 
@@ -55,7 +55,9 @@ interface Place {
   kind: string;
   names: { common?: string; catalogue: string[] };
 }
-const places = (JSON.parse(readFileSync('src/data/places.json', 'utf8')) as { places: Place[] }).places
+const places = (
+  JSON.parse(readFileSync('src/data/places.json', 'utf8')) as { places: Place[] }
+).places
   .slice()
   .sort((a, b) => a.tier - b.tier);
 const inputs = (kind: string | null): LayoutInput[] =>
@@ -93,7 +95,9 @@ test('with a kind chip on, all of that kind show at any zoom: brown dwarfs at 70
   });
   assert.ok(inside.length > 0);
   assert.equal(dwarfs.length, inside.length);
-  const off = layout(inputs(null), v, W, H, 70, []).filter((p) => places[p.index]?.kind === 'brown-dwarf');
+  const off = layout(inputs(null), v, W, H, 70, []).filter(
+    (p) => places[p.index]?.kind === 'brown-dwarf',
+  );
   assert.ok(off.length < dwarfs.length);
 });
 
@@ -115,7 +119,8 @@ test('labels never overlap each other, a card, or the window edge (PLC-3)', () =
       const a = labels[i] as Box;
       assert.ok(a.left >= 0 && a.top >= 0 && a.right <= W && a.bottom <= H);
       for (const c of cards) assert.ok(!overlaps(a, c), 'a label touches a card');
-      for (let j = i + 1; j < labels.length; j++) assert.ok(!overlaps(a, labels[j] as Box), 'labels overlap');
+      for (let j = i + 1; j < labels.length; j++)
+        assert.ok(!overlaps(a, labels[j] as Box), 'labels overlap');
     }
   }
 });
@@ -139,6 +144,8 @@ test(`laying out all ${places.length} places takes well under 4 ms (PLC-8)`, () 
   times.sort((a, b) => a - b);
   const median = times[Math.floor(times.length / 2)] ?? 0;
   const p95 = times[Math.floor(times.length * 0.95)] ?? 0;
-  console.log(`# layout of ${all.length} dots: median ${median.toFixed(3)} ms, 95th percentile ${p95.toFixed(3)} ms`);
+  console.log(
+    `# layout of ${all.length} dots: median ${median.toFixed(3)} ms, 95th percentile ${p95.toFixed(3)} ms`,
+  );
   assert.ok(median < 2, `median ${median} ms`);
 });

@@ -87,7 +87,8 @@ async function route(path, clientId) {
     return new Response('No such channel', { status: 404 });
   }
   if (rest[0] === 'properties') return text(properties(ch, rev));
-  if (rest[0] === 'Moc.fits') return new Response(fullSkyMoc(), { headers: { 'Content-Type': 'application/fits' } });
+  if (rest[0] === 'Moc.fits')
+    return new Response(fullSkyMoc(), { headers: { 'Content-Type': 'application/fits' } });
   if (/^Allsky\.\w+$/.test(rest[1] || '')) return allskyImage(ch, rev, clientId);
   const m = /^Norder(\d+)$/.exec(rest[0] || '');
   const t = /^Npix(\d+)\.\w+$/.exec(rest[2] || '');
@@ -136,7 +137,8 @@ async function blankRoute(rest) {
       ].join('\n'),
     );
   }
-  if (rest[0] === 'Moc.fits') return new Response(fullSkyMoc(), { headers: { 'Content-Type': 'application/fits' } });
+  if (rest[0] === 'Moc.fits')
+    return new Response(fullSkyMoc(), { headers: { 'Content-Type': 'application/fits' } });
   // Allsky of a 512-pixel map: 27 × 64 by 29 × 64 pixels.
   const allsky = /^Allsky\./.test(rest[1] || '');
   const canvas = allsky ? new OffscreenCanvas(1728, 1856) : new OffscreenCanvas(512, 512);
@@ -234,8 +236,16 @@ async function tile(ch, k, n, rev, clientId) {
     return res;
   } catch (err) {
     // 4. Still failing: the soft low-resolution sky in its place, and Retry on the page.
-    tell(clientId, { ch, rev, k, n, state: 'failed', why: String(err && err.message ? err.message : err) });
-    const soft = n >= 0 && hasAllsky(seed, ch) ? await fromAllsky(ch, k, n).catch(() => null) : null;
+    tell(clientId, {
+      ch,
+      rev,
+      k,
+      n,
+      state: 'failed',
+      why: String(err && err.message ? err.message : err),
+    });
+    const soft =
+      n >= 0 && hasAllsky(seed, ch) ? await fromAllsky(ch, k, n).catch(() => null) : null;
     if (soft) return image(soft);
     const canvas = new OffscreenCanvas(512, 512);
     canvas.getContext('2d');

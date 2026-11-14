@@ -27,6 +27,8 @@ export interface LayoutInput {
   always: boolean;
   /** Label width in CSS pixels. */
   width: number;
+  /** Room between the mark's centre and its label, CSS pixels (7 for a dot; pins are bigger). */
+  gap?: number;
 }
 
 /** A drawn dot: its index in the input, where it is, and its label box if it has one. */
@@ -43,7 +45,7 @@ export function maxTier(fov: number): number {
 }
 
 export const LABEL_HEIGHT = 16;
-const GAP = 7;
+const DOT_GAP = 7;
 const MAX_LABELS = 80;
 
 function hits(a: Box, b: Box): boolean {
@@ -82,6 +84,7 @@ export function layout(
     if (labels < MAX_LABELS) {
       const w = d.width;
       const h = LABEL_HEIGHT;
+      const GAP = d.gap ?? DOT_GAP;
       const tries: Box[] = [
         { left: p.x + GAP, top: p.y - h / 2, right: p.x + GAP + w, bottom: p.y + h / 2 },
         { left: p.x - GAP - w, top: p.y - h / 2, right: p.x - GAP, bottom: p.y + h / 2 },
