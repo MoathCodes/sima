@@ -316,6 +316,11 @@ export interface Target {
   values: string;
   /** What Measure leads with when it opens calm (MSR-1). */
   lead: 'motion' | 'spectrum' | 'stack' | 'brightness';
+  /** Where `kind` comes from, in words (H9). Optional: added by lane B. */
+  kindFrom?: string;
+  /** Where `period` comes from, in words (H9); also why a catalogued period is not used. Optional:
+   * added by lane B. */
+  periodFrom?: string;
 }
 
 // ---------------------------------------------------------------------------------------------
