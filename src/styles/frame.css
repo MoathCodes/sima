@@ -2,23 +2,726 @@
    controls, date scale, wavelength scale, detector strip). Style only lane D's own classes here.
    Tokens and shared components are in app.css. */
 
-/* Phase 0: the frame stacks its rows 8px apart inside 10px of padding, and a row with nothing in
-   it (an empty #frame-load, #frame-legend, lane F's #frame-grip) takes no room. Lane D replaces
-   this; #frame-load must then keep its height (O-I5). */
+/* ----- The frame card ------------------------------------------------------------------------ */
+
 #frame {
   display: grid;
   grid-template-columns: minmax(0, 1fr); /* the picture keeps the frame's width */
-  gap: 8px;
-  padding: 10px;
+  padding: var(--frame-pad);
 }
-#frame > :empty {
+#frame > :empty:not(#frame-load):not(#frame-pic) {
   display: none;
 }
-/* Phase 0: six views fit the 1366 frame: in Measure the view buttons drop their icons. */
-#frame-views > button {
+#frame-task:not(:empty) {
+  margin-bottom: 4px;
+}
+
+.frame-head {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-group);
+  min-width: 0;
+  padding: 8px 0 6px;
+  cursor: grab;
+  user-select: none;
+}
+.frame-head button,
+.frame-head .term {
+  cursor: pointer;
+}
+.frame-name {
+  flex: 1;
+  min-width: 0;
+}
+.frame-title {
+  margin: 0;
+  font: var(--text-title);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.frame-source {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-tight);
+  margin: 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+  white-space: nowrap;
+}
+.frame-dot {
+  flex: none;
+  width: var(--source-dot);
+  height: var(--source-dot);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.frame-source.real .frame-dot {
+  background: var(--good);
+}
+.frame-source.sim .frame-dot {
+  border: 1.5px dashed var(--warn);
+}
+.frame-source.sim {
+  color: var(--warn);
+}
+.frame-source.none .frame-dot {
+  border: 1.5px dotted var(--ink-3);
+}
+.frame-source.loading .frame-dot {
+  border: 1.5px dashed var(--ink-3);
+}
+.frame-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-group);
+  flex: none;
+}
+.frame-fov {
+  min-width: 26px;
+  text-align: center;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.frame-measure[aria-pressed='true'] {
+  color: var(--action);
+}
+/* At 1366 in Measure the header keeps only Measure's icon (spec-img/19). */
+@media (max-width: 1420px) {
+  body:has(#measure:not([hidden])) .frame-measure > span {
+    display: none;
+  }
+}
+
+/* The loading line keeps one line's height, words or not, so the frame never grows (O-I5). */
+.frame-load {
+  height: 17px;
+  margin: 0 0 6px;
+  overflow: hidden;
+  color: var(--ink-2);
+  font: var(--text-label);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ----- The picture --------------------------------------------------------------------------- */
+
+#frame-pic {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #000; /* the picture itself sits on pure black (DESIGN "Data windows") */
+  touch-action: none;
+}
+.pic-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  cursor: grab;
+}
+.pic-canvas.panning {
+  cursor: grabbing;
+}
+.pic-edge {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 var(--edge-tint) var(--tint, var(--p1));
+  pointer-events: none;
+}
+.pic-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: grid;
+  gap: 1px;
+  max-width: calc(100% - 16px);
+  pointer-events: none;
+}
+.pic-badge > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pic-title {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-tight);
+}
+.pic-title b {
+  font: var(--text-control);
+  font-weight: 600;
+}
+.pic-letter {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-stop);
+  background: var(--tint);
+  color: var(--ink);
+  font: var(--text-label);
+  font-weight: 600;
+}
+.pic-warn {
+  color: var(--st-accent-2);
+}
+.pic-scale {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  color: var(--st-ink);
+  pointer-events: none;
+}
+.pic-bar {
+  padding: 0 0 3px 2px;
+  border: 1.5px solid currentColor;
+  border-top: 0;
+  font: var(--text-scale);
+  white-space: nowrap;
+}
+.pic-ne {
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+.pic-ne text {
+  fill: currentColor;
+  stroke: none;
+  font: var(--text-scale);
+}
+.pic-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--st-accent);
+  cursor: ew-resize;
+}
+.pic-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--playhead-knob);
+  height: var(--playhead-knob);
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: var(--st-accent);
+}
+.pic-divider::before {
+  content: '';
+  position: absolute;
+  inset: 0 -10px; /* a wider grip than the line */
+}
+
+/* ----- The cover: busy over the sky map's preview, or "no pictures here" ----------------------- */
+
+.frame-cover {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--st-bg);
+  color: var(--st-ink);
+  text-align: center;
+}
+.frame-cover[hidden] {
+  display: none;
+}
+.cover-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  opacity: 0.55;
+}
+.cover-tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+.cover-busy {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  max-width: 82%;
+  padding: 12px 14px;
+  border-radius: var(--r-tip);
+  background: var(--badge-bg);
+}
+.cover-what {
+  margin: 0;
+  font: var(--text-control);
+}
+.cover-more {
+  margin: 0;
+  color: var(--st-ink-2);
+  font: var(--text-label);
+}
+.cover-bar {
+  position: relative;
+  width: 104px;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 1px;
+  background: var(--st-line);
+}
+.cover-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 30%;
+  background: var(--st-ink-2);
+  animation: cover-run 1.4s var(--ease-out) infinite;
+}
+.cover-bar.known > span {
+  width: var(--done);
+  animation: none;
+  transition: width var(--t-slide) var(--ease-out);
+}
+@keyframes cover-run {
+  from {
+    translate: -100% 0;
+  }
+  to {
+    translate: 340% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cover-bar > span {
+    animation: none;
+  }
+}
+.cover-none {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  max-width: 88%;
+  max-height: 100%;
+  overflow: hidden;
+}
+.cover-none p {
+  margin: 0;
+}
+.cover-head {
+  font: var(--text-control);
+  font-weight: 600;
+}
+.cover-why {
+  color: var(--st-ink-2);
+  font: var(--text-label);
+}
+.cover-label {
+  margin-top: 4px !important;
+  color: var(--st-ink-3);
+  font: var(--text-label);
+}
+.cover-targets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cover-targets .link {
+  color: var(--st-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--st-ink-3);
+  font: var(--text-label);
+}
+.cover-practice {
+  margin-top: 4px;
+  height: var(--h-text-btn);
+  font: var(--text-label);
+}
+
+/* ----- Views and lines ------------------------------------------------------------------------ */
+
+.frame-views {
+  display: flex;
+  margin-top: 8px;
+}
+.frame-views > button {
   min-width: 0;
   padding: 0 6px;
 }
-#frame-views:has(> :nth-child(4)) > button > .icon {
+.frame-views > button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* Six views fit the 1366 frame: in Measure they drop their icons when narrow. */
+@media (max-width: 1420px) {
+  .frame-views.six > button > .icon {
+    display: none;
+  }
+}
+.frame-exif {
+  margin: 6px 0 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+  text-align: center;
+  text-wrap: balance;
+}
+.frame-explain {
+  margin: 6px 0 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+  text-align: center;
+  text-wrap: balance;
+}
+
+/* ----- The detector strip (in Measure's #detectors) ------------------------------------------- */
+
+.det-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--gap-tight);
+}
+.det-thumb {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 0;
+  border-radius: var(--r-window);
+  background: transparent;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.det-thumb:hover {
+  background: var(--card-2);
+}
+.det-thumb canvas,
+.det-swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--r-window);
+  image-rendering: pixelated;
+  border-bottom: 3px solid var(--hue, var(--st-line));
+  box-sizing: border-box;
+}
+.det-swatch {
+  background: linear-gradient(135deg, var(--d1), var(--d3), var(--d6));
+  opacity: 0.85;
+}
+.det-thumb[aria-pressed='true'] canvas,
+.det-thumb[aria-pressed='true'] .det-swatch {
+  box-shadow: var(--ring-action);
+}
+.det-thumb[aria-pressed='true'] {
+  color: var(--ink);
+}
+.det-thumb:disabled {
+  opacity: 0.4;
+}
+.det-name {
+  font-weight: 600;
+}
+.det-band {
+  font: var(--text-scale);
+  color: var(--ink-3);
+}
+
+/* ----- The bar -------------------------------------------------------------------------------- */
+
+.sima-bar {
+  --dates-w: 400px;
+  --wl-w: 424px;
+  display: flex;
+  align-items: center;
+  gap: var(--bar-gap);
+  height: var(--bar-h);
+  padding: var(--bar-pad);
+  box-sizing: border-box;
+}
+.sima-bar.measure {
+  --dates-w: 600px;
+}
+@media (max-width: 1420px) {
+  .sima-bar {
+    --dates-w: 320px;
+    --wl-w: 356px;
+  }
+  .sima-bar.measure {
+    --dates-w: 440px;
+  }
+  .wl-name {
+    display: none;
+  }
+}
+@media (max-width: 1180px) {
+  .sima-bar {
+    --dates-w: 240px;
+  }
+  .sima-bar.measure {
+    --dates-w: 300px;
+  }
+}
+.bar-play,
+.bar-loop {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-group);
+  flex: none;
+}
+.bar-speed {
+  min-width: 40px;
+  font-variant-numeric: tabular-nums;
+}
+.bar-rule {
+  align-self: stretch;
+  width: 1px;
+  margin: 14px 0;
+  background: var(--rule);
+  flex: none;
+}
+.bar-count {
+  flex: none;
+  color: var(--ink-2);
+  font: var(--text-label);
+  white-space: nowrap;
+}
+.bar-count[hidden] {
   display: none;
+}
+.sima-bar.waiting .bar-dates {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* The date scale (signature). Lettering sits under the line, stops and pass names above. */
+.bar-dates {
+  position: relative;
+  flex: none;
+  width: var(--dates-w);
+  height: var(--date-scale-h);
+  touch-action: none;
+  cursor: pointer;
+  user-select: none;
+}
+.bar-dates > * {
+  position: absolute;
+}
+.ds-line {
+  left: 0;
+  right: 0;
+  top: 32px;
+  height: 1px;
+  background: var(--card-3);
+}
+.ds-pass {
+  top: 30px;
+  height: var(--pass-bar);
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--ink-2) var(--played),
+    var(--card-3) var(--played)
+  );
+}
+.ds-tick {
+  top: 35px;
+  width: 1px;
+  height: 4px;
+  background: var(--card-3);
+}
+.ds-tick.major {
+  height: 8px;
+  background: var(--ink-3);
+}
+.ds-month {
+  top: 46px;
+  translate: -50% 0;
+  color: var(--ink-3);
+  font: var(--text-scale);
+  white-space: nowrap;
+}
+.ds-today {
+  top: 24px;
+  width: 1px;
+  height: 20px;
+  background: var(--ink-3);
+}
+.ds-stem {
+  top: 22px;
+  width: 1px;
+  height: 9px;
+  background: var(--ink-3);
+}
+.ds-stop {
+  top: 2px;
+  display: grid;
+  place-items: center;
+  width: var(--stop);
+  height: var(--stop);
+  margin-left: calc(var(--stop) / -2);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-stop);
+  background: var(--tint);
+  color: var(--ink);
+  font: var(--text-label);
+  font-weight: 600;
+}
+.ds-stop.on {
+  box-shadow: var(--ring-mark);
+}
+.ds-stop.ref {
+  outline: 1.5px dashed var(--ink-2);
+  outline-offset: 2px;
+}
+.ds-stop.empty {
+  background: var(--card-2);
+  color: var(--ink-3);
+}
+.ds-passname {
+  top: 4px;
+  translate: -50% 0;
+  color: var(--ink-3);
+  font: var(--text-scale);
+  white-space: nowrap;
+}
+.ds-dot {
+  top: 28px;
+  width: var(--visit-dot);
+  height: var(--visit-dot);
+  margin-left: calc(var(--visit-dot) / -2);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.ds-dot.empty {
+  background: var(--card);
+  box-shadow: inset 0 0 0 1.5px var(--ink-3);
+}
+.ds-playhead {
+  top: 20px;
+  width: 2px;
+  height: 22px;
+  margin-left: -1px;
+  background: var(--mark-ink);
+  pointer-events: none;
+}
+.ds-playhead::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: var(--playhead-knob);
+  height: var(--playhead-knob);
+  translate: -50% 0;
+  border-radius: 50%;
+  background: var(--mark-ink);
+}
+.ds-tip {
+  top: -26px;
+  translate: -50% 0;
+  padding: 3px 7px;
+  border-radius: var(--r-tip);
+  background: var(--ink);
+  color: var(--card);
+  font: var(--text-label);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.ds-tip[hidden] {
+  display: none;
+}
+
+/* The wavelength scale (signature). */
+.wl {
+  display: grid;
+  gap: 5px;
+  flex: none;
+  width: var(--wl-w);
+}
+.wl-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 22px;
+  color: var(--ink-3);
+  font: var(--text-label);
+  white-space: nowrap;
+}
+.wl-value {
+  color: var(--ink);
+  font: var(--text-control);
+  font-weight: 600;
+}
+.wl-name {
+  color: var(--ink-2);
+}
+.wl-gap {
+  flex: 1;
+}
+.wl-same {
+  gap: var(--gap-tight);
+  height: 22px;
+  color: var(--ink);
+}
+.wl-same[hidden] {
+  display: none;
+}
+.wl-strip {
+  position: relative;
+  height: 20px;
+  cursor: pointer;
+  touch-action: none;
+}
+.wl-band {
+  position: absolute;
+  top: 7px;
+  left: calc(var(--i) * 100% / 6 + var(--band-gap) / 2);
+  width: calc(100% / 6 - var(--band-gap));
+  height: var(--band-strip);
+  border-radius: 2px;
+  background: var(--hue);
+}
+.wl-tick {
+  position: absolute;
+  top: 4px;
+  width: 1px;
+  height: 12px;
+  background: var(--ink);
+}
+.wl-handle {
+  position: absolute;
+  top: 0;
+  width: var(--handle-w);
+  height: var(--handle-h);
+  margin-left: calc(var(--handle-w) / -2);
+  box-sizing: border-box;
+  border: 2px solid var(--card);
+  border-radius: var(--r-handle);
+  background: var(--mark-ink);
+  box-shadow: var(--shadow-handle);
+}
+.wl-ticks {
+  position: relative;
+  height: 11px;
+  color: var(--ink-3);
+  font: var(--text-scale);
+}
+.wl-ticks > span {
+  position: absolute;
+  translate: -50% 0;
+  white-space: nowrap;
+}
+.wl-ticks > .first {
+  translate: 0 0;
+}
+.wl-ticks > .last {
+  translate: -100% 0;
 }
