@@ -11,6 +11,7 @@
  * eye, what a galaxy shape code stands for).
  */
 import type { Place, PlaceKind, PlaceSource, PlacesCatalogue } from '../data/schema.ts';
+import type { Say, TourStop } from '../data/tours.ts';
 
 /** A fact's source key in `Place.sources`. */
 export type FactKey = keyof Place['sources'];
@@ -104,6 +105,7 @@ function squash(s: string): string {
 export function tidy(text: string): string {
   return text
     .replace(/\s+([.,;:!?)\]])/g, '$1')
+    .replace(/\s+(['’]s)\b/g, '$1')
     .replace(/([([])\s+/g, '$1')
     .replace(/\s+/g, ' ')
     .trim();
@@ -203,12 +205,17 @@ export function distanceFact(cat: PlacesCatalogue, p: Place): Fact | null {
   return { label: 'How far', value: `About ${shortDistance(d.ly)}`, detail };
 }
 
+/** A magnitude to one decimal, with a true minus sign. */
+export function magnitude(v: number): string {
+  return v.toFixed(1).replace('-', '−');
+}
+
 /** The brightness row: the magnitude, its band, and what it means to the eye (V band only). */
 export function brightnessFact(cat: PlacesCatalogue, p: Place): Fact | null {
   const m = p.magnitude;
   if (!m) return null;
   const who = sourceWords(cat, p, 'magnitude');
-  const value = `Magnitude ${m.value.toFixed(1)}`;
+  const value = `Magnitude ${magnitude(m.value)}`;
   if (m.band === 'K') {
     return {
       label: 'Brightness',
@@ -396,4 +403,90 @@ export function frameFov(p: Place): number {
 /** A good sky width for "Zoom to it", degrees: three times the place, at least half a degree. */
 export function zoomFov(p: Place): number {
   return Math.min(60, Math.max(0.5, p.size ? (p.size.major * 3) / 60 : 0.5));
+}
+
+// ----- Tour notes -----------------------------------------------------------------------------
+
+/** The first sentence of a text, tidied. */
+export function firstSentence(text: string): string {
+  const t = tidy(text);
+  const m = /^.+?[.!?](?=\s+\p{Lu}|$)/u.exec(t);
+  return m ? m[0] : t;
+}
+
+const ranks = new WeakMap<PlacesCatalogue, { fastest: Place | null; nearest: Place | null; n: number }>();
+
+function rankOf(cat: PlacesCatalogue) {
+  let r = ranks.get(cat);
+  if (!r) {
+    let fastest: Place | null = null;
+    let nearest: Place | null = null;
+    for (const p of cat.places) {
+      if ((motionPerYear(p) ?? 0) > (fastest ? (motionPerYear(fastest) ?? 0) : 0)) fastest = p;
+      if (p.distance && (!nearest?.distance || p.distance.ly < nearest.distance.ly)) nearest = p;
+    }
+    r = { fastest, nearest, n: cat.places.length };
+    ranks.set(cat, r);
+  }
+  return r;
+}
+
+/** One sentence of a tour note, or null when the catalogue lacks that fact (it is left out). */
+export function noteSentence(cat: PlacesCatalogue, p: Place, say: Say): string | null {
+  const from = (key: FactKey) => {
+    const w = sourceWords(cat, p, key);
+    return w ? ` (${w})` : '';
+  };
+  switch (say) {
+    case 'kind': {
+      const who = sourceWords(cat, p, 'kind') || 'The catalogue';
+      const k = kindOf(cat, p).toLowerCase();
+      return `${who} classes it as ${/^[aeiou]/.test(k) ? 'an' : 'a'} ${k}.`;
+    }
+    case 'distance': {
+      const d = p.distance;
+      if (!d) return null;
+      const spread = d.disagree ? ', though studies disagree' : '';
+      return `About ${shortDistance(d.ly)} away${spread}${from('distance')}.`;
+    }
+    case 'motion': {
+      const v = motionPerYear(p);
+      return v !== null && v >= 0.1 ? `Moves ${v.toFixed(2)}″ a year across the sky${from('properMotion')}.` : null;
+    }
+    case 'arabic': {
+      const a = arabicOf(cat, p);
+      if (!a) return null;
+      return `${a.label} ${a.arabic}${a.gloss ? `: ${a.gloss}` : ''}${a.source ? ` (${a.source})` : ''}.`;
+    }
+    case 'size': {
+      const f = sizeFact(cat, p);
+      return f ? `${f.value.replace(/ across$/, '')} across on the sky${from('size')}.` : null;
+    }
+    case 'brightness': {
+      const m = p.magnitude;
+      if (!m) return null;
+      const band = m.band === 'K' ? 'near-infrared light, K band,' : 'visible light, V band,';
+      return `Magnitude ${magnitude(m.value)} in ${band.slice(0, -1)}${from('magnitude')}.`;
+    }
+    case 'text':
+      return p.text ? `${firstSentence(p.text)}${from('text')}` : null;
+    case 'fastest': {
+      const r = rankOf(cat);
+      return r.fastest?.id === p.id
+        ? `The fastest-moving of the ${r.n.toLocaleString('en-US')} places in Sima's catalogue${from('properMotion')}.`
+        : null;
+    }
+    case 'nearest': {
+      const r = rankOf(cat);
+      return r.nearest?.id === p.id
+        ? `The nearest of the places in Sima's catalogue with a listed distance${from('distance')}.`
+        : null;
+    }
+  }
+}
+
+/** A tour stop's note: its sentences, then what to do in the frame. */
+export function stopNote(cat: PlacesCatalogue, p: Place, stop: TourStop): string[] {
+  const out = stop.say.map((s) => noteSentence(cat, p, s)).filter((s): s is string => !!s);
+  return out;
 }
