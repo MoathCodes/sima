@@ -33,3 +33,17 @@ test('a cancelled job rejects with AbortError', async () => {
   already.abort();
   await assert.rejects(searchChanges(5, 5, { signal: already.signal }), (e: Error) => e.name === 'AbortError');
 });
+
+test('measures the target in slices, the same as measureTarget', async () => {
+  const { measure } = await import('../src/core/work.ts');
+  const { measureTarget } = await import('../src/core/real.ts');
+  const set = await loadSet('rw-aur');
+  const t = target('rw-aur');
+  const ms = await measure(set, t);
+  assert.equal(ms.ranOn, 'page');
+  assert.ok(ms.longestMs < 100);
+  assert.deepEqual(
+    ms.map((m) => m.ra),
+    measureTarget(set, t).map((m) => m.ra),
+  );
+});

@@ -6,11 +6,11 @@
  * `new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })`.
  *
  * Messages in (from work.ts): `{ id, op: 'patch', key, field, set }` keeps one patch (the latest)
- * for the jobs that follow; `{ id, op: 'build', set, opts }`, `{ id, op: 'search', key, det,
- * threshold }` and `{ id, op: 'stack', key, det, track, how }` start a job; `{ id, op: 'cancel' }`
+ * for the jobs that follow; `{ id, op: 'build', set, opts }`, `{ id, op: 'measure', set, target }`,
+ * `{ id, op: 'search', key, det, threshold }` and `{ id, op: 'stack', key, det, track, how }` start a job; `{ id, op: 'cancel' }`
  * stops one. Messages out: `{ id, ok: true, value, ms, longestMs }` or `{ id, ok: false, error }`.
  *
- * Jobs are generators (core/real.ts `buildRealFieldSteps`, core/detect.ts `changeSteps`,
+ * Jobs are generators (core/real.ts `buildRealFieldSteps` and `measureTargetSteps`, core/detect.ts `changeSteps`,
  * core/stack.ts `stackSteps`). The worker runs their steps back to back for about 50 ms, then lets
  * its own event loop take a turn, so a cancel or a newer job is heard quickly.
  */

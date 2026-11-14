@@ -7,9 +7,10 @@
  * turn for the page between slices, so no task holds the page for more than 100 ms.
  *
  * ```ts
- * import { buildField, searchChanges, stack, usePatch, cancelAll } from '../core/work.ts';
+ * import { buildField, measure, searchChanges, stack, usePatch, cancelAll } from '../core/work.ts';
  *
  * const field = await buildField(set, { ra, dec, fov, target });  // off the page's thread
+ * const ms = await measure(set, target);                          // the target, every exposure
  * usePatch(key, field, set);           // once per patch: sends it to the worker (a copy)
  * const ctl = new AbortController();
  * const search = await searchChanges(det, threshold, { signal: ctl.signal });
@@ -20,9 +21,9 @@
  * Every promise rejects with an `AbortError` (a DOMException) when its signal aborts, and with an
  * Error naming the reason when the job fails. A call made before `usePatch` rejects.
  */
-import type { CatalogueTrack, Det, Field, RealSet, Target } from './types.ts';
+import type { CatalogueTrack, Det, Field, Measurement, RealSet, Target } from './types.ts';
 import type { CombineHow } from './picture.ts';
-import { buildRealFieldSteps } from './real.ts';
+import { buildRealFieldSteps, measureTargetSteps } from './real.ts';
 import { changeSteps, type ChangeSearch } from './detect.ts';
 import { stackSteps, type StackResult } from './stack.ts';
 
@@ -35,6 +36,7 @@ export type Job =
       set: RealSet;
       opts: { ra: number; dec: number; fov: number; target: Target | null };
     }
+  | { op: 'measure'; set: RealSet; target: Target }
   | { op: 'search'; key: string; det: Det; threshold: number }
   | { op: 'stack'; key: string; det: Det; track: CatalogueTrack; how: CombineHow };
 
@@ -94,6 +96,8 @@ export async function runSteps(
   if (job.op === 'build') {
     it = buildRealFieldSteps(job.set, job.opts);
     transferResult = true;
+  } else if (job.op === 'measure') {
+    it = measureTargetSteps(job.set, job.target);
   } else if (job.op === 'search' || job.op === 'stack') {
     const p = patch();
     if (!p || p.key !== job.key) throw new Error('No patch: call usePatch first.');
@@ -262,6 +266,22 @@ export function buildField(
   options?: WorkOptions,
 ): Promise<Field & WorkTiming> {
   return run<Field>({ op: 'build', set, opts }, options);
+}
+
+/**
+ * The test target measured on every exposure (core/real.ts `measureTarget`) off the page's thread:
+ * R Draconis takes about 0.7 s. The fits that follow (core/fit.ts `fitMotion`, `realCurve`) take
+ * under 30 ms and can run on the page. The array gets `ranOn`, `ms` and `longestMs` like the
+ * other results.
+ *
+ * @param set The decoded patch (sent to the worker as a copy).
+ */
+export function measure(
+  set: RealSet,
+  target: Target,
+  options?: WorkOptions,
+): Promise<Measurement[] & WorkTiming> {
+  return run<Measurement[]>({ op: 'measure', set, target }, options);
 }
 
 /**

@@ -29,7 +29,8 @@ import { mjdToYear, propagate, separation } from './astro.ts';
  * already unpacked it: the missing gzip header is noticed).
  *
  * Each frame at its `offset` holds w × h FLAGS (uint32, little-endian), then w × h pixels
- * (IEEE half-precision, little-endian) in MJy/sr, FITS order (bottom row first).
+ * (IEEE half-precision, little-endian) in MJy/sr, FITS order (bottom row first). Unpacking uses
+ * the platform's DecompressionStream; the decoding loop gives the page a turn every 20 ms.
  *
  * @param data The parsed frames.json.
  * @param bytes The file's bytes, gzipped or not.
@@ -43,7 +44,9 @@ export async function decodeFrames(
   const raw = bytes[0] === 0x1f && bytes[1] === 0x8b ? await gunzip(bytes) : bytes;
   const view = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
   const half = halfTable();
-  const frames: RealFrame[] = data.frames.map((meta) => {
+  const frames: RealFrame[] = [];
+  let slice = performance.now();
+  for (const meta of data.frames) {
     const n = meta.w * meta.h;
     const flags = new Uint32Array(n);
     const pix = new Float32Array(n);
@@ -53,8 +56,13 @@ export async function decodeFrames(
     }
     for (let i = 0; i < n; i++, o += 4) flags[i] = view.getUint32(o, true);
     for (let i = 0; i < n; i++, o += 2) pix[i] = half[view.getUint16(o, true)]!;
-    return { meta, pix, flags };
-  });
+    frames.push({ meta, pix, flags });
+    // Give the page a turn about every 20 ms (TLS-8): R Draconis takes about 0.3 s in all.
+    if (performance.now() - slice > 20) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      slice = performance.now();
+    }
+  }
   return { key: opts.key, origin: opts.origin, data, frames, badMask: badMaskOf(data) };
 }
 
@@ -888,6 +896,15 @@ export function glowTarget(
  * @returns One Measurement per exposure, in time order.
  */
 export function measureTarget(set: RealSet, target: Target): Measurement[] {
+  const it = measureTargetSteps(set, target);
+  for (;;) {
+    const r = it.next();
+    if (r.done) return r.value;
+  }
+}
+
+/** `measureTarget` in steps (a generator that yields after each exposure), for core/work.ts. */
+export function* measureTargetSteps(set: RealSet, target: Target): Generator<void, Measurement[]> {
   const neighbours = set.data.neighbours ?? [];
   const order = set.frames.map((_, i) => i).sort((a, b) => set.frames[a]!.meta.mjd - set.frames[b]!.meta.mjd);
   const out: Measurement[] = [];
@@ -945,6 +962,7 @@ export function measureTarget(set: RealSet, target: Target): Measurement[] {
     const sky = c.seen ? wcsPix2Sky(m.wcs, c.x, c.y) : null;
     if (c.saturated) cores.set(m.det, [...(cores.get(m.det) ?? []), coreRadius(f, set.badMask, cx, cy)]);
     centres.push({ x: cx, y: cy });
+    yield;
     out.push({
       ...base,
       seen: c.seen,
