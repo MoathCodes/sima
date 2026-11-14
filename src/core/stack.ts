@@ -492,12 +492,14 @@ export function* stackSteps(
   let note: string;
   if (!frames.length) {
     note = `No exposure in D${det} to stack.`;
-  } else if (!(along.snr >= 5)) {
+  } else if (!Number.isFinite(along.snr)) {
+    note = `Not measured: the pixels at the object's place are flagged (for example a saturated core) or missing, so the stack along the motion has no value there.`;
+  } else if (along.snr < 5) {
     note = `Not seen: the stack along the motion is ${fmt(along.snr)} the noise at the object's place, under 5×. This says nothing about whether it is there.`;
   } else if (along.snr >= still.snr + 2 && along.snr >= opposite.snr + 2) {
     note = `Seen at ${fmt(along.snr)} the noise along the motion; the controls give ${fmt(still.snr)} (not shifted) and ${fmt(opposite.snr)} (opposite motion). Something at this place moves with the catalogue motion.`;
   } else {
-    note = `Seen at ${fmt(along.snr)} the noise along the motion, but the controls give ${fmt(still.snr)} (not shifted) and ${fmt(opposite.snr)} (opposite motion). It moved about ${travel.toFixed(1)} pixels over these dates, too little for this circle to tell a mover from a still source (SPEC 7.1.9).`;
+    note = `Seen at ${fmt(along.snr)} the noise along the motion, but the controls give ${fmt(still.snr)} (not shifted) and ${fmt(opposite.snr)} (opposite motion). It moved about ${travel.toFixed(1)} pixels over these dates, too little for this circle to tell a mover from a still source.`;
   }
   const names = forced[0]?.neighbours ?? [];
   if (names.length) {
