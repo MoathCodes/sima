@@ -70,6 +70,7 @@ function allskyBox(n3) {
   return { x: (n3 % 27) * 64, y: Math.floor(n3 / 27) * 64 };
 }
 function irsaTileUrl(ch, k, n) {
+  if (n < 0) return `${IRSA}/Norder3/Allsky${ch === 0 ? '' : `_${ch}`}.png`;
   return `${IRSA}/Norder${k}/Dir${Math.floor(n / 10000) * 10000}/Npix${n}${ch === 0 ? '' : `_${ch}`}.png`;
 }
 
@@ -87,6 +88,7 @@ async function route(path, clientId) {
   }
   if (rest[0] === 'properties') return text(properties(ch, rev));
   if (rest[0] === 'Moc.fits') return new Response(fullSkyMoc(), { headers: { 'Content-Type': 'application/fits' } });
+  if (/^Allsky\.\w+$/.test(rest[1] || '')) return allskyImage(ch, rev, clientId);
   const m = /^Norder(\d+)$/.exec(rest[0] || '');
   const t = /^Npix(\d+)\.\w+$/.exec(rest[2] || '');
   if (!m || !t) return new Response('Not a tile', { status: 404 });
@@ -127,7 +129,7 @@ async function blankRoute(rest) {
         'hips_frame = equatorial',
         'hips_order = 0',
         'hips_order_min = 0',
-        'hips_tile_width = 64',
+        'hips_tile_width = 512',
         'hips_tile_format = png',
         'moc_sky_fraction = 1',
         '',
@@ -135,7 +137,9 @@ async function blankRoute(rest) {
     );
   }
   if (rest[0] === 'Moc.fits') return new Response(fullSkyMoc(), { headers: { 'Content-Type': 'application/fits' } });
-  const canvas = new OffscreenCanvas(64, 64);
+  // Allsky of a 512-pixel map: 27 × 64 by 29 × 64 pixels.
+  const allsky = /^Allsky\./.test(rest[1] || '');
+  const canvas = allsky ? new OffscreenCanvas(1728, 1856) : new OffscreenCanvas(512, 512);
   canvas.getContext('2d');
   return new Response(await canvas.convertToBlob({ type: 'image/png' }), {
     headers: { 'Content-Type': 'image/png' },
@@ -212,7 +216,7 @@ async function tile(ch, k, n, rev, clientId) {
     }
   }
   // 2. Order 0 from the channel's shipped Allsky image: the first sky at once.
-  if (k === 0 && hasAllsky(seed, ch)) {
+  if (k === 0 && n >= 0 && hasAllsky(seed, ch)) {
     const blob = await fromAllsky(ch, k, n).catch(() => null);
     if (blob) {
       tell(clientId, { ch, rev, k, n, state: 'done', from: 'allsky' });
@@ -231,12 +235,29 @@ async function tile(ch, k, n, rev, clientId) {
   } catch (err) {
     // 4. Still failing: the soft low-resolution sky in its place, and Retry on the page.
     tell(clientId, { ch, rev, k, n, state: 'failed', why: String(err && err.message ? err.message : err) });
-    const soft = hasAllsky(seed, ch) ? await fromAllsky(ch, k, n).catch(() => null) : null;
+    const soft = n >= 0 && hasAllsky(seed, ch) ? await fromAllsky(ch, k, n).catch(() => null) : null;
     if (soft) return image(soft);
     const canvas = new OffscreenCanvas(512, 512);
     canvas.getContext('2d');
     return image(await canvas.convertToBlob({ type: 'image/png' }));
   }
+}
+
+/**
+ * A channel's Allsky image (order 3), which Aladin shows until finer tiles arrive: the shipped
+ * one, else IRSA's with its holes filled.
+ */
+async function allskyImage(ch, rev, clientId) {
+  const seed = await manifest();
+  if (hasAllsky(seed, ch)) {
+    const res = await fetch(`${SEED}allsky/${ch}.webp`).catch(() => null);
+    if (res?.ok) {
+      tell(clientId, { ch, rev, k: 3, n: -1, state: 'start' });
+      tell(clientId, { ch, rev, k: 3, n: -1, state: 'done', from: 'seed' });
+      return image(await res.blob());
+    }
+  }
+  return tile(ch, 3, -1, rev, clientId);
 }
 
 function image(blob) {
@@ -248,9 +269,9 @@ function hasAllsky(seed, ch) {
 }
 
 async function tell(clientId, msg) {
-  if (!clientId) return;
-  const client = await self.clients.get(clientId);
-  client?.postMessage({ type: 'sky-tile', ...msg });
+  const client = clientId ? await self.clients.get(clientId) : null;
+  const to = client ? [client] : await self.clients.matchAll({ type: 'window' });
+  for (const c of to) c.postMessage({ type: 'sky-tile', ...msg });
 }
 
 let trimming = false;

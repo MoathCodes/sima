@@ -1,2 +1,90 @@
 /* Lane C: the sky map, the patch outline, the tether, dots, labels, pins, sky notes and the
    "Move the frame here" card. Style only lane C's own classes here. Tokens are in app.css. */
+
+/* The map (Aladin Lite) fills #sky. */
+#sky .sky-map {
+  position: absolute;
+  inset: 0;
+}
+/* The Grey Map Rule: a screen-blend layer lifts the map's black to blue-black and leaves its
+   whites white. Marks ride above it and never recolour the map. */
+#sky .sky-lift {
+  position: absolute;
+  inset: 0;
+  background: var(--sky);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+/* Aladin's own chrome is not used: no logo, no field-of-view readout, no popups. */
+#sky .aladin-logo,
+#sky .aladin-logo-container,
+#sky .aladin-fov,
+#sky .aladin-status-bar,
+#sky .aladin-popup-container {
+  display: none !important;
+}
+
+/* The pointer says what a press will do: grab the patch, open a place, or pan. */
+#sky[data-cursor='grab'],
+#sky[data-cursor='grab'] * {
+  cursor: grab !important;
+}
+#sky[data-cursor='grabbing'],
+#sky[data-cursor='grabbing'] * {
+  cursor: grabbing !important;
+}
+#sky[data-cursor='pointer'],
+#sky[data-cursor='pointer'] * {
+  cursor: pointer !important;
+}
+
+/* Marks on the sky: dots and labels under the patch, the patch and the tether on top. */
+#sky-marks .sky-dots,
+#sky-marks .sky-patch {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* The sky note: the second fact explains itself on hover or focus (O-I6). */
+#sky-note .sky-note-more {
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: help;
+}
+#sky-note .sky-note-more:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+#sky-note .sky-note-btn {
+  margin-left: var(--gap-tight);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--st-ink);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* "Move the frame here": one row by the clicked spot (FRM-3, spec-img/22). */
+#sky-click.sky-click {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-tight);
+  padding: var(--pad-group) var(--pad-group) var(--pad-group) var(--inset);
+  white-space: nowrap;
+}
+#sky-click .sky-click-coords {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+#sky-click:not([hidden]) {
+  animation: sky-click-in var(--t-fade) var(--ease-out);
+}
+@keyframes sky-click-in {
+  from {
+    opacity: 0;
+  }
+}
