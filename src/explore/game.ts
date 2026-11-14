@@ -345,8 +345,10 @@ function showResult(box: HTMLElement, t: TaskCopy & { key: string; simulated: bo
   const where = `Rings: ${ringSource(S.field)}. Worked out, not observed. The bold ring is the date on screen; the letters in the close-up are the first and last dates.${
     t.simulated ? ' Practice exposure IDs start with SIMULATED.' : ''
   }`;
-  // The measured sentence first (what moved, how far), then where the rings come from.
-  cap.innerHTML = `${found && moved ? '<span class="task-moved"></span> ' : ''}<span class="term" tabindex="0"></span>${
+  // The measured sentence first (what moved, how far), then where the rings come from. Only in
+  // Explore: Measure says it in full beside the frame, and there the frame is too narrow for it.
+  const say = found && moved && S.level === 'explore';
+  cap.innerHTML = `${say ? '<span class="task-moved"></span> ' : ''}<span class="term" tabindex="0"></span>${
     t.key === 'planet-x' ? ' · contrast raised in the close-up only' : ''
   }`;
   const said = cap.querySelector<HTMLElement>('.task-moved');
@@ -382,15 +384,24 @@ function tapped(p: { x: number; y: number; ra: number; dec: number }): boolean {
   return false;
 }
 
-/** Where "Show me" rings the object on the date on screen, field pixels; null before it. */
+/**
+ * Where "Show me" points, for the keyboard crosshair: the middle of the object's path over every
+ * date, field pixels (it stays put while the pictures play, and a pick there hits); null before
+ * Show me.
+ */
 function ringNow(): { x: number; y: number } | null {
   const view = currentView();
-  const g = S.groups[S.epoch];
   if (help < 4 || !view?.field) return null;
-  const mjd = view.mjd ?? (g ? groupDate(view.field, g) : Number.NaN);
-  const at = targetAt(view.field, S.target, mjd);
-  const p = at ? view.skyToPic(at.ra, at.dec) : null;
-  return p ? view.toField(p.x, p.y) : null;
+  const pts = S.groups
+    .map((g) => targetAt(view.field, S.target, groupDate(view.field, g)))
+    .map((at) => (at ? view.skyToPic(at.ra, at.dec) : null))
+    .filter((q): q is { x: number; y: number } => !!q)
+    .map((q) => view.toField(q.x, q.y));
+  if (!pts.length) return null;
+  return {
+    x: pts.reduce((a, q) => a + q.x, 0) / pts.length,
+    y: pts.reduce((a, q) => a + q.y, 0) / pts.length,
+  };
 }
 
 function markFound(): void {

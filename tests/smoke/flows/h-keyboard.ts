@@ -16,7 +16,7 @@ function expect(name: string, fn: string, timeout = 10000): Step {
   };
 }
 
-const onStep = (n: number) =>
+const onStep = (n: number): Step =>
   expect(
     `The tour is on step ${n} of 8`,
     `document.querySelector('#tour .tour-card:not([hidden])')?.textContent?.includes('Step ${n} of 8')`,
@@ -182,6 +182,18 @@ export const flows: Flow[] = [
       ),
       onStep(6),
       expect('Focus is back on the step card', `document.activeElement?.classList.contains('tour-card')`),
+      enterOn('measure', 'Enter on Measure'),
+      onStep(7),
+      {
+        name: 'Arrow keys on the wavelength handle',
+        async run(page) {
+          await page.locator(guide('wavelength-handle')).first().focus();
+          for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowRight');
+        },
+      },
+      onStep(8),
+      enterOn('zoom-out', 'Enter on zoom out'),
+      expect('The tour is done', `document.querySelector('#tour [data-close-tour]') !== null`),
     ],
   },
   {
