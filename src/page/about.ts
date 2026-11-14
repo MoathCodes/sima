@@ -13,6 +13,18 @@ import type { Target } from '../core/types.ts';
 /** Light-years in a parsec (IAU). */
 const LY_PER_PC = 3.26156;
 
+/** About's sections, for the contents row: heading id and short name. */
+const SECTIONS: readonly [string, string][] = [
+  ['about-use', 'How to use'],
+  ['about-method', 'Method'],
+  ['about-targets', 'Targets'],
+  ['about-planet-x', 'Planet X'],
+  ['about-challenge', 'Challenge'],
+  ['about-limits', 'Limits'],
+  ['about-ai', 'AI help'],
+  ['about-sources', 'Sources'],
+];
+
 /** Fills the About dialog. Called once by shell.ts. */
 export function startAbout(): void {
   const dialog = document.getElementById('about');
@@ -23,8 +35,21 @@ export function startAbout(): void {
       <h2 id="about-title"><span lang="ar" dir="rtl" class="about-ar">سيما</span> About Sima</h2>
       <button class="icon-btn sm" data-dialog-close aria-label="Close About" data-tip="Close">${icon('close')}</button>
     </header>
+    <nav class="about-toc" aria-label="Sections of About">
+      ${SECTIONS.map(([id, name]) => `<a class="link" href="#${id}" data-section="${id}">${name}</a>`).join('')}
+    </nav>
     <div class="about-body" data-scroll tabindex="0">${body()}</div>`;
   dialog.querySelector('[data-dialog-close]')?.addEventListener('click', () => dialog.close());
+  // The contents row scrolls the body to a section; the page's address stays as it is.
+  dialog.querySelector('.about-toc')?.addEventListener('click', (e) => {
+    const a = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-section]') : null;
+    const to = a && document.getElementById(a.dataset.section ?? '');
+    if (!to) return;
+    e.preventDefault();
+    to.scrollIntoView({ block: 'start' });
+    to.setAttribute('tabindex', '-1');
+    to.focus({ preventScroll: true });
+  });
 }
 
 /** Opens About at its top. */
@@ -61,11 +86,13 @@ real pictures of that spot in date order. Stars stay still. Anything that moves 
 <p>Made by team SIMA, in Madinah, for the NASA Space Apps Challenge 2026,
 ${link('https://www.spaceappschallenge.org/2026/challenges/planet-x-and-spherex/?tab=details', '“Planet X and SPHEREx”')}.</p>
 
-<h3>How to use it</h3>
+<h3 id="about-use">How to use it</h3>
 <ul>
   <li><b>Start:</b> press a starting point on the welcome card, or press Play on the bar.</li>
   <li><b>Travel:</b> drag the sky to move, and use the wheel or <kbd class="kbd">+</kbd> <kbd class="kbd">−</kbd> to zoom.
     A click on the sky asks before it moves anything: press “Move the frame here”. You can also drag the square.</li>
+  <li><b>Over the picture:</b> the wheel changes the field size (3′ to 48′) instead of zooming the sky,
+    a drag moves the frame's spot, and in Measure a tap measures what you tapped.</li>
   <li><b>Search:</b> press <kbd class="kbd">/</kbd> and type a name in English or Arabic, a meaning (“shepherd”), a catalogue
     number (M104, NGC 6572) or coordinates (17 57 48.5 +04 41 36).</li>
   <li><b>Compare dates:</b> Flip plays the pictures. Two dates shows the earlier date in red and the later in cyan.
@@ -77,7 +104,7 @@ ${link('https://www.spaceappschallenge.org/2026/challenges/planet-x-and-spherex/
     through the pictures, <kbd class="kbd">/</kbd> goes to search, <kbd class="kbd">Esc</kbd> closes what is open.</li>
 </ul>
 
-<h3>The method</h3>
+<h3 id="about-method">The method</h3>
 <p>SPHEREx maps the whole sky every six months in 102 colours of infrared light, from 0.75 to 5.0 µm, with six
 detectors. It sees each spot a few times within days (a visit), and again about six months later (a pass).</p>
 <p>Sima takes the pictures of one spot and plays them in date order, like the blink comparators astronomers used
@@ -89,11 +116,11 @@ line is fitted to them, and the result is compared with the Gaia catalogue.</p>
 radiology (matching brightness), transient surveys (new, reference and difference cutouts) and citizen science
 (warming up on a known answer).</p>
 
-<h3>The five test targets</h3>
+<h3 id="about-targets">The five test targets</h3>
 <p>The challenge names five targets. Their real SPHEREx pictures come with the page, so they open at once.</p>
 <ul class="about-targets">${TARGETS.map(target).join('')}</ul>
 
-<h3>Planet X</h3>
+<h3 id="about-planet-x">Planet X</h3>
 <p>“Planet X” is the old name for a planet that might exist far beyond Neptune and has not been found. Such a
 planet would be cold and faint, and it would drift slowly against the stars. In SPHEREx pictures taken six months
 apart it would look like a nearby brown dwarf: a faint dot that is in a different place on each date.</p>
@@ -101,7 +128,7 @@ apart it would look like a nearby brown dwarf: a faint dot that is in a differen
 <span class="pill warn">Simulated</span> everywhere. It shows what such a find would look like. Anything the change
 search lists is a candidate to check, never a discovery.</p>
 
-<h3>The challenge's eight points</h3>
+<h3 id="about-challenge">The challenge's eight points</h3>
 <table class="about-table">
   <thead><tr><th>The challenge asks for</th><th>How Sima answers</th></tr></thead>
   <tbody>
@@ -116,7 +143,7 @@ search lists is a candidate to check, never a discovery.</p>
   </tbody>
 </table>
 
-<h3>Limits</h3>
+<h3 id="about-limits">Limits</h3>
 <ul>
   <li>The sky map is an average of a year of dates. Moving objects are blurred or shifted on it.</li>
   <li>Real pictures come with the page for the five test targets only. Any other spot needs the live service,
@@ -130,12 +157,12 @@ search lists is a candidate to check, never a discovery.</p>
   <li>Sima is made for a desktop screen and has been tested mainly in Chrome.</li>
 </ul>
 
-<h3>Made with AI help</h3>
+<h3 id="about-ai">Made with AI help</h3>
 <p>The code and much of the text of Sima were written with AI coding assistants, including Claude by Anthropic,
 directed and checked by the team. The numbers on screen come from the pictures and from the named catalogues, not
 from an AI. Where a value is a model or a simulation, the page says so.</p>
 
-<h3>Sources and their terms</h3>
+<h3 id="about-sources">Sources and their terms</h3>
 <p>NASA does not endorse sites outside the U.S. government. Each source below has its own terms of use.</p>
 <ul class="about-sources">
   <li><b>SPHEREx pictures and the all-sky map:</b> NASA/IPAC Infrared Science Archive (IRSA),
