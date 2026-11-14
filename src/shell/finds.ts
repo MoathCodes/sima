@@ -3,7 +3,7 @@
  * CatWISE2020, asked of VizieR from the browser, shown as a paged list and as marks on the sky.
  * The cuts, addresses and reading of the answers are in core/finds.ts.
  *
- * - It opens from the "Catalogue search" chip and from search ("fast movers", "cold", "pm>300").
+ * - It opens from search ("catalogue", "fast movers", "cold", "pm>300").
  *   It sits where the places list sits (#finds, beside the rail), and only one of the two shows.
  * - It searches only when asked ("Search this view"), within the view or the widest circle VizieR
  *   answers from the browser, and says which. When the view moves, it offers to search again.
@@ -137,7 +137,6 @@ export function closeFinds(): void {
   p.hidden = true;
   asking?.abort();
   clearMarks();
-  setChip(false);
 }
 
 function showPanel(): void {
@@ -148,12 +147,7 @@ function showPanel(): void {
   p.hidden = false;
   draw();
   makeRoom(p);
-  setChip(true);
   if (st.phase.kind === 'done') showMarks(st.phase.result);
-}
-
-function setChip(on: boolean): void {
-  document.querySelector('[data-guide="chip-catalogues"]')?.setAttribute('aria-pressed', String(on));
 }
 
 function clampCut(which: 'pm' | 'colour', v: number): number {
@@ -508,6 +502,7 @@ let lastCatwise: { text: string; area: FindArea } | null = null;
 // ----- Search words -------------------------------------------------------------------------
 
 const FAST_WORDS = ['fast', 'fast movers', 'movers', 'moving', 'proper motion', 'high proper motion', 'pm', 'gaia', 'runaway'];
+const OPEN_WORDS = ['catalogue', 'catalogues', 'catalogue search', 'catalog', 'catalogs', 'catalog search', 'filter', 'filters'];
 const COLD_WORDS = ['cold', 'cold objects', 'brown dwarf', 'brown dwarfs', 'catwise', 'w1-w2', 'w1−w2', 'colour', 'color', 'cool', 'y dwarf'];
 
 function matches(q: string, words: readonly string[]): boolean {
@@ -525,6 +520,14 @@ function searchWords(query: string): SearchHit[] {
   const bare = q.replace(/\s*(?:>|above|over)?\s*\d+(?:\.\d+)?\s*(?:mas\/?yr|mag)?\s*$/, '').trim();
   const hits: SearchHit[] = [];
   const value = numberIn(q);
+  if (matches(bare, OPEN_WORDS))
+    hits.push({
+      name: 'Catalogue search',
+      line: 'Gaia DR3 fast movers or CatWISE2020 cold objects in this view',
+      icon: 'filter',
+      score: 0.9,
+      choose: () => openFinds(),
+    });
   if (matches(bare, FAST_WORDS)) {
     const pm = value !== undefined ? clampCut('pm', value) : st.pm;
     hits.push({

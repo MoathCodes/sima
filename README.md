@@ -77,7 +77,7 @@ there are no pictures here and why, and offers the five targets and a labelled p
 
 ## Catalogue search, the motion handle and the sandbox
 
-- **Catalogue search** (chip "Catalogue search", or search "fast" or "cold"): asks VizieR, from
+- **Catalogue search** (search "catalogue", "fast" or "cold"): asks VizieR, from
   the browser, for Gaia DR3 stars that move fast (proper motion over a cut, up to a 1° circle) or
   CatWISE2020 sources that look cold (W1−W2 over a cut, W2 under 15, up to 0.5°). It tries the CfA
   mirror, then the IDIA one, and says so if both fail, with "Try again". An answer takes 5 to 20

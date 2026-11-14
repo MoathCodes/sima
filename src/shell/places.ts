@@ -24,7 +24,6 @@ import { hasCommonName, nameOf, rowLine, tidy } from './objects.ts';
 import { find } from './places/search.ts';
 import { KIND_CHIPS } from './places/kinds.ts';
 import { closeAll, openCard, openKind, openTours, startPanels } from './places/panels.ts';
-import { closeFinds, findsOpen, openFinds } from './finds.ts';
 import { catalogue, el, iconNode, kindIcon, setCatalogue } from './places/state.ts';
 
 interface Chip {
@@ -38,8 +37,6 @@ const CHIPS: readonly Chip[] = [
   ...KIND_CHIPS.map((c) => ({ id: c.id, name: c.name, icon: c.icon, run: () => openKind(c) })),
   { id: 'tours', name: 'Tours', icon: 'trail', run: openTours },
   { id: 'surprise-me', name: 'Surprise me', icon: 'bulb', run: surprise },
-  // O-V5: Gaia's fast movers and CatWISE's cold objects in the view (shell/finds.ts).
-  { id: 'catalogues', name: 'Catalogue search', icon: 'filter', run: () => (findsOpen() ? closeFinds() : openFinds()) },
 ];
 
 /** Fills the chips and the Places menu, then loads the catalogue. Called once by main.ts. */

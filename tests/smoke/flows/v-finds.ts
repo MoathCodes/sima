@@ -6,7 +6,7 @@
  */
 import { readFileSync } from 'node:fs';
 import type { Page } from 'playwright-core';
-import { guide, keyStep, press, pressStep, type Flow, type Step } from '../smoke.ts';
+import { guide, keyStep, pressStep, type Flow, type Step } from '../smoke.ts';
 
 const fixture = (name: string): string =>
   readFileSync(new URL(`../../fixtures/${name}`, import.meta.url), 'utf8');
@@ -43,16 +43,15 @@ function vizier(mode: 'answer' | 'fail'): Step {
   };
 }
 
-/** Opens the panel from its chip, through "More" when the row has no room for it. */
+/** Opens the panel from search. */
 const openPanel: Step = {
-  name: 'Open Catalogue search',
+  name: 'Search "catalogue" and open Catalogue search',
   async run(page) {
-    const chip = page.locator(guide('chip-catalogues'));
-    if (await chip.isVisible()) await chip.click();
-    else {
-      await press(page, 'chip-more');
-      await page.locator('.pl-more-menu .menu-item', { hasText: 'Catalogue search' }).click();
-    }
+    await page.keyboard.press('/');
+    await page.keyboard.type('catalogue');
+    const row = page.locator(`${guide('search-results')} button`, { hasText: 'Catalogue search' });
+    await row.waitFor();
+    await row.click();
     await page.locator(guide('finds')).waitFor();
   },
 };

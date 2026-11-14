@@ -107,7 +107,7 @@ ${link('https://www.spaceappschallenge.org/2026/challenges/planet-x-and-spherex/
   <li><b>Measure:</b> opens the numbers behind the picture and the picture tools. In its Stack view, drag the arrow
     to stack the pictures along a speed and direction you choose; two checks (not shifted, and the opposite motion)
     always show beside it.</li>
-  <li><b>Catalogue search:</b> the chip lists Gaia DR3 stars that move fast, or CatWISE2020 sources that are very red
+  <li><b>Catalogue search:</b> search “catalogue”, “fast” or “cold”. It lists Gaia DR3 stars that move fast, or CatWISE2020 sources that are very red
     (cold), in the view, and marks them on the sky. They are catalogue sources, not discoveries.</li>
   <li><b>Share:</b> gives a link to the same view, and code to put it in another web page.</li>
   <li><b>Keys:</b> <kbd class="kbd">Space</kbd> plays or pauses, <kbd class="kbd">←</kbd> <kbd class="kbd">→</kbd> step
