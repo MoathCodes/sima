@@ -1,17 +1,18 @@
 /**
  * The Web Worker that runs the heavy science off the page's thread (O-T1, O-T5, TLS-8): building
- * a patch's field, the change search and stacking. Owner: lane B.
+ * a patch's field, the change search, stacking and the frame's cleaned-up pictures. Owner: lane B.
  *
  * Do not import this file. The page talks to it only through core/work.ts, which starts it with
  * `new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })`.
  *
  * Messages in (from work.ts): `{ id, op: 'patch', key, field, set }` keeps one patch (the latest)
  * for the jobs that follow; `{ id, op: 'build', set, opts }`, `{ id, op: 'measure', set, target }`,
- * `{ id, op: 'search', key, det, threshold }` and `{ id, op: 'stack', key, det, track, how }` start a job; `{ id, op: 'cancel' }`
+ * `{ id, op: 'search', key, det, threshold }`, `{ id, op: 'stack', key, det, track, how }` and
+ * `{ id, op: 'pictures', key, groups, p }` start a job; `{ id, op: 'cancel' }`
  * stops one. Messages out: `{ id, ok: true, value, ms, longestMs }` or `{ id, ok: false, error }`.
  *
  * Jobs are generators (core/real.ts `buildRealFieldSteps` and `measureTargetSteps`, core/detect.ts `changeSteps`,
- * core/stack.ts `stackSteps`). The worker runs their steps back to back for about 50 ms, then lets
+ * core/stack.ts `stackSteps`, core/blink.ts `groupPictureSteps`). The worker runs their steps back to back for about 50 ms, then lets
  * its own event loop take a turn, so a cancel or a newer job is heard quickly.
  */
 import type { Field, RealSet } from './types.ts';

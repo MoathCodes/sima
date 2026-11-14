@@ -108,6 +108,8 @@
 
 #frame-pic {
   position: relative;
+  justify-self: center;
+  width: min(100%, var(--pic-max, 100%)); /* smaller only when the window is too short (layout.ts) */
   aspect-ratio: 1;
   overflow: hidden;
   background: #000; /* the picture itself sits on pure black (DESIGN "Data windows") */

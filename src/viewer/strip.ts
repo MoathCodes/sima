@@ -5,7 +5,7 @@
  * scale and the sky follow (BAR-4).
  */
 import { S, pic, watch } from './state.ts';
-import { flipImage, lookFor } from './paint.ts';
+import { flipImage, lookFor, picturesReady, refGroup } from './paint.ts';
 import { groupFrames } from '../core/blink.ts';
 import { BAND_EDGES } from '../core/instrument.ts';
 import { emit } from '../shell/bus.ts';
@@ -65,35 +65,76 @@ function build(el: HTMLElement): void {
   paint(el);
 }
 
+/** Thumbnails waiting to be repainted, by detector, and the animation frame that paints one. */
+const waiting = new Set<number>();
+let frame = 0;
+
+/**
+ * Marks the buttons at once, and repaints the thumbnails one per animation frame, only while the
+ * strip is on screen (TLS-8: six at once on every picture setting held the page).
+ */
 function paint(el: HTMLElement): void {
+  el.querySelectorAll<HTMLButtonElement>('[data-det]').forEach((b) => {
+    b.setAttribute('aria-pressed', String(!S.color && Number(b.dataset.det) === S.det));
+  });
+  el.querySelector('[data-color]')?.setAttribute('aria-pressed', String(S.color));
+  for (const d of [1, 2, 3, 4, 5, 6]) waiting.add(d);
+  soon();
+}
+
+function soon(): void {
+  if (!frame && waiting.size) frame = requestAnimationFrame(next);
+}
+
+function next(): void {
+  frame = 0;
+  const el = host;
+  if (!el?.isConnected || !el.checkVisibility()) {
+    // Hidden: painted again when Measure opens (the `level` change).
+    waiting.clear();
+    return;
+  }
+  // The detector on screen first.
+  const d = waiting.has(S.det) ? S.det : waiting.values().next().value;
+  if (d === undefined) return;
+  waiting.delete(d);
+  const b = el.querySelector<HTMLButtonElement>(`[data-det="${d}"]`);
+  if (b) thumb(b, d);
+  soon();
+}
+
+/** Paints one detector's thumbnail; once its pictures are made, if they were not yet. */
+function thumb(b: HTMLButtonElement, d: number): void {
   const field = S.field;
   const g = S.groups[S.epoch];
   const p = pic();
   const by = g?.visit === null || g?.visit === undefined ? 'window' : 'visit';
-  el.querySelectorAll<HTMLButtonElement>('[data-det]').forEach((b) => {
-    const d = Number(b.dataset.det);
-    b.setAttribute('aria-pressed', String(!S.color && d === S.det));
-    const canvas = b.querySelector('canvas');
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
-    if (!field || !g) {
-      canvas.width = 1;
-      canvas.height = 1;
-      b.disabled = true;
-      return;
-    }
-    const groups = groupFrames(field, d, by);
-    const mine = groups.find((x) => x.window === g.window && x.visit === g.visit);
-    b.disabled = !mine?.frames.length;
-    b.title = mine?.frames.length ? '' : `No D${d} exposure on this date`;
+  const canvas = b.querySelector('canvas');
+  const ctx = canvas?.getContext('2d');
+  if (!canvas || !ctx) return;
+  if (!field || !g) {
+    canvas.width = 1;
+    canvas.height = 1;
+    b.disabled = true;
+    return;
+  }
+  const groups = groupFrames(field, d, by);
+  const mine = groups.find((x) => x.window === g.window && x.visit === g.visit);
+  b.disabled = !mine?.frames.length;
+  b.title = mine?.frames.length ? '' : `No D${d} exposure on this date`;
+  if (!mine?.frames.length) {
     canvas.width = field.n;
     canvas.height = field.n;
-    if (!mine?.frames.length) {
-      ctx.clearRect(0, 0, field.n, field.n);
-      return;
-    }
-    const look = lookFor(field, groups, 0, p, d);
-    ctx.putImageData(flipImage(field, mine, look, p), 0, 0);
-  });
-  el.querySelector('[data-color]')?.setAttribute('aria-pressed', String(S.color));
+    ctx.clearRect(0, 0, field.n, field.n);
+    return;
+  }
+  const ready = () => {
+    waiting.add(d);
+    soon();
+  };
+  if (!picturesReady(field, [refGroup(groups, 0), mine], p, ready)) return;
+  const look = lookFor(field, groups, 0, p, d);
+  canvas.width = field.n;
+  canvas.height = field.n;
+  ctx.putImageData(flipImage(field, mine, look, p), 0, 0);
 }

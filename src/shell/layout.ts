@@ -3,7 +3,8 @@
  *
  * - The frame hangs from its top right corner, 76 px from the top. The user drags it by its
  *   header and sizes it from its bottom left corner; its box is remembered (`frame-box`, FRM-5).
- *   It never reaches under the bar: when it would, its picture gets smaller.
+ *   It never reaches under the bar: when it would, it gets narrower, and at its narrowest its
+ *   picture gets smaller.
  * - When Measure opens, the frame glides left (0.42 s) and Measure fades in beside it after the
  *   glide: one movement at a time. When Measure closes, it fades out first and the frame glides
  *   back. With reduced motion the frame does not slide; it fades in at its new place (GEN-5).
@@ -37,6 +38,8 @@ const RAIL_RIGHT = 72;
 /** Cards end this far above the bar. */
 const ABOVE_BAR = 14;
 const MIN_WIDTH = 300;
+/** The picture's smallest side when the window is too short for the frame at its narrowest. */
+const PIC_MIN = 120;
 const TOOLS_WIDTH = 320;
 const TOOLS_MIN = 280;
 /** The column at the left that holds one card at a time. */
@@ -156,10 +159,18 @@ function place(opts: { glide?: boolean; closing?: boolean } = {}): void {
     // Width: the user's, but never past the rail and never under the bar.
     let width = clamp(box.width, MIN_WIDTH, vw - box.right - RAIL_RIGHT);
     set(frame, 'width', `${width}px`);
+    set(frame, '--pic-max', '');
     let height = frame.offsetHeight;
     for (let i = 0; i < 3 && height > bottom - FRAME_TOP && width > MIN_WIDTH - 40; i++) {
       width = Math.max(MIN_WIDTH - 40, width - (height - (bottom - FRAME_TOP)));
       set(frame, 'width', `${width}px`);
+      height = frame.offsetHeight;
+    }
+    // At its narrowest the lines around the picture wrap and grow, so the picture itself gets
+    // smaller (still square) until the whole frame is above the bar.
+    const pic = byId('frame-pic');
+    if (pic && height > bottom - FRAME_TOP) {
+      set(frame, '--pic-max', `${Math.max(PIC_MIN, pic.offsetWidth - (height - (bottom - FRAME_TOP)))}px`);
       height = frame.offsetHeight;
     }
     const top = clamp(box.top, FRAME_TOP, bottom - height);

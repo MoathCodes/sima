@@ -1,13 +1,14 @@
 /**
  * Heavy science without blocking the page (O-T1, O-T5, TLS-8): a typed promise API the page
- * calls. Owner: lane B. Lane E (Find changes, Stack) and lane D (building a patch) use it.
+ * calls. Owner: lane B. Lane E (Find changes, Stack) and lane D (building a patch, the frame's
+ * pictures and their clean-up) use it.
  *
  * It runs each job in a Web Worker (core/worker.ts). Where Workers are not available (or one
  * cannot start), it runs the same steps on the page's own thread in slices of about 20 ms, with a
  * turn for the page between slices, so no task holds the page for more than 100 ms.
  *
  * ```ts
- * import { buildField, measure, searchChanges, stack, usePatch, cancelAll } from '../core/work.ts';
+ * import { buildField, measure, pictures, searchChanges, stack, usePatch, cancelAll } from '../core/work.ts';
  *
  * const field = await buildField(set, { ra, dec, fov, target });  // off the page's thread
  * const ms = await measure(set, target);                          // the target, every exposure
@@ -15,14 +16,16 @@
  * const ctl = new AbortController();
  * const search = await searchChanges(det, threshold, { signal: ctl.signal });
  * const st = await stack(det, track, 'mean', { signal: ctl.signal });
+ * const [pix] = await pictures(field, [group], settings);  // a date's picture, cleaned up
  * ctl.abort();                          // a newer request replaces this one
  * ```
  *
  * Every promise rejects with an `AbortError` (a DOMException) when its signal aborts, and with an
  * Error naming the reason when the job fails. A call made before `usePatch` rejects.
  */
-import type { CatalogueTrack, Det, Field, Measurement, RealSet, Target } from './types.ts';
-import type { CombineHow } from './picture.ts';
+import type { CatalogueTrack, Det, Field, Group, Measurement, RealSet, Target } from './types.ts';
+import type { CombineHow, PicSettings } from './picture.ts';
+import { groupPictureSteps } from './blink.ts';
 import { buildRealFieldSteps, measureTargetSteps } from './real.ts';
 import { changeSteps, type ChangeSearch } from './detect.ts';
 import { stackSteps, type StackResult } from './stack.ts';
@@ -38,7 +41,8 @@ export type Job =
     }
   | { op: 'measure'; set: RealSet; target: Target }
   | { op: 'search'; key: string; det: Det; threshold: number }
-  | { op: 'stack'; key: string; det: Det; track: CatalogueTrack; how: CombineHow };
+  | { op: 'stack'; key: string; det: Det; track: CatalogueTrack; how: CombineHow }
+  | { op: 'pictures'; key: string; groups: Group[]; p: PicSettings };
 
 /** Where the work ran, and how long it took (added to results). */
 export interface WorkTiming {
@@ -98,11 +102,14 @@ export async function runSteps(
     transferResult = true;
   } else if (job.op === 'measure') {
     it = measureTargetSteps(job.set, job.target);
-  } else if (job.op === 'search' || job.op === 'stack') {
+  } else if (job.op === 'search' || job.op === 'stack' || job.op === 'pictures') {
     const p = patch();
     if (!p || p.key !== job.key) throw new Error('No patch: call usePatch first.');
     if (job.op === 'search') it = changeSteps(p.field, p.set, job.det, job.threshold);
-    else {
+    else if (job.op === 'pictures') {
+      it = groupPictureSteps(p.field, job.groups, job.p);
+      transferResult = true;
+    } else {
       it = stackSteps(p.field, job.det, job.track, job.how, p.set);
       transferResult = true;
     }
@@ -185,7 +192,7 @@ async function run<T>(job: Job, opts: WorkOptions = {}): Promise<T & WorkTiming>
   const { signal } = opts;
   if (signal?.aborted) throw abortError();
   const w = getWorker();
-  if (w && (job.op === 'search' || job.op === 'stack') && current && sentKey !== current.key) {
+  if (w && (job.op === 'search' || job.op === 'stack' || job.op === 'pictures') && current && sentKey !== current.key) {
     await post(w, { op: 'patch', key: current.key, field: current.field, set: current.set });
     sentKey = current.key;
   }
@@ -316,6 +323,22 @@ export function stack(
 ): Promise<StackResult & WorkTiming> {
   if (!current) return Promise.reject(new Error('No patch: call usePatch first.'));
   return run<StackResult>({ op: 'stack', key: current.key, det, track, how }, options);
+}
+
+/**
+ * The frame's pictures of these groups (core/blink.ts `groupPicture`: blended, then the clean-up
+ * steps that are on) on the current patch, in the same order. The arrays are moved to the page.
+ *
+ * @param field The patch on screen; rejects unless it is the one given to `usePatch`.
+ */
+export function pictures(
+  field: Field,
+  groups: readonly Group[],
+  p: PicSettings,
+  options?: WorkOptions,
+): Promise<Float32Array[] & WorkTiming> {
+  if (!current || current.field !== field) return Promise.reject(new Error('Not the patch given to usePatch.'));
+  return run<Float32Array[]>({ op: 'pictures', key: current.key, groups: [...groups], p: { ...p } }, options);
 }
 
 /** Stops the worker and every job (for tests, or when the page goes away). */

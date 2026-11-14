@@ -6,9 +6,9 @@
  * and WiseView (one combined picture per pass): SPEC 7.4.
  */
 import type { Det, Field, Frame, Group } from './types.ts';
-import type { CombineHow } from './picture.ts';
+import type { CombineHow, PicSettings } from './picture.ts';
 import { colourMatch } from './real.ts';
-import { combine } from './filters.ts';
+import { cleanUp, combine } from './filters.ts';
 import { finiteSorted, medianOfSorted } from './stats.ts';
 
 /** Gains are kept inside this range; outside it the match is not trusted and 1 is used. */
@@ -231,6 +231,43 @@ function cached(field: Field, key: string, make: () => Float32Array): Float32Arr
     m.set(key, v);
   }
   return v;
+}
+
+/** n × n: 1 where no frame of the group has a usable value. */
+export function badOf(field: Field, group: Group): Uint8Array {
+  const out = new Uint8Array(field.n * field.n).fill(1);
+  for (const i of group.frames) {
+    const f = field.frames[i];
+    if (!f) continue;
+    for (let p = 0; p < out.length; p++) if (!f.bad[p]) out[p] = 0;
+  }
+  return out;
+}
+
+/**
+ * One date's picture as the frame shows it: its exposures blended (brightness-matched when
+ * `match` is on), then the clean-up steps that are on (core/filters.ts `cleanUp`). A group with
+ * no exposure gives all NaN (H6: nothing filled in).
+ */
+export function groupPicture(field: Field, group: Group, p: PicSettings): Float32Array {
+  if (!group.frames.length) return new Float32Array(field.n * field.n).fill(Number.NaN);
+  const raw = blend(field, group, p.combineBy, p.match);
+  const steps = p.background || p.median || p.smooth > 0;
+  return steps ? cleanUp(raw, field.n, p, badOf(field, group)) : raw;
+}
+
+/** `groupPicture` for several groups, one step per group (core/work.ts runs it in its worker). */
+export function* groupPictureSteps(
+  field: Field,
+  groups: readonly Group[],
+  p: PicSettings,
+): Generator<void, Float32Array[]> {
+  const out: Float32Array[] = [];
+  for (const g of groups) {
+    out.push(groupPicture(field, g, p));
+    yield;
+  }
+  return out;
 }
 
 /** The gains of a group's frames, so a changed gain makes a new picture. */

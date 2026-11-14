@@ -29,11 +29,11 @@ import { compute, STALE } from './tools/compute.ts';
 import type { SpotResult, StackSet, TargetResult } from './tools/jobs.ts';
 import { allRows, catalogue } from './tools/catalogue.ts';
 import { candidate, search } from './tools/search.ts';
-import { lastView, noiseOf } from './tools/view.ts';
+import { lastView, noiseOf, onPaint } from './tools/view.ts';
 import { download, esc, fileName, num, pill, sig, term, token } from './tools/dom.ts';
 import { drawChart, drawPath, mjdDate, moverPath, type Pt } from './measure/charts.ts';
 import type { Candidate } from '../core/detect.ts';
-import { paintCutout, triplet } from './measure/cutouts.ts';
+import { paintCutout, triplet, tripletReady } from './measure/cutouts.ts';
 import { ABSORPTION, candidateLines, moverLine, neighbours, pathLine, showDet, spotHeadline, targetHeadline, targetStats, type Headline } from './measure/model.ts';
 import { plainP, trendWords } from './measure/words.ts';
 import { renderFound, startInbox } from './inbox.ts';
@@ -87,6 +87,15 @@ export function startMeasure(): void {
     if (!panel()?.hidden) chart();
   });
   watch(['allNumbers'], saveAllNumbers);
+  // "The picture on screen" follows each paint, so it always says what the frame shows (MSR-5).
+  onPaint(() => {
+    const p = panel();
+    const state = p?.querySelector<HTMLElement>('[data-wrap]')?.dataset.state;
+    const under = p?.querySelector<HTMLElement>('[data-under]');
+    if (p?.hidden || !under || (state !== 'picture' && state !== 'sim')) return;
+    const html = pictureDetails();
+    if (under.dataset.pic !== html) under.innerHTML = under.dataset.pic = html;
+  });
   startInbox(() => {
     const host = panel()?.querySelector<HTMLElement>('[data-found]');
     if (host && !panel()?.hidden && S.allNumbers) renderFound(host);
@@ -312,7 +321,7 @@ function render(): void {
     title.textContent = S.label;
     kind.innerHTML = pill('Simulated', 'warn');
     head.innerHTML = `<p class="ms-sub">Simulated pictures, made up for practice. Measure works only on real exposures, so nothing here is measured, listed or saved as a result.</p>`;
-    under.innerHTML = pictureDetails();
+    under.innerHTML = under.dataset.pic = pictureDetails();
     return;
   }
   if (state === 'picture') {
@@ -320,7 +329,7 @@ function render(): void {
     kind.textContent = S.label;
     head.innerHTML = `<p class="ms-sub">Tap a star in the picture to measure it${field?.target ? `, or <button type="button" class="link" data-do-target>measure ${esc(field.target.name)}</button>` : ''}.</p>`;
     head.querySelector('[data-do-target]')?.addEventListener('click', () => detail({ kind: 'target' }));
-    under.innerHTML = pictureDetails();
+    under.innerHTML = under.dataset.pic = pictureDetails();
     return;
   }
 
@@ -636,9 +645,10 @@ function hasNumbers(): boolean {
 
 /** "The picture on screen": what it is, where it came from, its noise (MSR-5). */
 function pictureDetails(): string {
+  // The picture the frame last painted, not the state it is about to paint.
   const view = lastView();
-  const g = S.groups[S.epoch];
-  const field = S.field;
+  const g = view?.group;
+  const field = view?.field;
   if (!field || !g) return '';
   const frames = g.frames.map((i) => field.frames[i]).filter((f) => !!f);
   const noise = view ? noiseOf(view) : null;
@@ -887,7 +897,8 @@ function drawCuts(host: HTMLElement): void {
   let pos: { ra: number; dec: number } | null = sel.kind === 'target' ? null : { ra: sel.ra, dec: sel.dec };
   const t = field.target;
   if (sel.kind === 'target' && t && g) pos = atDate({ cat: 'gaia', id: t.name, ra: t.ra, dec: t.dec, ep: t.ep, pmra: t.pmra, pmdec: t.pmdec, mag: 0 }, g.mjd);
-  const tri = !stackOnly && g && pos ? triplet(field, S.det, g.window, { ...pos, half: 7 }) : null;
+  const making = !stackOnly && !!g && !!pos && !tripletReady(field, S.det, chart);
+  const tri = !stackOnly && !making && g && pos ? triplet(field, S.det, g.window, { ...pos, half: 7 }) : null;
   const fig = (k: string, cap: string) => `<figure><canvas data-cut="${k}"></canvas><figcaption>${cap}</figcaption></figure>`;
   const snr = (v: number) => (Number.isFinite(v) ? `${num(v, 1)}σ` : 'not measured');
   const stackRow = stack
@@ -896,10 +907,12 @@ function drawCuts(host: HTMLElement): void {
     : '';
   const dateRow = stackOnly
     ? ''
-    : tri
-      ? `<p class="ms-cuthead">${term(`One date: ${g ? formatDate(g.mjd, 'day') : ''}, D${S.det}`, `The picture on screen, against ${tri.refText}, and the difference.`)}</p>
-        <div class="ms-cutrow">${fig('ref', 'Reference')}${fig('now', 'This date')}${fig('diff', 'Difference')}</div>`
-      : `<p class="ms-cutnote">${esc(g ? 'No other date in this detector to compare with.' : 'No picture on screen.')}</p>`;
+    : making
+      ? '<p class="ms-cutnote">Making the cutouts…</p>'
+      : tri
+        ? `<p class="ms-cuthead">${term(`One date: ${g ? formatDate(g.mjd, 'day') : ''}, D${S.det}`, `The picture on screen, against ${tri.refText}, and the difference.`)}</p>
+          <div class="ms-cutrow">${fig('ref', 'Reference')}${fig('now', 'This date')}${fig('diff', 'Difference')}</div>`
+        : `<p class="ms-cutnote">${esc(g ? 'No other date in this detector to compare with.' : 'No picture on screen.')}</p>`;
   host.innerHTML = stackRow + dateRow;
   if (pos && tri) {
     const sigma = field.noise[S.det - 1];

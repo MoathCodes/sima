@@ -1,9 +1,9 @@
 /**
  * Cutouts: the reference, this date and the difference around one spot (as transient surveys
  * show them, SPEC 7.4). Used by a candidate in Find changes and by Measure's Cutouts tab.
- * Owner: lane E. The pictures are lane B's `blend` and `combine`; painting is lane B's display.
+ * Owner: lane E. The pictures are lane B's blends (made in its worker, through lane D's
+ * `picturesReady`) and `combine`; painting is lane B's display.
  */
-import { blend } from '../../core/blink.ts';
 import { combine } from '../../core/filters.ts';
 import { limits, makeLut, toRgba, type Range } from '../../core/display.ts';
 import type { PicSettings } from '../../core/picture.ts';
@@ -11,6 +11,7 @@ import { wcsSky2Pix } from '../../core/real.ts';
 import { median } from '../../core/stats.ts';
 import type { Det, Field, Group } from '../../core/types.ts';
 import { pic } from '../state.ts';
+import { groupPicture, picturesReady } from '../paint.ts';
 
 /** One window of one detector as a flip-book group. */
 export function windowGroup(field: Field, det: Det, window: number): Group {
@@ -39,6 +40,21 @@ export interface Triplet {
   refText: string;
 }
 
+/** The settings of a date's blend as recorded: no clean-up step. */
+function blendOnly(p: PicSettings): PicSettings {
+  return { ...p, background: false, median: false, smooth: 0 };
+}
+
+/**
+ * True when every date's blend a triplet of this detector needs is made. If not, they are made
+ * off the page's thread (blending every date at once held the page 150 ms, TLS-8) and `ready` is
+ * called once they are; ask again then.
+ */
+export function tripletReady(field: Field, det: Det, ready: () => void): boolean {
+  const groups = Array.from({ length: field.windows }, (_, w) => windowGroup(field, det, w));
+  return picturesReady(field, groups, blendOnly(pic()), ready);
+}
+
 /** Triplets already made, per field: a flip-book revisits its dates, and the tabs repaint. */
 const triplets = new WeakMap<Field, Map<string, Triplet | null>>();
 
@@ -65,7 +81,7 @@ export function triplet(field: Field, det: Det, window: number, around?: { ra: n
 }
 
 function makeTriplet(field: Field, det: Det, window: number, box: { x0: number; x1: number; y0: number; y1: number }): Triplet | null {
-  const p = pic();
+  const p = blendOnly(pic());
   const n = field.n;
   const now = windowGroup(field, det, window);
   if (!now.frames.length) return null;
@@ -73,10 +89,10 @@ function makeTriplet(field: Field, det: Det, window: number, box: { x0: number; 
   for (let w = 0; w < field.windows; w++) {
     if (w === window) continue;
     const g = windowGroup(field, det, w);
-    if (g.frames.length) others.push(blend(field, g, p.combineBy, p.match));
+    if (g.frames.length) others.push(groupPicture(field, g, p));
   }
   if (!others.length) return null;
-  const a = blend(field, now, p.combineBy, p.match);
+  const a = groupPicture(field, now, p);
   // The median of the other dates inside the box only.
   const bw = box.x1 - box.x0 + 1;
   const bh = box.y1 - box.y0 + 1;
