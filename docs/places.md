@@ -32,7 +32,10 @@ coordinate frame, 15 kind labels, a source dictionary and a places array.
 - `kind`: one of 15 broad groups. Galaxy shape comes from OpenNGC's Hubble
   classification, not a SIMBAD activity class such as LINER. Lenticular,
   irregular and unclassified galaxies use the general galaxy group and keep
-  their original `morphology` code.
+  their original `morphology` code. For OpenNGC `Cl+N` objects, SIMBAD
+  distinguishes a nebula from an embedded cluster; both sources are credited.
+  OpenNGC `Neb` objects are included, and its Messier aliases are retained.
+  M 45 (outside NGC/IC) is resolved directly through SIMBAD.
 - `tier`: editorial dot visibility from 0 (widest view) to 4 (closest).
   It is not a scientific measurement. Messier objects, common names and the
   challenge targets rank ahead of unnamed catalogue entries.
@@ -47,8 +50,10 @@ coordinate frame, 15 kind labels, a source dictionary and a places array.
 - `properMotion`: SIMBAD motion in milliarcseconds per year; RA includes
   cos(dec). `inSpherex` suggests a date comparison only when the catalogue
   motion supports it. It never promises detection or states a pixel measurement.
-- `text`: the first two sentences of a Simple English Wikipedia introduction,
-  where an exact-title page exists.
+- `text`: up to two sentences from the start of a Simple English Wikipedia
+  introduction, where an exact-title page exists. Short opening paragraphs stay
+  attached to the following sentence. Introductions beginning with a pronoun,
+  or lacking an astronomical topic, are omitted.
 - `sources`: per-fact lists of indices into the top-level source dictionary.
   Every referenced entry supplies a source name and URL. `position` covers both
   coordinates; `names` covers common and catalogue names. Arabic, transliteration
@@ -121,5 +126,32 @@ objects do not imply variability; explicit beta Cepheid and other variable
 classes do. The tests retain those checks.
 
 This was a card-data review. Visual card layout needs the places UI lane.
-The checkout has no `package.json`, so npm typecheck, test and build commands
-cannot run here. No files outside this lane were added to work around that.
+The follow-up checkout includes the app, so its npm checks also run here.
+
+## Catalogue follow-up, 2026-11-14
+
+The builder now keeps Polaris's short opening paragraph, uses SIMBAD to
+resolve the `Cl+N` ambiguity for Orion, includes the previously filtered-out
+`Neb` records (M 8, M 16, M 17, M 20), and includes M 45. M 43 and NGC 2070
+remain emission nebulae; M 44/Praesepe and M 45/Pleiades remain open clusters.
+The Lagoon Nebula keeps OpenNGC's M 8 alias, which its SIMBAD record omits.
+Canopus now takes the Arabic table's linked identification and both sourced
+spellings, Suhayl and Suhail. Aldebaran, Vega and Altair retain their entries.
+All 2,930 output records were checked for pronoun-led text; none remain.
+
+An additional 30 cards were selected from the input catalogue with seed
+`20261115`: 119 Tau, M 5, NGC 5634, NGC 2266, NGC 7082, NGC 6752, pi And,
+NGC 1022, 7 And, NGC 2188, NGC 2250, NGC 4699, NGC 2654, tau Lib, Atria,
+Copeland's Blue Snowball, beta Phe, NGC 6781, HD 32147, zeta2 Sco, omega2 Aqr,
+Maasym, NGC 1763, NGC 6638, upsilon Peg, NGC 5854, NGC 2374, IC 3568,
+NGC 1097 and eta Hya. Names, text, type, magnitude, size and source links were
+reviewed against downloaded source records where present. A separate SIMBAD
+query confirmed their types and positions (largest offset 0.000021 arcseconds).
+No additional wrong facts were found. NGC 1763's SIMBAD association type supports
+keeping it in the broad cluster group despite OpenNGC's `Cl+N` type.
+
+The fixed 1,550-entry OpenNGC selection now admits nebulae ahead of some fainter
+entries. Together with M 45, this changes the total from 2,931 to 2,930.
+The build remains deterministic with the same cached responses and roughly
+1.36 MB of JSON. Unit tests cover the three reported faults, all named nebulae
+and clusters, and the retained M 8 alias.
