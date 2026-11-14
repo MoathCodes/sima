@@ -12,7 +12,7 @@
  * This file keeps the frames' state and the rules between them. card.ts draws a frame, place.ts
  * puts it on the screen, menu.ts holds its menus, store.ts saves the workspace.
  */
-import { S, watch, type Fov } from '../viewer/state.ts';
+import { S, VIEWS, watch, type Fov, type Mode } from '../viewer/state.ts';
 import { pause as pauseMain, play as playMain, reducedMotion, setEpoch, END_HOLD, MIN_STEP_MS, STEP_MS } from '../viewer/playback.ts';
 import { emit, on } from '../shell/bus.ts';
 import { groupFrames, sameColourOnly } from '../core/blink.ts';
@@ -638,12 +638,15 @@ export function makeMain(f: Live): void {
     stopWait();
     setTimeout(() => {
       if (S.det !== mine.det) emit('band', { det: mine.det });
-      if (mine.type === 'two' || mine.type === 'diff') S.mode = mine.type;
+      // A picture type becomes the main frame's view (when its level has it); a chart or table
+      // type has no main-frame view, so the main frame keeps its own.
+      const view = ({ blink: 'flip', two: 'two', diff: 'diff', stack: 'stack' } as Partial<Record<FrameType, Mode>>)[mine.type];
+      if (view && VIEWS[S.level].includes(view)) S.mode = view;
       if (mine.mjd !== null) setEpoch(nearest(S.groups, mine.mjd));
     }, 0);
   });
   emit('aim', { ra: mine.ra, dec: mine.dec, fov: mine.fov });
-  f.s.type = 'blink';
+  f.s.type = mine.type === 'spectrum' || mine.type === 'brightness' || mine.type === 'info' ? mine.type : mainType();
   f.s.det = old.det;
   f.s.mjd = old.mjd;
   f.snap = !!old.target;
