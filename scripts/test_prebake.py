@@ -429,10 +429,32 @@ class TestFetch(unittest.TestCase):
             self.assertEqual(status, 200)
             self.assertEqual(_Flaky.hits, 3)
             self.assertLess(len(body), 200000)
+            self.assertTrue(pb.retrying())
         finally:
             pb.RETRY_WAITS = old
             srv.shutdown()
             srv.server_close()
+
+
+class TestFetchPlan(unittest.TestCase):
+    def test_ahead_goes_first_and_frames_are_heard(self):
+        exps = {g: [{"id": f"{g[0]}-{g[1]}-{i}", "t": 60000.0 + g[0], "url": "u"} for i in range(2)]
+                for g in [(0, 1), (0, 3), (1, 1), (1, 3)]}
+        p = {"groups": exps, "perDet": 2}
+        asked, heard = [], []
+        saved = pb.download_cutout, pb.make_frame, pb.MAX_CONCURRENT
+        pb.download_cutout = lambda url, waits=None: b""
+        pb.make_frame = lambda e, body, cat, url: (asked.append(e["id"]) or ({"mjd": e["t"], "det": 1},), "")
+        pb.MAX_CONCURRENT = 1  # one at a time, so the asking order shows
+        try:
+            cat = {"ra": 0.0, "dec": 0.0, "ep": 2016.0, "pmra": 0.0, "pmdec": 0.0}
+            frames, _ = pb.fetch_plan(p, cat, 0.1, ahead=[(1, 3), (0, 3)],
+                                      on_frame=lambda got: heard.append(sum(map(len, got.values()))))
+        finally:
+            pb.download_cutout, pb.make_frame, pb.MAX_CONCURRENT = saved
+        self.assertEqual(asked[:3], ["1-3-0", "0-3-0", "0-1-0"])
+        self.assertEqual(len(frames), 8)
+        self.assertEqual(heard, list(range(1, 9)))
 
 
 class TestConfig(unittest.TestCase):

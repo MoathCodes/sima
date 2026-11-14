@@ -130,7 +130,8 @@
 #sky-loading {
   position: fixed;
   display: grid;
-  grid-template-columns: auto auto;
+  /* The words shrink and wrap so Retry always fits whole (SKY-7). */
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 8px;
   max-width: min(320px, calc(100vw - 2 * 560px));
@@ -147,6 +148,9 @@
   color: var(--ink-2);
   font: var(--text-label);
   white-space: nowrap;
+}
+#sky-loading:has([data-retry]) :is(.sky-loading-head, .sky-loading-line) {
+  white-space: normal;
 }
 #sky-loading [data-retry] {
   grid-column: 2;
@@ -267,6 +271,15 @@
   font: var(--text-wordmark);
   font-size: 19px;
 }
+.about-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-tight) 14px;
+  margin-bottom: 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+  font: var(--text-label);
+}
 .about-body {
   min-height: 0;
   overflow: auto;
@@ -281,6 +294,7 @@
 }
 .about-body h3 {
   margin-top: 28px;
+  scroll-margin-top: 12px;
   font: var(--text-headline);
   letter-spacing: var(--tracking-headline);
 }

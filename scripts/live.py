@@ -51,9 +51,9 @@ RETRY_FAILED_AFTER = 30            # seconds before a failed patch may be tried 
 EMPTY_TTL = pb.SEARCH_TTL          # an empty spot is searched again after this long
 CATALOG_LIMIT = 5000               # rows per catalogue in catalog.json, brightest first
 DEFAULT_ORIGINS = ["http://localhost:5173"]
-# Retry waits (seconds) for first-look cutouts: short and capped, so one exposure that IRSA keeps
-# answering "busy" does not hold up the first look. Everything else uses prebake.RETRY_WAITS.
-FIRST_LOOK_WAITS = [1, 2, 3, 5, 5, 5, 5, 5, 5, 5]
+# Detectors whose oldest and newest exposures are asked first. The viewer opens on 2.0 um
+# (detector 3), so that pair is likeliest to be the first look it shows.
+FIRST_DETS = (3, 2, 4, 1, 5, 6)
 
 ID_RE = re.compile(r"[0-9a-f]{16}")
 
@@ -119,11 +119,26 @@ def cutout_size(fov: int) -> float:
 
 
 def first_look_groups(p: dict) -> list[tuple]:
-    """One exposure per detector at the oldest and the newest visit (up to 12)."""
+    """The groups of the oldest and the newest visit (up to 12): asked first, oldest and newest of
+    one detector side by side, detectors in FIRST_DETS order."""
     if not p["windows"]:
         return []
-    ends = {p["windows"][0], p["windows"][-1]}
-    return [g for g in p["groups"] if g[0] in ends]
+    ends = (p["windows"][0], p["windows"][-1])
+    rank = {d: i for i, d in enumerate(FIRST_DETS)}
+    found = [g for g in p["groups"] if g[0] in ends]
+    return sorted(found, key=lambda g: (rank.get(g[1], len(rank)), g[0]))
+
+
+def first_look(got: dict, p: dict) -> list:
+    """The frames of a first look, once one detector has a picture at the oldest and the newest
+    visit (enough to blink); [] before. All frames kept so far at those two visits, by date."""
+    if not p["windows"]:
+        return []
+    old, new = p["windows"][0], p["windows"][-1]
+    if not any(got.get((old, d)) and got.get((new, d)) for (_, d) in got):
+        return []
+    frames = [r for (w, _), rs in got.items() if w in (old, new) for r in rs]
+    return sorted(frames, key=lambda r: (r[0]["mjd"], r[0]["det"]))
 
 
 def allowed_origin(origin: str | None, allowed: list[str]) -> str | None:
@@ -174,7 +189,10 @@ class Patch:
 
     def snapshot(self) -> dict:
         with self.lock:
-            return dict(self.status)
+            st = dict(self.status)
+        # NASA's archive answered busy lately and requests wait to be asked again.
+        st["retrying"] = st["state"] in ("searching", "first", "rest") and pb.retrying()
+        return st
 
     def set(self, **kw):
         with self.lock:
@@ -204,16 +222,20 @@ class Patch:
             for e in exps:
                 pb.estimate_lam(e, ra, dec)
             p = pb.plan(exps, LIVE_PER_DET, LIVE_MAX_FRAMES)
-            groups = first_look_groups(p)
-            self.set(state="first", done=0, total=len(groups), kept=0)
-            frames, _ = pb.fetch_plan(p, cat, size, limit=1, groups=set(groups), waits=FIRST_LOOK_WAITS,
-                                      on_progress=lambda d, t: self.set(done=d, total=t, kept=d))
-            self.timings["first"] = time.time() - t0
-            if frames:
-                self.write_step("first", frames, p, cat, fov, size, len(exps), 1)
             planned = sum(min(p["perDet"], len(g)) for g in p["groups"].values())
-            self.set(state="rest", done=0, total=planned, kept=0)
-            frames, _ = pb.fetch_plan(p, cat, size,
+            self.set(state="first", done=0, total=planned, kept=0)
+
+            def on_frame(got):
+                # The first look goes out as soon as it can blink; the rest keeps coming.
+                if "first" in self.timings:
+                    return
+                first = first_look(got, p)
+                if first:
+                    self.timings["first"] = time.time() - t0
+                    self.write_step("first", first, p, cat, fov, size, len(exps), p["perDet"])
+                    self.set(state="rest")
+
+            frames, _ = pb.fetch_plan(p, cat, size, ahead=first_look_groups(p), on_frame=on_frame,
                                       on_progress=lambda d, t: self.set(done=d, total=t, kept=d))
             self.timings["full"] = time.time() - t0
             if not frames:

@@ -222,7 +222,8 @@ async function tile(ch, k, n, rev, clientId) {
       why: String(err && err.message ? err.message : err),
     });
     const soft =
-      n >= 0 && hasAllsky(seed, ch) ? await fromAllsky(ch, k, n).catch(() => null) : null;
+      (await fromBase(seed, ch, k, n).catch(() => null)) ??
+      (n >= 0 && hasAllsky(seed, ch) ? await fromAllsky(ch, k, n).catch(() => null) : null);
     if (soft) return image(soft);
     const canvas = new OffscreenCanvas(512, 512);
     canvas.getContext('2d', { willReadFrequently: true });
@@ -260,7 +261,9 @@ async function softTile(ch, k, n) {
     const res = await fetch(local).catch(() => null);
     if (res?.ok) return image(await res.blob());
   }
-  const blob = n >= 0 && hasAllsky(seed, ch) ? await fromAllsky(ch, k, n).catch(() => null) : null;
+  const blob =
+    (await fromBase(seed, ch, k, n).catch(() => null)) ??
+    (n >= 0 && hasAllsky(seed, ch) ? await fromAllsky(ch, k, n).catch(() => null) : null);
   if (blob) return image(blob);
   const canvas = new OffscreenCanvas(n < 0 ? 1728 : 512, n < 0 ? 1856 : 512);
   canvas.getContext('2d', { willReadFrequently: true });
@@ -405,6 +408,56 @@ function allsky(ch) {
     while (allskies.size > 4) allskies.delete(allskies.keys().next().value);
   }
   return p;
+}
+
+// The shipped base tiles of the deepest order, decoded, a few at a time.
+const bases = new Map();
+function baseTile(ch, k, n) {
+  const key = `${ch}/${k}/${n}`;
+  let p = bases.get(key);
+  if (!p) {
+    p = fetch(`${SEED}tiles/${ch}/Norder${k}/Npix${n}.webp`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`no shipped tile ${key}`);
+        return r.blob();
+      })
+      .then((b) => createImageBitmap(b));
+    p.catch(() => bases.delete(key));
+    bases.set(key, p);
+    while (bases.size > 8) bases.delete(bases.keys().next().value);
+  }
+  return p;
+}
+
+/**
+ * A tile deeper than the shipped base tiles (the default channel only), cut from the deepest
+ * base tile that holds it and scaled to 512 px: four times sharper than the Allsky image.
+ * Null for a channel without base tiles, or an order the base tiles already have.
+ */
+async function fromBase(seed, ch, k, n) {
+  const top = seed?.base?.channel === ch ? Math.max(...seed.base.orders) : -1;
+  if (n < 0 || top < 0 || k <= top) return null;
+  const per = 4 ** (k - top);
+  const bmp = await baseTile(ch, top, Math.floor(n / per));
+  const { row, col } = subTilePosition(n % per);
+  const size = 512 / 2 ** (k - top);
+  const inset = Math.min(0.5, size / 4);
+  const canvas = new OffscreenCanvas(512, 512);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(
+    bmp,
+    col * size + inset,
+    row * size + inset,
+    size - 2 * inset,
+    size - 2 * inset,
+    0,
+    0,
+    512,
+    512,
+  );
+  return canvas.convertToBlob({ type: 'image/png' });
 }
 
 /** Any tile, cut from the channel's Allsky image (order 3, 64 px a tile) and scaled to 512 px. */

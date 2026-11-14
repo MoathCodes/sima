@@ -45,10 +45,11 @@ Tests for the service's pure parts and its routes (no network):
    exposure's wavelength at the patch centre is estimated from its footprint and the detector's
    wavelength table, and the plan keeps at most 2 exposures per detector per visit, 48 in all, chosen
    so the same colour comes back in every visit (as for the shipped targets).
-4. **First look.** It fetches one exposure per detector at the oldest and the newest visit (up to 12)
-   and writes them as `/api/patch/<id>/first/frames.json` and `frames.bin.gz`.
-5. **Full set.** It fetches the rest of the plan (the first-look exposures come from the disk cache)
-   and writes `/api/patch/<id>/full/`.
+4. **First look.** One pass fetches the whole plan, but asks first for the oldest and the newest
+   visit of each detector, side by side (detector 3 first, as the viewer opens on 2.0 µm). As soon as
+   one detector has a picture at both visits (enough to blink), the service writes every frame it
+   has of those two visits as `/api/patch/<id>/first/frames.json` and `frames.bin.gz`.
+5. **Full set.** The same pass keeps going and writes `/api/patch/<id>/full/` when the plan is done.
 6. The viewer polls the status every 1.5 s and shows the progress in words ("Fetching 6 of 12 real
    exposures from NASA's archive for a first look…"). It shows the first look as soon as it exists,
    then swaps in the full set. The picture is labelled "Real SPHEREx data, fetched live, DR1".
@@ -104,13 +105,20 @@ Proxima Centauri, 39 s after the first request:
 ```
 
 `state` is `queued`, `searching`, `first`, `rest`, `ready`, `empty` (no exposures there) or `failed`.
-`done` of `total` counts exposures in the current step, `kept` how many of them were usable; `first`
+`first` lasts until the first look is written, `rest` until the full set is. `done` of `total`
+counts the exposures of the whole plan fetched so far, `kept` how many of them were usable; `first`
 and `full` hold the folder of each step once it is written; `releases` the collections the kept
 frames came from; `catalog` the address of `catalog.json` once written. `warning` is set when a release
 in the list found nothing because IRSA no longer lists it, for example "spherex_qr2 returned nothing
 and IRSA no longer lists it; IRSA now lists: spherex_dr1, …". The same line goes to the service's log.
 To find out, the service asks IRSA for its list of SPHEREx collections (one query of about 15 seconds,
 kept for a day), but only when a release found nothing.
+
+`retrying` is `true` while the patch is searching or fetching and some request to NASA's archive
+waited to be asked again in the last 20 s (a busy reply such as HTTP 503, a gateway error or a
+dropped connection). The viewer then says "NASA's archive is busy, so the service is asking again"
+in its loading words, so a long wait has a reason on screen. It is `false` (or absent) once the
+patch is finished.
 
 (SPEC 6.3 sketches the same answer with the names swapped: state `done` and count `ready`. This file
 is what the service sends.)
@@ -200,9 +208,10 @@ What this shows:
   run 2 a second patch (another lane's page, through the same service) ran at the same time.
 - **The first patch on an empty cache** spends about 7 s more reading the wavelength tables (about
   24 byte-range reads of 11 KB). They stay on disk, so every later patch skips this.
-- Busy replies on the first look are retried after 1, 2, 3 and then 5 s (`FIRST_LOOK_WAITS` in
-  `live.py`) instead of the growing waits used elsewhere. In run 1, before this change, one exposure
-  that got four busy replies in a row waited 33 s and alone held the first look from 53 s to 78 s.
+- In run 1 one exposure that got four busy replies in a row waited 33 s and alone held the first look
+  from 53 s to 78 s, because the first look waited for all 12 exposures. Since 14 November 2026 the
+  first look waits only for one detector's oldest and newest picture, so one busy exposure no longer
+  holds it up, and every request uses the same growing waits (`prebake.RETRY_WAITS`).
 
 Open question for the team: whether IRSA limits busy replies per client. If it does, 4 requests at a
 time might give the same speed with fewer refusals. Not tested, to avoid loading IRSA further.
