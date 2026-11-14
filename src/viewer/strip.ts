@@ -30,6 +30,17 @@ export function startStrip(): void {
   });
 }
 
+/**
+ * Turns the Color view (all six detectors as one picture) on or off, as the Color button does.
+ * For a link's `det=color` too (url.ts).
+ */
+export function showColour(on: boolean): void {
+  if (S.color === on) return;
+  S.color = on;
+  draw();
+  announceShown();
+}
+
 function build(el: HTMLElement): void {
   el.classList.add('det-strip');
   el.setAttribute('role', 'group');
@@ -50,11 +61,7 @@ function build(el: HTMLElement): void {
   el.querySelectorAll<HTMLElement>('[data-det]').forEach((b) =>
     b.addEventListener('click', () => emit('band', { det: Number(b.dataset.det) })),
   );
-  el.querySelector('[data-color]')?.addEventListener('click', () => {
-    S.color = !S.color;
-    draw();
-    announceShown();
-  });
+  el.querySelector('[data-color]')?.addEventListener('click', () => showColour(!S.color));
   paint(el);
 }
 

@@ -455,9 +455,13 @@
   --dates-w: 400px;
   --wl-w: 424px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--bar-gap);
-  height: var(--bar-h);
+  /* As wide as its parts on one row; where the page is narrower (max-width, or the page width in
+     embed mode) the parts wrap onto another row instead of running past the edge. */
+  width: max-content;
+  min-height: var(--bar-h);
   padding: var(--bar-pad);
   box-sizing: border-box;
 }
@@ -737,4 +741,26 @@
 }
 .wl-ticks > .last {
   translate: -100% 0;
+}
+
+/* Narrow windows and narrow embeds: two rows. Playback and the date scale on top, the date scale
+   taking what is left; the wavelength scale across the whole second row. */
+@media (max-width: 900px) {
+  .sima-bar {
+    width: 100%;
+    padding-block: 8px 10px;
+    row-gap: 6px;
+  }
+  .bar-dates {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 160px;
+  }
+  .bar-rule {
+    display: none;
+  }
+  .wl {
+    flex: 1 1 100%;
+    width: auto;
+  }
 }
