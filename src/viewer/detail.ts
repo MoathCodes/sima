@@ -212,7 +212,7 @@ function skeleton(p: HTMLElement): void {
     const t = (e.target as HTMLElement).closest<HTMLElement>('[data-do]');
     if (!t) return;
     if (t.dataset.do === 'det') emit('band', { det: Number(t.dataset.det) });
-    if (t.dataset.do === 'tab') selectTab(t.dataset.tab as MeasureTab);
+    if (t.dataset.do === 'tab') selectTab(t.dataset.to as MeasureTab);
     if (t.dataset.do === 'csv') exportCsv();
     if (t.dataset.do === 'all-at-once') {
       spectrumAll = !spectrumAll;
@@ -355,15 +355,29 @@ function render(): void {
 
 /**
  * MSR-8: nothing is cut off and nothing scrolls. When the words under the chart do not fit the
- * column (all the numbers at 1366), the paragraph that explains how to read the chart folds into a
+ * column, or leave the chart too small to read (all the numbers at 1366), the paragraph that explains how to read the chart folds into a
  * dotted "How to read this chart" whose explanation shows on hover or focus (MSR-4).
  */
+let fitQueued = false;
+
 function fitUnder(main: HTMLElement, under: HTMLElement): void {
-  if (main.scrollHeight <= main.clientHeight + 1) return;
-  const para = under.querySelector<HTMLElement>('.ms-para');
-  if (!para) return;
-  const words = (para.textContent ?? '').replace(/\s+/g, ' ').trim();
-  para.outerHTML = `<p class="ms-note">${term('How to read this chart', words)}</p>`;
+  // Measured in the next drawn frame, with the page's own layout, not forced inside a click
+  // (TLS-8); several renders in one frame measure once.
+  if (fitQueued) return;
+  fitQueued = true;
+  requestAnimationFrame(() => {
+    fitQueued = false;
+    // Fold when the column overflows, or when the words squeeze the chart below a useful size
+    // (two rows of cutouts need about 240 px, a chart about 140 px).
+    const box = main.querySelector<HTMLElement>('[data-chartbox]');
+    const cuts = !!main.querySelector('[data-cuts]:not([hidden])');
+    const small = !!box && !box.hidden && box.clientHeight < (cuts ? 240 : 140);
+    if (main.scrollHeight <= main.clientHeight + 1 && !small) return;
+    const para = under.querySelector<HTMLElement>('.ms-para');
+    if (!para) return;
+    const words = (para.textContent ?? '').replace(/\s+/g, ' ').trim();
+    para.outerHTML = `<p class="ms-note">${term('How to read this chart', words)}</p>`;
+  });
 }
 
 /** The detector in words: "D6, 4.41–5.0 µm". */
@@ -588,7 +602,7 @@ function underText(tab: MeasureTab, h: Headline): string {
   // An empty chart other than the headline's points back to the one that has the measurement.
   if (tab !== h.chart && !h.pending && h.value !== 'Not measured' && emptyTab(tab)) {
     const name = TABS.find(([k]) => k === h.chart)?.[1] ?? '';
-    parts.push(`<p class="ms-note">The measurement is under <button type="button" class="link" data-do="tab" data-tab="${h.chart}">${esc(name)}</button>.</p>`);
+    parts.push(`<p class="ms-note">The measurement is under <button type="button" class="link" data-do="tab" data-to="${h.chart}">${esc(name)}</button>.</p>`);
   }
   if (hasNumbers()) parts.push('<p class="ms-note"><button type="button" class="link" data-do="csv">Download these numbers (CSV)</button></p>');
   if (sel.kind !== 'target' && field.target) {
@@ -873,7 +887,7 @@ function drawCuts(host: HTMLElement): void {
   let pos: { ra: number; dec: number } | null = sel.kind === 'target' ? null : { ra: sel.ra, dec: sel.dec };
   const t = field.target;
   if (sel.kind === 'target' && t && g) pos = atDate({ cat: 'gaia', id: t.name, ra: t.ra, dec: t.dec, ep: t.ep, pmra: t.pmra, pmdec: t.pmdec, mag: 0 }, g.mjd);
-  const tri = !stackOnly && g && pos ? triplet(field, S.det, g.window) : null;
+  const tri = !stackOnly && g && pos ? triplet(field, S.det, g.window, { ...pos, half: 7 }) : null;
   const fig = (k: string, cap: string) => `<figure><canvas data-cut="${k}"></canvas><figcaption>${cap}</figcaption></figure>`;
   const snr = (v: number) => (Number.isFinite(v) ? `${num(v, 1)}σ` : 'not measured');
   const stackRow = stack

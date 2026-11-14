@@ -114,6 +114,9 @@
 .ms-cutrow + .ms-cuthead {
   margin-top: 8px;
 }
+.ms-cuts:has(.ms-cutrow + .ms-cuthead) canvas {
+  max-width: clamp(36px, calc((100cqh - 150px) / 2), 96px);
+}
 .ms-main > .ms-chart {
   position: relative;
   flex: 0 1 190px;
@@ -155,9 +158,13 @@
   justify-items: center;
   min-width: 0;
 }
+.ms-cuts {
+  container-type: size;
+}
+/* Thumbnails shrink with the box's height, so both rows and their captions always fit. */
 .ms-cuts canvas {
   width: 100%;
-  max-width: 96px;
+  max-width: clamp(40px, calc(100cqh - 90px), 96px);
   aspect-ratio: 1;
   image-rendering: pixelated;
   background: #000;

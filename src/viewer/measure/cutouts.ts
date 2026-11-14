@@ -39,9 +39,34 @@ export interface Triplet {
   refText: string;
 }
 
-/** The three pictures for a window of a detector; null when the window has no exposure. */
-export function triplet(field: Field, det: Det, window: number): Triplet | null {
+/** Triplets already made, per field: a flip-book revisits its dates, and the tabs repaint. */
+const triplets = new WeakMap<Field, Map<string, Triplet | null>>();
+
+/**
+ * The three pictures for a window of a detector; null when the window has no exposure. With
+ * `around`, the reference and the difference are worked out only in the cutout's box (NaN outside
+ * it): the median of every other date over the whole field held the page (TLS-8).
+ */
+export function triplet(field: Field, det: Det, window: number, around?: { ra: number; dec: number; half: number }): Triplet | null {
   const p = pic();
+  const c = around ? wcsSky2Pix(field.wcs, around.ra, around.dec) : null;
+  const n = field.n;
+  const box = c && around
+    ? { x0: Math.max(0, Math.round(c.x) - around.half), x1: Math.min(n - 1, Math.round(c.x) + around.half), y0: Math.max(0, Math.round(c.y) - around.half), y1: Math.min(n - 1, Math.round(c.y) + around.half) }
+    : { x0: 0, x1: n - 1, y0: 0, y1: n - 1 };
+  const key = `${det}|${window}|${p.combineBy}|${p.match}|${box.x0},${box.x1},${box.y0},${box.y1}`;
+  let kept = triplets.get(field);
+  if (!kept) triplets.set(field, (kept = new Map()));
+  if (kept.has(key)) return kept.get(key)!;
+  const made = makeTriplet(field, det, window, box);
+  if (kept.size >= 48) kept.delete(kept.keys().next().value!);
+  kept.set(key, made);
+  return made;
+}
+
+function makeTriplet(field: Field, det: Det, window: number, box: { x0: number; x1: number; y0: number; y1: number }): Triplet | null {
+  const p = pic();
+  const n = field.n;
   const now = windowGroup(field, det, window);
   if (!now.frames.length) return null;
   const others: Float32Array[] = [];
@@ -52,9 +77,23 @@ export function triplet(field: Field, det: Det, window: number): Triplet | null 
   }
   if (!others.length) return null;
   const a = blend(field, now, p.combineBy, p.match);
-  const ref = others.length === 1 ? (others[0] ?? a) : combine(others, 'median');
-  const diff = new Float32Array(a.length);
-  for (let i = 0; i < a.length; i++) diff[i] = (a[i] ?? Number.NaN) - (ref[i] ?? Number.NaN);
+  // The median of the other dates inside the box only.
+  const bw = box.x1 - box.x0 + 1;
+  const bh = box.y1 - box.y0 + 1;
+  const crop = (pix: Float32Array) => {
+    const out = new Float32Array(bw * bh);
+    for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) out[y * bw + x] = pix[(box.y0 + y) * n + box.x0 + x] ?? Number.NaN;
+    return out;
+  };
+  const small = others.length === 1 ? crop(others[0]!) : combine(others.map(crop), 'median');
+  const ref = new Float32Array(n * n).fill(Number.NaN);
+  const diff = new Float32Array(n * n).fill(Number.NaN);
+  for (let y = 0; y < bh; y++)
+    for (let x = 0; x < bw; x++) {
+      const i = (box.y0 + y) * n + box.x0 + x;
+      ref[i] = small[y * bw + x] ?? Number.NaN;
+      diff[i] = (a[i] ?? Number.NaN) - (ref[i] ?? Number.NaN);
+    }
   const refText =
     others.length === 1 ? 'the other date' : `the median of the other ${others.length} dates`;
   return { ref, now: a, diff, refText };
