@@ -60,6 +60,9 @@ sentence claims a discovery. Every picture says its source, release, date and wa
   Before finishing, all of `npm run typecheck`, `npm test` and `npm run build` must pass.
 - Python: `uv venv .venv && uv pip install -r scripts/requirements.txt` (the `.venv` is ignored).
 - A headless Chromium for Playwright is in `~/.cache/ms-playwright/` (chromium-1243).
+- **Never end your turn to wait for a background command.** Nothing wakes you when it finishes, so
+  your work stops there. Run long checks (the smoke test, profiles, live fetches) in the foreground
+  with a long timeout, or in parts, and finish with your final report.
 - The machine is shared by about eight agents (12 cores, 14 GB RAM). Use the dev-server port given in
   your task, run at most one headless browser at a time, and stop servers and browsers when done.
 
