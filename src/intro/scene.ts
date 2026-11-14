@@ -13,12 +13,12 @@ export const RING_CHANNELS = [8, 25, 42, 59, 76, 93];
 /** Timing, seconds. */
 export const T = {
   ringIn: [0.25, 1.5], // the ring comes up
-  sweep: [0.35, 2.7], // the ring's light goes through the six detectors
-  ar: [0.7, 1.4], // سيما
-  la: [1.0, 1.7], // Sima
-  line: [1.35, 2.05], // the line
+  sweep: [0.35, 2.9], // the ring's light goes through the six detectors
+  ar: [0.5, 1.1], // سيما
+  la: [0.8, 1.4], // Sima
+  line: [1.1, 1.7], // the line
   /** The reveal starts here when the sky map is in; else up to `hold` later. */
-  reveal: 2.55,
+  reveal: 2.9,
   hold: 2.0,
   // Seconds from the reveal:
   flareLead: 0.55, // the flare swells this long before the reveal
@@ -28,7 +28,7 @@ export const T = {
   turn: [0.3, 2.05],
   /** The globe hands over to the sky map here, which then glides in for `land`. */
   hand: 2.05,
-  land: 1.45,
+  land: 1.3,
   /** The intro fades over the sky map in the first part of the landing. */
   crossfade: 0.4,
   cardsMs: 450,

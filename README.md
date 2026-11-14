@@ -121,6 +121,7 @@ Share gives a link and an embed code. A link can hold:
 | `date` | The picture to start at, `YYYY-MM-DD` (UTC). |
 | `pic` | Picture settings from the picture tools. |
 | `embed=1` | Only the frame, the bar and Measure, for an iframe. |
+| `intro` | `1` plays the opening intro (for demos), `0` leaves it out. |
 
 A parameter the page does not understand is named in a short note, never ignored silently.
 
@@ -139,6 +140,17 @@ A link longer than 4,000 characters is offered as a file instead. A damaged or t
 the usual view with a plain message. `embed=1` shows no extra frames. The code is in
 `src/workspace/`.
 
+## The opening intro
+
+The first visit opens with a six-second intro: the sky globe in shadow with a ring of real SPHEREx
+light round its edge (one detector after another), a flare where Barnard's Star is, the name, then
+the shadow slides off, the globe turns and grows, and the sky map glides in to where the frame is
+already playing. It plays once per browser (`sima-intro`); About's "Play the intro" and `?intro=1`
+play it again; `embed=1` and `#w=` workspace links never show it. Any key, click or tap skips it.
+With reduced motion it is a still ring and name, then a fade. Everything is drawn live from the
+shipped all-sky images (WebGL 2, in a worker); the page starts under it as usual. The code is in
+`src/intro/`; DESIGN.md "Intro" describes it.
+
 ## Keys
 
 Space plays or pauses, ← and → step through the pictures, + and − zoom the sky, / goes to
@@ -149,7 +161,7 @@ search, Escape closes the topmost open thing (popover, dialog, list, picture too
 `docs/SPEC.md` is the spec (behaviour), `DESIGN.md` the look, `docs/lanes.md` the map of who owns
 which file. In short: `src/core/` science (pure functions), `src/sky/` the sky map, `src/viewer/`
 the frame, the bar and Measure, `src/shell/` the cards on the sky, `src/guide/` and `src/explore/`
-the guide, `src/workspace/` the extra frames and workspaces, `scripts/` the data and the service.
+the guide, `src/workspace/` the extra frames and workspaces, `src/intro/` the opening intro, `scripts/` the data and the service.
 
 ## Licences
 

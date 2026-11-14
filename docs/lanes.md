@@ -89,6 +89,7 @@ create)* do not exist yet; their lane creates them.
 | **G** | `src/shell/places.ts`, `src/shell/objects.ts` *(to create, if wanted)*, `src/data/tours.ts` *(to create)*, `src/styles/places.css` |
 | **H** | `src/guide/*`, `src/explore/*`, `src/styles/guide.css` |
 | **Integrator** | `package.json`, `package-lock.json`, `tsconfig.json`, `tsconfig.node.json`, `vite.config.ts`, `src/main.ts`, `src/env.d.ts`, `src/shell/bus.ts` (a contract), `tests/bus.test.ts`, `tests/smoke/run.ts`, `tests/smoke/smoke.ts`, `tests/smoke/flows/0-skeleton.ts`, `tests/smoke/flows/w-workspace.ts`, `src/workspace/*` (the workspace: `index.ts`, `schema.ts`, `patches.ts`, `frames.ts`, `card.ts`, `menu.ts`, `place.ts`, `tray.ts`, `store.ts`), `src/styles/workspace.css`, `tests/workspace.test.ts`, `.gitignore`, `.prettierrc.json`, `.prettierignore`, `README.md`, `PRODUCT.md`, `assets/icon.svg`, `AGENTS.md`, `CLAUDE.md`, `DESIGN.md`, `docs/SPEC.md`, `docs/SPEC-v1-workspace-plan.md`, `docs/tools.md`, `docs/spec-img/*`, `docs/lanes.md` |
+| **Intro** (integrator) | `src/intro/*` (`intro.ts`, `scene.ts`, `render.ts`, `worker.ts`, `sphere.ts`, `wanted.ts`), `src/styles/intro.css`, `tests/intro.test.ts`, `tests/smoke/flows/intro.ts`; small hooks in `index.html` (the early check), `src/main.ts`, `src/page/about.ts` ("Play the intro"), `src/viewer/url.ts` (`intro` is a known parameter) and `src/sky/sky.ts` (`introZoom`) |
 
 `docs/tools.md` describes lanes B and E's work. Send changes to it as a patch in your report.
 
@@ -244,6 +245,7 @@ Names in `index.html` are listed with the mount points above. Names inside parts
 | E | `original`, `all-numbers`, `chart`, `detectors`, `tools-tab-picture`, `tools-tab-clean`, `tools-tab-find`, `tools-tab-layers` |
 | F | `guide-button`, `places-button`, `share-button`, `about-button`, `zoom-in`, `zoom-out`, `sky-map-button`, `grid-button`, `sky-map-spherex`, `sky-map-wise-w1`, `sky-map-wise-w2` |
 | G | `chip-stars`, `chip-nearby`, `chip-changing`, `chip-clusters`, `chip-nebulae`, `chip-galaxies`, `chip-tours`, `chip-surprise-me` |
+| Intro | `intro`, `intro-skip`, `play-intro` (in About) |
 | H | `starter-runaway`, `starter-made-of`, `starter-too-faint`, `welcome-own`, `hint` |
 | Integrator (workspace) | `workspace-button`, `workspace-tray`, `tool-blink`, `tool-two`, `tool-diff`, `tool-spectrum`, `tool-brightness`, `tool-stack`, `tool-info`, `compare-main`, `workspace-name`, `workspace-save`, `workspace-open`, `workspace-export`, `workspace-import`, `share-workspace`; in a frame: `wf-head`, `wf-menu`, `wf-compare`, `wf-close`, `wf-play`, `wf-next`, `wf-exif`; in its menu: `wf-type-<type>`, `wf-link-main`, `wf-link-<frame id>`, `wf-make-main`, `compare-det`, `compare-date`, `compare-type` |
 
@@ -267,6 +269,7 @@ are; ask lane F to change one. All stylesheets are imported by `src/main.ts`.
 | `src/styles/tools.css` | E |
 | `src/styles/places.css` | G |
 | `src/styles/guide.css` | H |
+| `src/styles/intro.css` | Intro |
 | `src/styles/workspace.css` | Integrator (workspace) |
 
 ## Browser storage (SPEC 8.5)
@@ -280,6 +283,7 @@ Wrap every read and write in `try`; storage can be blocked.
 | `sky-places` | Saved places | G |
 | `sima-guide` | Tour progress, seen tips, "all numbers" | H (E writes `allNumbers`). Always merge into this entry, never overwrite it |
 | `sima.tools` | Picture settings, threshold, list filter and order | E |
+| `sima-intro` | The opening intro has played in this browser (the smoke runner presets it) | Intro |
 | `sima-workspace` | The workspace now (autosave): extra frames and links come back on a plain visit | Integrator (workspace) |
 | `sima-workspaces` | Named workspaces (save, rename, open, delete) | Integrator (workspace) |
 

@@ -310,7 +310,7 @@ These are data colours. They never colour chrome.
 - **Wordmark** (Reem Kufi 600): "سيما" at 24px, then "Sima" at 19px, in one card.
 
 ### Named Rules
-**The Five Sizes Rule.** Interface text is 11, 12, 14, 17 or 25px. The only others are 16px for About's reading text and the wordmark (24px Arabic, 19px Latin).
+**The Five Sizes Rule.** Interface text is 11, 12, 14, 17 or 25px. The only others are 16px for About's reading text and the wordmark (24px Arabic, 19px Latin), and the name in the opening intro (see Intro).
 
 **The Tabular Figures Rule.** All numbers use tabular figures (set once on the body), so dates, coordinates and counters do not jitter while pictures play.
 
@@ -330,7 +330,7 @@ The sky map is fixed and fills the whole window. Everything else is a card float
 
 Inside a card, buttons in a group sit 2px apart. Related items sit 6px apart. The frame pads its content by 10px. Panels in Measure pad by 14px top and bottom and 16px at the sides.
 
-Stacking order, from the back: sky, marks on the sky, sky notes, frame and rail, bar, top row, popovers, tip card, toast.
+Stacking order, from the back: sky, marks on the sky, sky notes, frame and rail, bar, top row, popovers, tip card, toast. The opening intro, while it plays, covers all of them (see Intro).
 
 **Two levels.** Explore (the default) shows less: lettered date stops, three ways to view, no counter. Measure shows every visit as a dot on the date scale, six ways to view, and opens the Measure panel beside the frame.
 
@@ -466,6 +466,25 @@ Motion says where a thing came from and where it went. It is short and it never 
 - **Pictures in the frame swap with hard cuts**, never a fade (see Data windows).
 - **Loading** shows only when it lasts: the sky's loading card after 0.3s, the frame's busy cover after 0.25s, so a quick load never flashes. The first sky map is the exception: its card is on screen from the first paint. A card keeps its words while it fades out, and its percentage never goes back. When the count is known (a live fetch: "5 of 12"), the bar fills to match, and a line says the wait can take a few minutes and the sky works meanwhile.
 - **Reduced motion:** everything that slides, grows or glides only fades; the loading bars stand still.
+
+## Intro
+
+The first visit opens with about six seconds of motion (6.25 s, then the cards' 0.45 s fade). It is the one deliberate exception to the rules above: motion here is there to set the scene, once, and it ends in the calm page. Everything in it is real data or plainly a mark, and it never holds the page up.
+
+1. **Darkness, then the ring** (0 to 2.9 s). On Blue-black Sky, a black disc (the sky globe in shadow) with a thin ring of light round its edge, like an eclipse's corona. The ring's light is the real SPHEREx sky along the globe's edge, from the shipped all-sky images: brighter sky reaches further out, so the Milky Way makes the streamers. It steps through one channel from each detector, 0.91 to 4.92 µm, each in its detector hue (`d1` to `d6`: here they colour detector data, as the Rainbow Rule allows). A line at the bottom says what the light is, in Label size and `st-ink-3`: "SPHEREx all-sky map, NASA IRSA (DR1) · average of all dates · 0.91 µm, detector D1".
+2. **The name** inside the disc, in `st-ink`: سيما (Reem Kufi 600, 30% of the disc's radius, 40 to 84px), Sima under it (Reem Kufi, 19 to 30px), and one line in Reading size and `st-ink-2`: "The infrared sky, as NASA's SPHEREx sees it." Each fades and rises 8px into place.
+3. **The diamond ring** (about 2.35 s). A small white flare on the edge, up and to the right, where Barnard's Star sits: the spot the page will land on. Its name is beside it in Label size and `st-ink-2`, only when the frame's patch is a named target at the landing's centre.
+4. **The shadow slides off** (from 2.9 s, 1.45 s long), away from the flare, as at the end of an eclipse. The globe under it is the real map in the channel the sky map shows, grey and lifted as the Grey Map Rule says. The ring fades as the globe lights. The name leaves first.
+5. **The turn and the dive** (3.2 to 4.95 s). The globe turns until Barnard's Star faces us, then grows until the sky fills the window, changing from a globe to the sky map's own projection on the way.
+6. **The landing** (4.95 to 6.25 s). The sky map takes over at about 55° wide (exactly matched: same projection, scale and centre) and glides in to its own view in 1.3 s; the intro fades over it in the first 0.4 s. The page's cards then fade in (0.45 s) on the normal first visit: the frame playing, the welcome card open.
+
+**Rules.**
+- **Once per browser** (`sima-intro` in storage). About's "Play the intro" and `?intro=1` play it again; `?intro=0`, `embed=1` and `#w=` workspace links never show it.
+- **Skippable at any moment** by any key, click or tap, and a small "Skip" text button at the top right (Label size, `st-ink-2`, `st-raise` on hover). A skip fades the intro out in 0.26s onto the page as it would have landed. Every key goes to the intro while it plays, so Space skips it and does not also pause the frame. Escape skips it like any key.
+- **Never holds the page up.** Every part starts under it. If the sky map is not ready when the shadow should leave, the ring and name hold, breathing gently, for at most 2 s more; then the shipped sky is shown anyway. A slow machine or network can stretch the landing too: the map lands sharp only once NASA's tiles are in, which the intro asks for while it plays. The globe is never empty or black: it is drawn from pictures shipped with the app.
+- **Reduced motion:** a still ring (the sky map's channel and detector hue), a still flare and the name, for 2.4 s, then a 0.6 s fade into the page.
+- **Smooth:** drawn live with WebGL 2 in a worker (an OffscreenCanvas), so the picture keeps moving while the page starts; the words fade on the compositor. No video.
+- **Stacking:** while it plays it covers every card. While the sky map glides in, the cards wait (`html[data-intro='land']`), then fade in. On phones (under 700px) it plays too, then gives way to the sky and its note.
 
 ## Interaction
 

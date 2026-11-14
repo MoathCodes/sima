@@ -9,6 +9,7 @@
 import { TARGETS } from '../core/targets.ts';
 import { icon } from '../shell/icons.ts';
 import { openSandbox } from '../shell/sandbox.ts';
+import { playIntro } from '../intro/intro.ts';
 import type { Target } from '../core/types.ts';
 
 /** Light-years in a parsec (IAU). */
@@ -45,6 +46,11 @@ export function startAbout(): void {
   dialog.querySelector('[data-open-sandbox]')?.addEventListener('click', () => {
     dialog.close();
     openSandbox();
+  });
+  // "Play the intro" under the lead (DESIGN.md Intro).
+  dialog.querySelector('[data-play-intro]')?.addEventListener('click', () => {
+    dialog.close();
+    playIntro();
   });
   // The contents row scrolls the body to a section; the page's address stays as it is.
   dialog.querySelector('.about-toc')?.addEventListener('click', (e) => {
@@ -90,7 +96,8 @@ function body(): string {
 infrared sky of NASA's SPHEREx telescope. Put a square on any spot of the sky, and the frame plays the
 real pictures of that spot in date order. Stars stay still. Anything that moves or changes stands out.</p>
 <p>Made by team SIMA, in Madinah, for the NASA Space Apps Challenge 2026,
-${link('https://www.spaceappschallenge.org/2026/challenges/planet-x-and-spherex/?tab=details', '“Planet X and SPHEREx”')}.</p>
+${link('https://www.spaceappschallenge.org/2026/challenges/planet-x-and-spherex/?tab=details', '“Planet X and SPHEREx”')}.
+<button class="link" type="button" data-play-intro data-guide="play-intro">Play the intro</button></p>
 
 <h3 id="about-use">How to use it</h3>
 <ul>

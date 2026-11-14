@@ -97,3 +97,26 @@ test("index.html's early check and introWanted agree on when the intro plays", (
   assert.equal(introWanted('', '', false), true, 'a first visit plays it');
   assert.equal(introWanted('?intro=1', '#w=abc', true), false, 'a workspace link never plays it');
 });
+
+test('the globe hands over to the sky map at the map’s own scale, and lands on its view', async () => {
+  const { sceneAt, handFov, stgScale, T } = await import('../src/intro/scene.ts');
+  for (const [w, h] of [
+    [1900, 1030],
+    [1366, 768],
+    [390, 844],
+  ] as const) {
+    const fov = 1.9;
+    const from = handFov(w, h, fov);
+    const land = { q: lookAt(269.4485, 4.7394), fov, x: w / 2, y: h / 2, from, fromScale: stgScale(w, from) };
+    const plan = { reduced: false, skyChannel: 42, revealAt: 3, handAt: null, land };
+    const has = () => true;
+    const before = sceneAt(plan, 3 + T.hand - 1e-6, w, h, has);
+    const after = sceneAt({ ...plan, handAt: 3 + T.hand }, 3 + T.hand, w, h, has);
+    assert.ok(Math.abs(before.radius / land.fromScale - 1) < 1e-3, `${w}: the globe reaches the map's scale`);
+    assert.ok(Math.abs(after.radius / land.fromScale - 1) < 1e-9, `${w}: the landing starts there`);
+    assert.ok(before.proj > 0.999, `${w}: by then it is drawn as the map is (stereographic)`);
+    assert.ok(Math.hypot(w, h) / 2 < land.fromScale, `${w}: the globe fills the window first`);
+    const end = sceneAt({ ...plan, handAt: 3 + T.hand }, 3 + T.hand + T.land + 1e-9, w, h, has);
+    assert.ok(end.done && Math.abs(end.radius / stgScale(w, fov) - 1) < 1e-9, `${w}: lands on 1.9°`);
+  }
+});
