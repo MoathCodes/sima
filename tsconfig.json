@@ -1,0 +1,32 @@
+{
+  // The page code (src/), checked as browser code: DOM types, Vite's client types, no Node types.
+  // Node-side files (vite.config.ts, tests, scripts) are checked by tsconfig.node.json.
+  // Owner: integrator.
+  "compilerOptions": {
+    "target": "es2024",
+    "lib": ["es2024", "dom", "dom.iterable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["vite/client"],
+
+    "strict": true,
+    "noEmit": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+
+    // Node 22 runs the tests by stripping types, so imports name their .ts file, type-only
+    // imports say `import type`, and nothing may need a compile step (no enums, no namespaces,
+    // no parameter properties).
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "useDefineForClassFields": true
+  },
+  "include": ["src"]
+}

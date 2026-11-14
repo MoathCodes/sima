@@ -1,0 +1,24 @@
+/* Lane D: the frame's contents (header, picture, views, provenance line) and the bar (play
+   controls, date scale, wavelength scale, detector strip). Style only lane D's own classes here.
+   Tokens and shared components are in app.css. */
+
+/* Phase 0: the frame stacks its rows 8px apart inside 10px of padding, and a row with nothing in
+   it (an empty #frame-load, #frame-legend, lane F's #frame-grip) takes no room. Lane D replaces
+   this; #frame-load must then keep its height (O-I5). */
+#frame {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr); /* the picture keeps the frame's width */
+  gap: 8px;
+  padding: 10px;
+}
+#frame > :empty {
+  display: none;
+}
+/* Phase 0: six views fit the 1366 frame: in Measure the view buttons drop their icons. */
+#frame-views > button {
+  min-width: 0;
+  padding: 0 6px;
+}
+#frame-views:has(> :nth-child(4)) > button > .icon {
+  display: none;
+}
