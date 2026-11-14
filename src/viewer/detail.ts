@@ -408,7 +408,7 @@ function underText(tab: MeasureTab, h: Headline): string {
     if (sel.kind === 'target') {
       if (curve) {
         parts.push(
-          `<p class="ms-note">${[plainP(curve.test), esc(widenedNote(curve.widenedBy)), trendWords(curve.trend) ? `Trend: ${esc(trendWords(curve.trend))}.` : '', curve.note ? esc(curve.note) : '']
+          `<p class="ms-note">${[plainP(curve.test), esc(widenedNote(curve.widenedBy)), trendWords(curve.trend) ? `Trend: ${esc(trendWords(curve.trend))}.` : '', curve.note && !h.para.includes(esc(curve.note)) ? esc(curve.note) : '']
             .filter(Boolean)
             .join(' ')}</p>`,
         );
@@ -609,7 +609,8 @@ function chart(): void {
         yLabel: 'Change, mag',
         xKind: 'date',
         invertY: true,
-        empty: !res.target ? pending : c ? (c.note ?? 'Not shown: the scatter within a visit is too large to read a change') : `Not measured in D${S.det}: ${detsWith(res.target.curves)}`,
+        // The reason is written in full under the chart; the chart only points to it.
+        empty: !res.target ? pending : c ? (c.note ? `Not shown in D${S.det}: the reason is under the chart` : 'Not shown: the scatter within a visit is too large to read a change') : `Not measured in D${S.det}: ${detsWith(res.target.curves)}`,
       });
     }
     const pts = (res.spot?.points ?? []).filter((q) => q.det === S.det && Number.isFinite(q.flux) && !q.flagged);

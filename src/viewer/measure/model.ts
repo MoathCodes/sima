@@ -99,7 +99,7 @@ function motionHeadline(t: TargetInput): Headline {
   const stab = Number.isFinite(f.stability)
     ? ` It is ${f.stability > f.totalErr ? 'not ' : ''}stable: ${term(`leaving out one of the ${f.visits} visits moves it by ±${num(f.stability, 2)}″`, 'Each visit is left out in turn and the motion fitted again. A large change means one visit decides the answer.')}.`
     : '';
-  const plx = f.parallax ? (f.parallax.shown ? ` Parallax measured ${num(f.parallax.value, 0)} ± ${num(f.parallax.err, 0)} mas.` : ` Parallax was fitted too but is not shown: ${esc(f.parallax.why.replace(/\.+$/, ''))}.`) : '';
+  const plx = f.parallax ? (f.parallax.shown ? ` Parallax measured ${num(f.parallax.value, 0)} ± ${num(f.parallax.err, 0)} mas.` : ` Parallax is not shown: ${esc(f.parallax.why.replace(/\.+$/, ''))}.`) : '';
   return {
     value: `${num(f.total, 2)}″/yr`,
     valueTip: `How far the star moves across the sky in a year, measured from the pixels: ${num(f.total, 2)} ± ${num(f.totalErr, 2)} arcseconds a year. An arcsecond is 1/3600 of a degree; one SPHEREx pixel is 6.15″.`,
@@ -107,8 +107,9 @@ function motionHeadline(t: TargetInput): Headline {
     sub: `${term(`Measured ±${num(f.totalErr, 2)}″`, 'The 1σ error: the true value is within this about two times in three.')} from the pixels of ${f.used} of ${f.of} real exposures${cat ? `, catalogue ${num(cat.total, 2)}″/yr` : ''}`,
     chart: 'path',
     para:
-      `Measured <b>${num(f.total, 2)} ± ${num(f.totalErr, 2)}″/yr</b> ${pa}from the pixels of ${f.used} of ${f.of} real exposures (each dot is one exposure; colours are survey passes).` +
-      (cat ? ` Catalogue: ${num(cat.total, 2)}″/yr (${esc(cat.source)}).` : ' There is no catalogue motion to compare with.') +
+      // The line above already gives the value, its error and the exposures used; say only what it does not.
+      `Moving ${pa || 'across the sky '}(each dot is one exposure; colours are survey passes).` +
+      (cat ? ` The catalogue value is from ${esc(cat.source)}.` : ' There is no catalogue motion to compare with.') +
       plx +
       stab +
       ` The motion is from a ${term('straight-line fit', 'A weighted straight line through the positions against time, east and north. Points that scatter more than their errors widen the error.')}.`,
@@ -230,7 +231,9 @@ export function candidateLines(c: Candidate): string {
 export function targetStats(t: Target, fit: MotionFit | null, visits: number, coords: (ra: number, dec: number) => [string, string]): StatRow[] {
   const ok = fit?.ok ? fit : null;
   const [ra, dec] = ok ? coords(ok.ra, ok.dec) : coords(t.ra, t.dec);
-  const from = (t.values.split('(')[0] ?? t.values).trim();
+  // A source given as a SPEC rule is not a catalogue a reader knows; the tip keeps the full text.
+  const named = (t.values.split('(')[0] ?? t.values).trim();
+  const from = named.startsWith('SPEC') ? 'published values' : named;
   const rows: StatRow[] = [
     { name: 'RA', tip: ok ? `Right ascension, measured from the pixels (fitted position at ${num(ok.ep, 1)}): the sky’s longitude.` : `Right ascension from the catalogue at ${t.ep}: the sky’s longitude.`, value: ra, from: ok ? 'measured' : 'catalogue' },
     { name: 'Dec', tip: 'Declination: the sky’s latitude, from −90° to +90°.', value: dec, from: ok ? 'measured' : 'catalogue' },

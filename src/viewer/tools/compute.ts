@@ -10,7 +10,8 @@
  * Results are kept per patch, so switching tabs or detectors back and forth costs nothing.
  */
 import { S, watch } from '../state.ts';
-import { measure, searchChanges, stack, usePatch, type WorkTiming } from '../../core/work.ts';
+import { searchChanges, stack, type WorkTiming } from '../../core/work.ts';
+import { targetMeasurements } from '../load.ts';
 import { fitMotion, lowerLimits, realCurve } from '../../core/fit.ts';
 import { channelSpectrum } from '../../core/stats.ts';
 import type { ChangeSearch } from '../../core/detect.ts';
@@ -85,14 +86,14 @@ async function run(job: Job): Promise<JobResult> {
       const ctl = new AbortController();
       searchCtl = ctl;
       signal.addEventListener('abort', () => ctl.abort(), { once: true });
-      usePatch(`lane-e-${myGen}`, field, set);
       return (await searchChanges(job.det, job.threshold, { signal: ctl.signal }).catch(quiet)) as ChangeSearch &
         WorkTiming;
     }
     case 'target': {
       const target = field.target;
       if (!set || !target) throw new Error('no target with real exposures');
-      const ms = await measure(set, target, { signal }).catch(quiet);
+      // Lane D measures the target once per patch (load.ts); share it rather than measure again.
+      const ms = await (targetMeasurements() ?? Promise.reject(new Error('no target with real exposures')));
       if (myGen !== gen) throw STALE;
       // The fits take under 30 ms (core/work.ts) and run here.
       const fit = fitMotion(ms, target);
@@ -103,7 +104,6 @@ async function run(job: Job): Promise<JobResult> {
     }
     case 'stack': {
       if (!set) throw new Error('no real exposures');
-      usePatch(`lane-e-${myGen}`, field, set);
       const dets = [...new Set(field.frames.map((f) => f.det))].sort((a, b) => a - b);
       const out: StackSet = [];
       // One detector after another; the detector on screen first.

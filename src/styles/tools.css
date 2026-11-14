@@ -88,11 +88,15 @@
 .ms-tabs {
   flex-wrap: wrap;
   column-gap: 14px;
+  row-gap: 0; /* six tabs take two rows in a narrow column; keep them close (MSR-8) */
+}
+.ms-tabs > [role='tab'] {
+  padding-block: 3px 4px;
 }
 .ms-main > .ms-chart {
   position: relative;
   flex: 0 1 190px;
-  min-height: 110px;
+  min-height: 100px;
   overflow: hidden;
 }
 .ms-all .ms-main > .ms-chart {

@@ -54,7 +54,7 @@ test('a mover leads with its motion, the Path chart and "matches catalogue" (MSR
   assert.deepEqual(h.pill, { text: 'matches catalogue', tone: 'good' });
   assert.equal(h.chart, 'path');
   assert.match(visibleText(h.sub), /69 of 72 real exposures, catalogue 10\.39″\/yr/);
-  assert.match(visibleText(h.para), /Parallax was fitted too but is not shown/);
+  assert.match(visibleText(h.para), /Parallax is not shown/);
 });
 
 test('a motion that disagrees with the catalogue says so, in brown with words', () => {
