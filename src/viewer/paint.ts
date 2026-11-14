@@ -365,7 +365,8 @@ export interface StackView {
   result: StackResult | null;
 }
 
-const stacking = new Map<string, Promise<void>>();
+/** Stacks being made in the worker, per field (the workspace's frames stack their own patch). */
+const stacking = new WeakMap<Field, Map<string, Promise<void>>>();
 
 /**
  * Stack: every exposure of the detector added up. Along the target's motion it runs off the
@@ -388,8 +389,10 @@ export function stackPicture(
   if (moving && track) {
     const hit = cache.get(key);
     if (hit) return hit;
-    if (!stacking.has(key)) {
-      const job = stack(det, track, p.combineBy)
+    let jobs = stacking.get(field);
+    if (!jobs) stacking.set(field, (jobs = new Map()));
+    if (!jobs.has(key)) {
+      const job = stack(det, track, p.combineBy, { field })
         .then((result) => {
           cache.set(key, {
             pix: result.along.pix,
@@ -403,8 +406,8 @@ export function stackPicture(
           if ((err as DOMException)?.name !== 'AbortError')
             console.warn('paint: stacking failed', err);
         })
-        .finally(() => stacking.delete(key));
-      stacking.set(key, job);
+        .finally(() => jobs.delete(key));
+      jobs.set(key, job);
     }
     return null;
   }

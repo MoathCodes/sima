@@ -5,8 +5,8 @@
  * Do not import this file. The page talks to it only through core/work.ts, which starts it with
  * `new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })`.
  *
- * Messages in (from work.ts): `{ id, op: 'patch', key, field, set }` keeps one patch (the latest)
- * for the jobs that follow; `{ id, op: 'build', set, opts }`, `{ id, op: 'measure', set, target }`,
+ * Messages in (from work.ts): `{ id, op: 'patch', key, field, set }` keeps a patch by its key for
+ * the jobs that name it, and `{ id, op: 'drop', key }` forgets one; `{ id, op: 'build', set, opts }`, `{ id, op: 'measure', set, target }`,
  * `{ id, op: 'search', key, det, threshold }`, `{ id, op: 'stack', key, det, track, how }` and
  * `{ id, op: 'pictures', key, groups, p }` start a job; `{ id, op: 'cancel' }`
  * stops one. Messages out: `{ id, ok: true, value, ms, longestMs }` or `{ id, ok: false, error }`.
@@ -24,7 +24,8 @@ interface Scope {
 }
 const scope = globalThis as unknown as Scope;
 
-let patch: { key: string; field: Field; set: RealSet | null } | null = null;
+/** The patches jobs may name, by key (work.ts sends them and says when to drop one). */
+const patches = new Map<string, { key: string; field: Field; set: RealSet | null }>();
 const running = new Map<number, { cancelled: boolean }>();
 
 scope.onmessage = (e: MessageEvent) => {
@@ -35,13 +36,17 @@ scope.onmessage = (e: MessageEvent) => {
     return;
   }
   if (msg.op === 'patch') {
-    patch = { key: msg.key, field: msg.field, set: msg.set };
+    patches.set(msg.key, { key: msg.key, field: msg.field, set: msg.set });
     scope.postMessage({ id: msg.id, ok: true, value: null, ms: 0, longestMs: 0 });
+    return;
+  }
+  if (msg.op === 'drop') {
+    patches.delete(msg.key);
     return;
   }
   const state = { cancelled: false };
   running.set(msg.id, state);
-  runSteps(msg, () => patch, 50, () => state.cancelled)
+  runSteps(msg, (key) => patches.get(key) ?? null, 50, () => state.cancelled)
     .then(({ value, transfer, ms, longestMs }) => {
       running.delete(msg.id);
       if (state.cancelled) return;
