@@ -33,9 +33,9 @@ export function startBar(): void {
   bar.classList.add('sima-bar');
   bar.innerHTML = `
     <div class="bar-play" role="group" aria-label="Playback">
-      <button class="icon-btn" data-step="-1" aria-label="Previous picture" data-tip="Previous (←)" data-tip-pos="above">${icon('prev')}</button>
+      <button class="icon-btn" data-step="-1" data-guide="prev" aria-label="Previous picture" data-tip="Previous (←)" data-tip-pos="above">${icon('prev')}</button>
       <button class="play-btn" data-play data-guide="play" aria-label="Play" data-tip="Play (Space)" data-tip-pos="above"></button>
-      <button class="icon-btn" data-step="1" aria-label="Next picture" data-tip="Next (→)" data-tip-pos="above">${icon('next')}</button>
+      <button class="icon-btn" data-step="1" data-guide="next" aria-label="Next picture" data-tip="Next (→)" data-tip-pos="above">${icon('next')}</button>
     </div>
     <div class="bar-dates" data-dates data-guide="dates" aria-label="Dates"></div>
     <span class="bar-count term" data-count tabindex="0" data-tip="The picture on screen, of all the visits" data-tip-pos="above"></span>

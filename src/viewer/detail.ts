@@ -320,7 +320,7 @@ function render(): void {
     kind.innerHTML = selKind(sel!);
   }
   head.innerHTML = `
-    <p class="ms-value"><span class="term" tabindex="0" data-tip="${esc(h.valueTip)}">${esc(h.value)}</span> ${pill(h.pill.text, h.pill.tone)}</p>
+    <p class="ms-value" data-guide="headline"><span class="term" tabindex="0" data-tip="${esc(h.valueTip)}">${esc(h.value)}</span> ${pill(h.pill.text, h.pill.tone)}</p>
     <p class="ms-sub">${h.sub}</p>`;
 
   const tab = all ? (S.measureTab ?? h.chart) : h.chart;

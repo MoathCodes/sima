@@ -39,10 +39,6 @@ export const flows: Flow[] = [
           await page.reload();
           await page.waitForSelector('html[data-ready]');
           await page.locator(`${guide('all-numbers')}[aria-pressed="true"]`).waitFor({ timeout: 5000 });
-          // The welcome card comes back on reload (lane H); close it as a visitor would.
-          const own = page.locator(guide('welcome-own'));
-          if (await own.isVisible()) await own.click();
-          else await page.evaluate(() => document.getElementById('welcome')?.setAttribute('hidden', ''));
         },
       },
       noInnerScroll,

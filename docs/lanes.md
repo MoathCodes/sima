@@ -139,7 +139,7 @@ Everyone may read `S`. Write a field only if your lane is named. Assign whole va
 | `original` | E. |
 | `selected` | E; H's game may set it. |
 | `tools` | D (the frame's sliders button); E (its close button). |
-| `toolsTab`, `measureTab`, `allNumbers` | E. H restores `allNumbers` from `sima-guide`. |
+| `toolsTab`, `measureTab`, `allNumbers` | E. E saves and restores `allNumbers` inside `sima-guide`. |
 | `embed` | F (`url.ts`). |
 
 ## The exported functions (SPEC 8.4), and a few more
@@ -271,7 +271,7 @@ Wrap every read and write in `try`; storage can be blocked.
 | `b102-level` | Explore or Measure | H |
 | `frame-box` | The frame's position and size | F |
 | `sky-places` | Saved places | G |
-| `sima-guide` | Tour progress, seen tips, "all numbers" | H |
+| `sima-guide` | Tour progress, seen tips, "all numbers" | H (E writes `allNumbers`). Always merge into this entry, never overwrite it |
 | `sima.tools` | Picture settings, threshold, list filter and order | E |
 
 ## Links (SPEC 8.5)
