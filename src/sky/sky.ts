@@ -61,6 +61,8 @@ const H1 = 'Average of all dates: moving objects are blurred or shifted here';
 
 interface HiPSLayer {
   setOpacity(o: number): void;
+  /** True once Aladin has added it to the view. */
+  readonly added: boolean;
 }
 interface Aladin {
   getRaDec(): [number, number];
@@ -600,9 +602,32 @@ function fadeIn(next: Shown): void {
   requestAnimationFrame(step);
 }
 
+/** Maps to remove, and since when the oldest has waited (ms). */
+const leaving: Shown[] = [];
+let leavingSince = 0;
+
+/**
+ * Removes a map's layers. Aladin ignores the removal of a layer it has not added yet and adds it
+ * later anyway, and when it removes its selected layer it selects the newest one, which may not be
+ * added yet ("sky-N does not exists"). So a map is hidden at once and removed once Aladin has
+ * added every layer asked for (or after 10 s, if one never loads).
+ */
 function removeShown(shown: Shown): void {
-  al?.removeImageLayer(shown.name);
-  if (shown.soft) al?.removeImageLayer(shown.soft.name);
+  shown.hips.setOpacity(0);
+  shown.soft?.hips.setOpacity(0);
+  if (!leaving.length) leavingSince = performance.now();
+  leaving.push(shown);
+  removeLeaving();
+}
+
+function removeLeaving(): void {
+  if (!al || !leaving.length) return;
+  const all = [current, incoming, ...leaving].flatMap((x) => (x ? [x.hips, x.soft?.hips] : []));
+  if (all.some((h) => h && !h.added) && performance.now() - leavingSince < 10_000) return;
+  for (const x of leaving.splice(0)) {
+    al.removeImageLayer(x.name);
+    if (x.soft) al.removeImageLayer(x.soft.name);
+  }
 }
 
 function tellWorker(channel: number | null): void {
@@ -816,6 +841,7 @@ function loop(): void {
 
 function animate(now: number): void {
   if (!al) return;
+  removeLeaving();
   if (glide) {
     const t = Math.min(1, (now - glide.start) / glide.ms);
     const e = 1 - (1 - t) ** 3;
