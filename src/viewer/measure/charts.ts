@@ -6,6 +6,8 @@
  * out rather than observed (fits, catalogue predictions), magenta for where the user looks.
  */
 import { sizeCanvas, token, num } from '../tools/dom.ts';
+import { mjdToYear } from '../../core/astro.ts';
+import type { Candidate } from '../../core/detect.ts';
 
 export interface Pt {
   x: number;
@@ -184,6 +186,27 @@ export interface PathSpec {
   fit: { e0: number; n0: number; e1: number; n1: number } | null;
   catalogue: { e0: number; n0: number; e1: number; n1: number } | null;
   empty: string;
+}
+
+/**
+ * A mover's own Path (TLS-5): its positions from the change search, offsets from its mean
+ * position, and the fitted straight line over its dates (the fit passes through the mean position
+ * at the mean of the dates, core/movers.ts).
+ */
+export function moverPath(c: Pick<Candidate, 'path' | 'motion'>, colour: (frame: number) => string, ring: (frame: number) => boolean): PathSpec {
+  const pts = c.path ?? [];
+  if (!c.motion || pts.length < 2) return { points: [], fit: null, catalogue: null, empty: 'Not measured: too few positions' };
+  const yrs = pts.map((p) => mjdToYear(p.mjd));
+  const t0 = yrs.reduce((a, b) => a + b, 0) / yrs.length;
+  const at = (y: number) => ({ e: ((y - t0) * c.motion!.pmra) / 1000, n: ((y - t0) * c.motion!.pmdec) / 1000 });
+  const a = at(Math.min(...yrs));
+  const b = at(Math.max(...yrs));
+  return {
+    points: pts.map((p) => ({ east: p.east, north: p.north, colour: colour(p.frame), ring: ring(p.frame) })),
+    fit: { e0: a.e, n0: a.n, e1: b.e, n1: b.n },
+    catalogue: null,
+    empty: 'Not measured',
+  };
 }
 
 export function drawPath(canvas: HTMLCanvasElement, spec: PathSpec): void {

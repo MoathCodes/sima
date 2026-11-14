@@ -93,6 +93,27 @@
 .ms-tabs > [role='tab'] {
   padding-block: 3px 4px;
 }
+/* The stable heading over every chart: which detector and which dates (O-T6). */
+.ms-chart-head {
+  margin-bottom: -4px;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.ms-chart-head b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.ms-wrap:not([data-state='measure']) .ms-chart-head {
+  display: none;
+}
+.ms-cuthead {
+  margin: 0 0 4px;
+  color: var(--st-ink-2);
+  font: var(--text-label);
+}
+.ms-cutrow + .ms-cuthead {
+  margin-top: 8px;
+}
 .ms-main > .ms-chart {
   position: relative;
   flex: 0 1 190px;
@@ -765,11 +786,15 @@
 .tl-readout {
   left: 50%;
   bottom: 30px;
-  max-width: 96%;
+  width: max-content;
+  max-width: 100%;
   translate: -50% 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: center;
+  text-wrap: balance;
+}
+/* The value on one line, where it is on the next; each wraps rather than being cut off (TLS-6). */
+.tl-readout > span {
+  display: block;
 }
 
 /* The legend under the picture: every mark explained in view (O-G5). */

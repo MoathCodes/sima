@@ -14,7 +14,7 @@ import { S, pic, watch, type ToolsTab } from './state.ts';
 import { draw, type PictureView } from './render.ts';
 import { icon } from '../shell/icons.ts';
 import { cleanupSteps } from '../core/picture.ts';
-import { formatCoords } from '../core/astro.ts';
+import { formatDec, formatRa } from '../core/astro.ts';
 import { median, robustSigma } from '../core/stats.ts';
 import {
   anyChanged,
@@ -240,6 +240,8 @@ function keys(): void {
  */
 function pointer(): void {
   let box: { x0: number; y0: number; x1: number; y1: number } | null = null;
+  /** The last box drawn: its statistics stay (and follow the date) until the pointer moves on. */
+  let kept: { x0: number; y0: number; x1: number; y1: number } | null = null;
   let last: { x: number; y: number } | null = null;
   const host = () => document.getElementById('frame-pic');
   const readout = () => document.querySelector<HTMLElement>('#pic-tools [data-readout]');
@@ -258,6 +260,8 @@ function pointer(): void {
       if (!box) off();
       return;
     }
+    if (kept && last && Math.hypot(px - last.x, py - last.y) < 3) return;
+    kept = null;
     last = { x: px, y: py };
     if (box) {
       box.x1 = px;
@@ -277,6 +281,7 @@ function pointer(): void {
     true,
   );
   document.addEventListener('pointerup', () => {
+    if (box && Math.abs(box.x1 - box.x0) > 4) kept = box;
     if (box && last) show(last.x, last.y);
     box = null;
   });
@@ -289,48 +294,68 @@ function pointer(): void {
     const view = lastView();
     if (!el || !view?.field) return;
     el.hidden = false;
-    el.innerHTML = box && Math.abs(box.x1 - box.x0) > 4 ? esc(region(view, box)) : esc(pixelLine(view, px, py));
+    // Two lines that wrap, never cut off (TLS-6): the value, then where it is.
+    const b = box ?? kept;
+    const lines = b && Math.abs(b.x1 - b.x0) > 4 ? region(view, b) : pixelLine(view, px, py);
+    el.innerHTML = lines.filter(Boolean).map((l) => `<span>${esc(l)}</span>`).join('');
   }
 }
 
-/** One pixel, in words: "123 µJy · 4.2× noise · flagged pixel · RA Dec · pixel (31, 40)". */
-function pixelLine(view: Readonly<PictureView>, px: number, py: number): string {
-  if (view.field?.simulated) return 'Simulated pictures: no real pixel values';
-  if (S.color) return 'The Color view mixes six detectors: pick one to read a value';
+/** One pixel, in words: ["123 µJy · 4.2× noise · flagged pixel", "RA Dec · pixel (31, 40)"]. */
+function pixelLine(view: Readonly<PictureView>, px: number, py: number): string[] {
+  if (view.field?.simulated) return ['Simulated pictures: no real pixel values'];
+  if (S.color) return ['The Color view mixes six detectors: pick one to read a value'];
   const f = view.toField(px, py);
   const x = Math.round(f.x);
   const y = Math.round(f.y);
   const n = view.n;
   const sky = view.picToSky(px, py);
-  const where = `${sky ? formatCoords(sky.ra, sky.dec) : ''} · pixel (${x}, ${y})`;
-  if (x < 0 || y < 0 || x >= n || y >= n) return where;
+  // RA and Dec each stay whole when the line wraps.
+  const whole = (t: string) => t.replace(/ /g, '\u00a0');
+  const where = `${sky ? `${whole(formatRa(sky.ra))} ${whole(formatDec(sky.dec))} · ` : ''}pixel (${x}, ${y})`;
+  if (x < 0 || y < 0 || x >= n || y >= n) return ['', where];
   const frames = (view.group?.frames ?? []).map((i) => view.field?.frames[i]).filter((fr) => !!fr);
-  if (!frames.length) return `No exposure in this detector on this date · ${where}`;
+  if (!frames.length) return ['No exposure in this detector on this date', where];
   const flagged = frames.filter((fr) => fr.bad[y * n + x]).length;
-  if (!view.values) return `Two dates shows two pictures: pick one view to read a value · ${where}`;
+  if (!view.values) return ['Two dates shows two pictures: pick one view to read a value', where];
   const v = view.values[y * n + x] ?? Number.NaN;
-  if (!Number.isFinite(v)) return `No data here · ${where}`;
+  if (!Number.isFinite(v)) return ['No data here', where];
   const noise = noiseOf(view);
   const times = noise ? ` · ${num((v - noise.sky) / noise.sigma, 1)}× noise` : '';
   const flag = flagged ? ` · flagged pixel (${flagged} of ${frames.length} exposures)` : '';
   const diff = view.mode === 'diff' ? ' change against the typical sky' : '';
   const proc = view.processed.length ? ' (processed)' : '';
-  return `${sig(v, 3)} µJy${diff}${proc}${times}${flag} · ${where}`;
+  return [`${sig(v, 3)} µJy${diff}${proc}${times}${flag}`, where];
 }
 
-/** Statistics of a dragged box (O-T4). */
-function region(view: Readonly<PictureView>, b: { x0: number; y0: number; x1: number; y1: number }): string {
-  if (!view.values) return 'Pick a view with one picture to measure a box';
+/**
+ * Statistics of a dragged box (O-T4), as two lines. Pixels flagged on every exposure of the date
+ * are left out and counted (H6); where only some exposures are flagged, the picture already uses
+ * the clean ones.
+ */
+function region(view: Readonly<PictureView>, b: { x0: number; y0: number; x1: number; y1: number }): string[] {
+  if (!view.values) return ['Pick a view with one picture to measure a box'];
   const a = view.toField(Math.min(b.x0, b.x1), Math.min(b.y0, b.y1));
   const z = view.toField(Math.max(b.x0, b.x1), Math.max(b.y0, b.y1));
+  const frames = (view.group?.frames ?? []).map((i) => view.field?.frames[i]).filter((fr) => !!fr);
   const vals: number[] = [];
+  let flagged = 0;
   for (let y = Math.max(0, Math.round(a.y)); y <= Math.min(view.n - 1, Math.round(z.y)); y++) {
     for (let x = Math.max(0, Math.round(a.x)); x <= Math.min(view.n - 1, Math.round(z.x)); x++) {
-      const v = view.values[y * view.n + x];
+      const k = y * view.n + x;
+      if (frames.length && frames.every((fr) => fr.bad[k])) {
+        flagged += 1;
+        continue;
+      }
+      const v = view.values[k];
       if (v !== undefined && Number.isFinite(v)) vals.push(v);
     }
   }
-  if (!vals.length) return 'No data in this box';
+  const left = flagged ? `, ${flagged} flagged left out` : '';
+  if (!vals.length) return [`No clean data in this box${left}`];
   const sum = vals.reduce((s, v) => s + v, 0);
-  return `Box of ${vals.length} pixels: middle ${sig(median(vals), 3)} µJy, spread ${sig(robustSigma(vals), 3)} µJy (robust), total ${sig(sum, 3)} µJy, brightest ${sig(Math.max(...vals), 3)} µJy`;
+  return [
+    `Box of ${vals.length} pixels${left}`,
+    `middle ${sig(median(vals), 3)} µJy · spread ${sig(robustSigma(vals), 3)} µJy (robust) · total ${sig(sum, 3)} µJy · brightest ${sig(Math.max(...vals), 3)} µJy`,
+  ];
 }
