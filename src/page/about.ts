@@ -109,6 +109,12 @@ ${link('https://www.spaceappschallenge.org/2026/challenges/planet-x-and-spherex/
     always show beside it.</li>
   <li><b>Catalogue search:</b> search “catalogue”, “fast” or “cold”. It lists Gaia DR3 stars that move fast, or CatWISE2020 sources that are very red
     (cold), in the view, and marks them on the sky. They are catalogue sources, not discoveries.</li>
+  <li><b>More frames:</b> the last button on the left rail opens the frame tools. Drag one onto the sky, or press it, to
+    open up to six more frames beside the main one: Blink, Two dates, Difference, Spectrum, Brightness, Stack or Info.
+    Each has its own date, detector and type. Link frames (the chain button) to share dates, spot or detector; the bar
+    drives the main frame and every frame linked to it by date. Compare opens a copy with one thing different.</li>
+  <li><b>Workspaces:</b> the extra frames are kept in this browser. Save them under a name, export them as a file,
+    or share them: the Share link carries them.</li>
   <li><b>Share:</b> gives a link to the same view, and code to put it in another web page.</li>
   <li><b>Keys:</b> <kbd class="kbd">Space</kbd> plays or pauses, <kbd class="kbd">←</kbd> <kbd class="kbd">→</kbd> step
     through the pictures, <kbd class="kbd">/</kbd> goes to search, <kbd class="kbd">Esc</kbd> closes what is open.</li>

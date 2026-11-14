@@ -97,6 +97,16 @@
       data-guide="sky-layers"
     ></div>
 
+    <!-- The workspace's tool tray (src/workspace/tray.ts): frame types to drop on the sky, and
+         saved workspaces. Opened from the rail. -->
+    <div
+      id="workspace"
+      class="popover"
+      popover
+      data-overlay="workspace"
+      data-guide="workspace-tray"
+    ></div>
+
     <!--
       The frame. Lane F places it: drag by #frame-head, size by #frame-grip, glide, hide, and the
       remembered box (frame-box). Lane D fills it, except #frame-task (lane H) and #pic-tools and
@@ -131,6 +141,9 @@
     </section>
     <!-- Lane F: while the frame is hidden, this small card in its place shows it again (FRM-5). -->
     <div id="frame-show" class="card" data-card="frame-show" hidden></div>
+
+    <!-- The workspace's extra frames (src/workspace/card.ts): each is a [data-card]. -->
+    <div id="frames"></div>
 
     <!-- Lane E: Measure, beside the frame. Lane E puts an empty #detectors in it for lane D's detector strip. -->
     <section

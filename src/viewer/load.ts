@@ -39,7 +39,7 @@ export const POLL_MS = 1500;
 /** Field sizes the live service fetches, arcminutes. */
 const LIVE_FOVS = [3, 6, 12] as const;
 /** A spot this close to a shipped target's track opens the target's own pictures, degrees. */
-const TARGET_RADIUS = 1.5 / 60;
+export const TARGET_RADIUS = 1.5 / 60;
 
 /** Why a spot has no pictures, for the frame's "No pictures here" card (FRM-11). */
 export interface NoPictures {
@@ -204,7 +204,7 @@ export async function aimAt(ra: number, dec: number, fov?: number): Promise<void
 }
 
 /** Field size as the live service fetches it: the nearest of 3, 6 and 12 that covers the field. */
-function liveFov(fov: number): number {
+export function liveFov(fov: number): number {
   return LIVE_FOVS.find((f) => f >= fov) ?? 12;
 }
 
@@ -582,7 +582,8 @@ export function lamInBand(det: Det, edges: readonly number[], lam = S.lam): numb
 
 // ----- Bits -------------------------------------------------------------------------------------
 
-async function fetchSet(
+/** Fetches and decodes a patch's two files (the workspace's frames load through this too). */
+export async function fetchSet(
   base: string,
   key: string,
   origin: 'shipped' | 'live',
@@ -602,7 +603,7 @@ async function fetchSet(
 }
 
 /** The middle of the exposures: the median of the cutout centres. */
-function centreOf(data: TargetData): { ra: number; dec: number } {
+export function centreOf(data: TargetData): { ra: number; dec: number } {
   const ras = data.frames.map((f) => f.wcs.crval[0]).sort((a, b) => a - b);
   const decs = data.frames.map((f) => f.wcs.crval[1]).sort((a, b) => a - b);
   const mid = (v: number[]) => v[v.length >> 1] ?? Number.NaN;

@@ -13,6 +13,7 @@ import './styles/tools.css';
 import './styles/places.css';
 import './styles/guide.css';
 import './styles/extras.css';
+import './styles/workspace.css';
 
 import { startShell } from './shell/shell.ts';
 import { startPlaces } from './shell/places.ts';
@@ -28,6 +29,7 @@ import { startMotion } from './viewer/motion.ts';
 import { readLink, startUrl } from './viewer/url.ts';
 import { startGame } from './explore/game.ts';
 import { startGuide } from './guide/index.ts';
+import { startWorkspace } from './workspace/index.ts';
 import { S } from './viewer/state.ts';
 import * as bus from './shell/bus.ts';
 
@@ -74,6 +76,10 @@ if (!link.embed) {
   start('sandbox', startSandbox);
 }
 start('url', () => startUrl(link));
+if (!link.embed) {
+  const plain = !link.target && link.ra === null && !link.unknown.length && !link.view && !link.det && !link.date;
+  start('workspace', () => startWorkspace(plain));
+}
 document.documentElement.dataset.started = '';
 
 void Promise.allSettled(running).then(() => {

@@ -71,7 +71,7 @@ must say so (FRM-11), not call a service that is not there.
 | **F. Shell** | Top row, rail, frame placement and glide, loading cards, keys, Escape order, search box, Share, About, embed | GEN-1 to 7, layout of 4.1 at both sizes |
 | **G. Places** | Catalogue reading, search source, chips, lists, cards, tours, saved places | PLC-4 to 7 |
 | **H. Guide** | Welcome card, starters, tour, close-up, hints, explanations, tips | GDE-1 to 8 |
-| **Integrator** | The build, the shared contracts, the smoke test, merges | 11.1 |
+| **Integrator** | The build, the shared contracts, the smoke test, merges; the workspace (extra frames) | 11.1; SPEC 10 O-V1 to O-V4 |
 
 ## Every file and its owner
 
@@ -88,7 +88,7 @@ create)* do not exist yet; their lane creates them.
 | **F** | `index.html`, `src/styles/app.css`, `src/styles/shell.css`, `src/styles/fonts/*`, `src/shell/shell.ts`, `src/shell/icons.ts`, `src/viewer/omnibox.ts`, `src/viewer/url.ts`, `src/viewer/share.ts` *(to create; Share is in `shell.ts` for now)*, `src/page/` *(to create, if wanted)* |
 | **G** | `src/shell/places.ts`, `src/shell/objects.ts` *(to create, if wanted)*, `src/data/tours.ts` *(to create)*, `src/styles/places.css` |
 | **H** | `src/guide/*`, `src/explore/*`, `src/styles/guide.css` |
-| **Integrator** | `package.json`, `package-lock.json`, `tsconfig.json`, `tsconfig.node.json`, `vite.config.ts`, `src/main.ts`, `src/env.d.ts`, `src/shell/bus.ts` (a contract), `tests/bus.test.ts`, `tests/smoke/run.ts`, `tests/smoke/smoke.ts`, `tests/smoke/flows/0-skeleton.ts`, `.gitignore`, `.prettierrc.json`, `.prettierignore`, `README.md`, `PRODUCT.md`, `assets/icon.svg`, `AGENTS.md`, `CLAUDE.md`, `DESIGN.md`, `docs/SPEC.md`, `docs/SPEC-v1-workspace-plan.md`, `docs/tools.md`, `docs/spec-img/*`, `docs/lanes.md` |
+| **Integrator** | `package.json`, `package-lock.json`, `tsconfig.json`, `tsconfig.node.json`, `vite.config.ts`, `src/main.ts`, `src/env.d.ts`, `src/shell/bus.ts` (a contract), `tests/bus.test.ts`, `tests/smoke/run.ts`, `tests/smoke/smoke.ts`, `tests/smoke/flows/0-skeleton.ts`, `tests/smoke/flows/w-workspace.ts`, `src/workspace/*` (the workspace: `index.ts`, `schema.ts`, `patches.ts`, `frames.ts`, `card.ts`, `menu.ts`, `place.ts`, `tray.ts`, `store.ts`), `src/styles/workspace.css`, `tests/workspace.test.ts`, `.gitignore`, `.prettierrc.json`, `.prettierignore`, `README.md`, `PRODUCT.md`, `assets/icon.svg`, `AGENTS.md`, `CLAUDE.md`, `DESIGN.md`, `docs/SPEC.md`, `docs/SPEC-v1-workspace-plan.md`, `docs/tools.md`, `docs/spec-img/*`, `docs/lanes.md` |
 
 `docs/tools.md` describes lanes B and E's work. Send changes to it as a patch in your report.
 
@@ -159,6 +159,9 @@ Everyone may read `S`. Write a field only if your lane is named. Assign whole va
 | `shell/shell.ts` | F | `frameRect`, `openPlace`, `hideFrame`, `flyFree`, `greet`, `skyReady` |
 | `shell/icons.ts` | F | `icon(name)`. Ask F for a new icon rather than drawing your own. |
 | `explore/game.ts` | H | `setLevel`, `openStarter`, `revealTarget`, `pointOut`, `STARTERS` |
+| `sky/sky.ts` (workspace) | C | `setRings(rings)` draws each extra frame's square, number tag and line to its window; `onRingDrop(fn)` hears a ring dropped somewhere else |
+| `core/work.ts` (workspace) | B | `keepPatch(key, field, set)` gives the worker another patch to keep (up to eight); `stack(…, { field })` stacks on that field |
+| `workspace/index.ts` | Integrator | `startWorkspace(plain)`. Not started with `embed=1`. |
 | `guide/index.ts` | H | `startGuide()` |
 
 Each part's `start…()` function is called once by `src/main.ts` (integrator). A part that throws
@@ -212,6 +215,8 @@ fills the element and styles what is inside it; lane F (app.css, "Page skeleton"
 | `toasts` | F | Short messages above the bar. |
 | `tooltip` | F | The one tooltip, for every element with `data-tip`. |
 | `narrow-note` | F | "Open it on a computer" under 700 px (O-W3). |
+| `workspace` | Integrator | The tool tray (popover) opened from the rail's last button: frame types, Compare, saved workspaces, files. |
+| `frames` | Integrator | Holds the extra frames (`.wf`, each a `[data-card]`), their shared menu `#wf-menu` and the "Six frames are open" dialog. |
 
 ### Attributes every lane keeps
 
@@ -240,6 +245,7 @@ Names in `index.html` are listed with the mount points above. Names inside parts
 | F | `guide-button`, `places-button`, `share-button`, `about-button`, `zoom-in`, `zoom-out`, `sky-map-button`, `grid-button`, `sky-map-spherex`, `sky-map-wise-w1`, `sky-map-wise-w2` |
 | G | `chip-stars`, `chip-nearby`, `chip-changing`, `chip-clusters`, `chip-nebulae`, `chip-galaxies`, `chip-tours`, `chip-surprise-me` |
 | H | `starter-runaway`, `starter-made-of`, `starter-too-faint`, `welcome-own`, `hint` |
+| Integrator (workspace) | `workspace-button`, `workspace-tray`, `tool-blink`, `tool-two`, `tool-diff`, `tool-spectrum`, `tool-brightness`, `tool-stack`, `tool-info`, `compare-main`, `workspace-name`, `workspace-save`, `workspace-open`, `workspace-export`, `workspace-import`, `share-workspace`; in a frame: `wf-head`, `wf-menu`, `wf-compare`, `wf-close`, `wf-play`, `wf-next`, `wf-exif`; in its menu: `wf-type-<type>`, `wf-link-main`, `wf-link-<frame id>`, `wf-make-main`, `compare-det`, `compare-date`, `compare-type` |
 
 To add a name, add it in your own part and list it in your report.
 
@@ -261,6 +267,7 @@ are; ask lane F to change one. All stylesheets are imported by `src/main.ts`.
 | `src/styles/tools.css` | E |
 | `src/styles/places.css` | G |
 | `src/styles/guide.css` | H |
+| `src/styles/workspace.css` | Integrator (workspace) |
 
 ## Browser storage (SPEC 8.5)
 
@@ -273,12 +280,19 @@ Wrap every read and write in `try`; storage can be blocked.
 | `sky-places` | Saved places | G |
 | `sima-guide` | Tour progress, seen tips, "all numbers" | H (E writes `allNumbers`). Always merge into this entry, never overwrite it |
 | `sima.tools` | Picture settings, threshold, list filter and order | E |
+| `sima-workspace` | The workspace now (autosave): extra frames and links come back on a plain visit | Integrator (workspace) |
+| `sima-workspaces` | Named workspaces (save, rename, open, delete) | Integrator (workspace) |
 
 ## Links (SPEC 8.5)
 
 `ra`, `dec` (degrees), `fov` (arcminutes), `det` (`D1` to `D6`, or `color`), `view` (a `Mode`),
 `target`, `date` (YYYY-MM-DD, UTC), `pic` (`core/picture.ts` `encodePic`), `embed=1`. Lane F's
 `url.ts` reads and writes them. A parameter it does not understand is named in a note.
+
+A shared workspace adds `#w=` after them: the workspace as JSON with a schema version, deflated and
+base64url-encoded (`workspace/schema.ts`). The page reads it once and removes it from the address.
+A damaged or too-new one opens the usual view with a plain message. Share offers the JSON file
+instead when the link would pass 4,000 characters.
 
 ## The smoke test
 

@@ -52,6 +52,12 @@ const PATHS = {
   nebula: '<path d="M5.6 15a3.1 3.1 0 0 1 .3-6.2 4.3 4.3 0 0 1 8.3 1.2A2.5 2.5 0 0 1 14.5 15z"/>',
   path: '<circle cx="4.6" cy="15.4" r="1.8"/><circle cx="15.4" cy="4.6" r="1.8"/><path d="M6.4 14.2c3.2-1.6.6-5.6 3.8-6.6 1.7-.5 2.6-1.3 3.5-1.8" stroke-dasharray="1.6 2.4"/>',
   dice: '<rect x="3.5" y="3.5" width="13" height="13" rx="2.6"/><circle cx="7.2" cy="7.2" r="1" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="12.8" cy="12.8" r="1" fill="currentColor" stroke="none"/>',
+  more: '<circle cx="4.6" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.4" cy="10" r="1.3" fill="currentColor" stroke="none"/>',
+  chain:
+    '<path d="M8.6 11.4a3 3 0 0 0 4.2 0l2.6-2.6a3 3 0 0 0-4.2-4.2l-1 1"/><path d="M11.4 8.6a3 3 0 0 0-4.2 0l-2.6 2.6a3 3 0 0 0 4.2 4.2l1-1"/>',
+  'add-frame': '<rect x="3" y="5.5" width="10" height="10" rx="1.6"/><path d="M15.5 2.5v5.5M12.75 5.25h5.5"/>',
+  compare: '<rect x="2.5" y="4.5" width="6.8" height="11" rx="1.3"/><rect x="10.7" y="4.5" width="6.8" height="11" rx="1.3"/>',
+  wave: '<path d="M2.5 12.5c1.8-6 3.2-6 4.6 0s2.9 6 4.6 0 3.2-6 5.8-1"/>',
 } as const;
 
 /** The name of an icon. */
