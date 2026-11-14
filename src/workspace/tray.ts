@@ -66,7 +66,7 @@ function fill(tray: HTMLElement): void {
   const saved = named();
   tray.innerHTML = `
     <p class="group-label">Add a frame</p>
-    <p class="wf-hint">Drag one onto the sky to look there, or press one to add it in the middle of the sky. <span data-count></span></p>
+    <p class="wf-hint">Drag one onto the sky to look there, or press one to add it in the middle of the sky. <span data-frame-count></span></p>
     <div class="wf-tools">${FRAME_TYPES.map((t) => `<button type="button" class="wf-tool" data-tool="${t}" data-guide="tool-${t}" data-tip="${esc(TYPE_WORDS[t].line)}" data-tip-pos="right">${icon(TYPE_ICONS[t])}<span>${esc(TYPE_WORDS[t].name)}</span></button>`).join('')}</div>
     <div class="wf-row"><span class="wf-row-label">Compare the main frame</span><button type="button" class="btn text" data-compare-main data-guide="compare-main">${icon('compare')}Compare…</button></div>
     <hr class="wf-rule">
@@ -94,7 +94,7 @@ function savedRow(n: string, when: string): string {
 }
 
 function count(tray: HTMLElement): void {
-  const el = tray.querySelector('[data-count]');
+  const el = tray.querySelector('[data-frame-count]');
   const n = frames().length;
   if (el) el.textContent = n ? `${n} of ${MAX_FRAMES} open.` : '';
 }
