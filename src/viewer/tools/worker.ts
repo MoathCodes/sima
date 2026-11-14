@@ -1,13 +1,13 @@
 /**
- * The heavy work of Measure and the picture tools, off the page's thread (TLS-8, O-T1, O-T5):
- * the change search, measuring the target, a fixed spot's light on every exposure, and stacking.
+ * Lane E's small worker: a fixed spot's light on every exposure, off the page's thread (TLS-8).
+ * The change search, stacks and the target's measurement run in lane B's worker (core/work.ts).
  * Owner: lane E. It only calls lane B's pure functions in src/core.
  *
  * Messages in: `{ type: 'data', gen, set, field }` once per patch, then `{ type: 'job', id, gen,
  * job }`. Out: `{ id, ok: true, result }` or `{ id, ok: false, error }`. A job for an older patch
  * (`gen`) is answered with an error and not run.
  */
-import { runJob, type Job } from './jobs.ts';
+import { runSpot } from './jobs.ts';
 import type { Field, RealSet } from '../../core/types.ts';
 
 interface Port {
@@ -25,7 +25,7 @@ let data: { gen: number; set: RealSet | null; field: Field | null } = {
 port.onmessage = (e: MessageEvent) => {
   const m = e.data as
     | { type: 'data'; gen: number; set: RealSet | null; field: Field | null }
-    | { type: 'job'; id: number; gen: number; job: Job };
+    | { type: 'job'; id: number; gen: number; job: { ra: number; dec: number } };
   if (m.type === 'data') {
     data = { gen: m.gen, set: m.set, field: m.field };
     return;
@@ -35,7 +35,7 @@ port.onmessage = (e: MessageEvent) => {
     return;
   }
   try {
-    const result = runJob(m.job, data.set, data.field);
+    const result = runSpot(m.job, data.set, data.field);
     port.postMessage({ id: m.id, ok: true, result });
   } catch (err) {
     port.postMessage({ id: m.id, ok: false, error: String(err) });

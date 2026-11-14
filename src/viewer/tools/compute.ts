@@ -1,41 +1,37 @@
 /**
- * Runs the heavy jobs (jobs.ts) in Web Workers so the page never holds still for more than
- * 100 ms (TLS-8, O-T1, O-T5). Owner: lane E.
+ * Runs Measure's and the tools' heavy jobs off the page's thread, so the page never holds still
+ * for more than 100 ms (TLS-8, O-T1, O-T5). Owner: lane E.
  *
- * Two workers: one for the change search, one for Measure, so a long search never makes Measure
- * wait. Each gets the patch's data once (when `S.set` or `S.field` change). A new search while
- * one is still running stops the old one (the worker is replaced), as docs/tools.md asks: "If you
- * change detector or threshold while the search runs, it stops and starts again".
+ * - The change search, the stacks and measuring the target: lane B's worker (core/work.ts).
+ *   A new search stops the one still running (docs/tools.md: "If you change detector or
+ *   threshold while the search runs, it stops and starts again").
+ * - A fixed spot's light on every exposure: lane E's own small worker (worker.ts).
  *
  * Results are kept per patch, so switching tabs or detectors back and forth costs nothing.
- *
- * When lane B's worker API (src/core/work.ts) is merged, this file is the one place to switch.
  */
 import { S, watch } from '../state.ts';
-import { runJob, type Job, type JobResult } from './jobs.ts';
+import { measure, searchChanges, stack, usePatch, type WorkTiming } from '../../core/work.ts';
+import { fitMotion, lowerLimits, realCurve } from '../../core/fit.ts';
+import { channelSpectrum } from '../../core/stats.ts';
+import type { ChangeSearch } from '../../core/detect.ts';
+import { runSpot, type Job, type JobResult, type SpotResult, type StackSet, type TargetResult } from './jobs.ts';
 
-/** Rejection reason for a job whose patch has changed or that a newer job replaced. */
+/** Rejection reason for a job whose patch changed or that a newer job replaced. */
 export const STALE = 'stale';
-
-interface Pending {
-  resolve: (r: JobResult) => void;
-  reject: (e: unknown) => void;
-}
-
-interface Lane {
-  worker: Worker | null;
-  sent: number;
-  pending: Map<number, Pending>;
-}
 
 let gen = 0;
 let nextId = 1;
 const cache = new Map<string, Promise<JobResult>>();
-const lanes: Record<'search' | 'measure', Lane> = {
-  search: { worker: null, sent: -1, pending: new Map() },
-  measure: { worker: null, sent: -1, pending: new Map() },
-};
+/** Aborts every job of the patch on screen when it changes. */
+let patchCtl = new AbortController();
+/** Aborts the running search when a newer one starts. */
+let searchCtl: AbortController | null = null;
 let started = false;
+
+/** Lane E's spot worker. */
+let spotWorker: Worker | null = null;
+let spotSent = -1;
+const spotPending = new Map<number, { resolve: (r: SpotResult) => void; reject: (e: unknown) => void }>();
 
 function start(): void {
   if (started) return;
@@ -43,41 +39,18 @@ function start(): void {
   watch(['set', 'field'], () => {
     gen += 1;
     cache.clear();
-    for (const lane of Object.values(lanes)) if (lane.pending.size) restart(lane);
+    patchCtl.abort();
+    patchCtl = new AbortController();
+    searchCtl = null;
+    for (const p of spotPending.values()) p.reject(STALE);
+    spotPending.clear();
   });
 }
 
-function makeWorker(lane: Lane): Worker | null {
-  if (typeof Worker === 'undefined') return null;
-  try {
-    const w = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
-    w.onmessage = (e: MessageEvent) => {
-      const m = e.data as { id: number; ok: boolean; result?: JobResult; error?: string };
-      const p = lane.pending.get(m.id);
-      if (!p) return;
-      lane.pending.delete(m.id);
-      if (m.ok && m.result !== undefined) p.resolve(m.result);
-      else p.reject(m.error === STALE ? STALE : new Error(m.error ?? 'failed'));
-    };
-    w.onerror = (e) => {
-      e.preventDefault();
-      for (const p of lane.pending.values()) p.reject(new Error(e.message || 'worker failed'));
-      lane.pending.clear();
-      restart(lane);
-    };
-    return w;
-  } catch {
-    return null;
-  }
-}
-
-/** Stops whatever the lane's worker is doing; its jobs are rejected as stale. */
-function restart(lane: Lane): void {
-  lane.worker?.terminate();
-  lane.worker = null;
-  lane.sent = -1;
-  for (const p of lane.pending.values()) p.reject(STALE);
-  lane.pending.clear();
+/** Turns lane B's AbortError into STALE, so callers can ignore it. */
+function quiet(err: unknown): never {
+  if ((err as DOMException)?.name === 'AbortError') throw STALE;
+  throw err;
 }
 
 /**
@@ -91,14 +64,7 @@ export function compute<T extends JobResult>(job: Job): Promise<T> {
   const key = `${gen}|${JSON.stringify(job)}`;
   const hit = cache.get(key);
   if (hit) return hit as Promise<T>;
-  const laneName = job.kind === 'search' ? 'search' : 'measure';
-  const lane = lanes[laneName];
-  if (laneName === 'search' && lane.pending.size) {
-    // A newer search replaces the one still running.
-    for (const k of [...cache.keys()]) if (k.includes('"kind":"search"')) cache.delete(k);
-    restart(lane);
-  }
-  const p = run(lane, job).catch((err: unknown) => {
+  const p = run(job).catch((err: unknown) => {
     cache.delete(key);
     throw err;
   });
@@ -106,35 +72,101 @@ export function compute<T extends JobResult>(job: Job): Promise<T> {
   return p as Promise<T>;
 }
 
-function run(lane: Lane, job: Job): Promise<JobResult> {
-  lane.worker ??= makeWorker(lane);
-  const w = lane.worker;
+async function run(job: Job): Promise<JobResult> {
+  const field = S.field;
+  const set = S.set;
+  const myGen = gen;
+  if (!field) throw new Error('no pictures');
+  const signal = patchCtl.signal;
+  switch (job.kind) {
+    case 'search': {
+      searchCtl?.abort();
+      for (const k of [...cache.keys()]) if (k.includes('"kind":"search"') && !k.endsWith(JSON.stringify(job))) cache.delete(k);
+      const ctl = new AbortController();
+      searchCtl = ctl;
+      signal.addEventListener('abort', () => ctl.abort(), { once: true });
+      usePatch(`lane-e-${myGen}`, field, set);
+      return (await searchChanges(job.det, job.threshold, { signal: ctl.signal }).catch(quiet)) as ChangeSearch &
+        WorkTiming;
+    }
+    case 'target': {
+      const target = field.target;
+      if (!set || !target) throw new Error('no target with real exposures');
+      const ms = await measure(set, target, { signal }).catch(quiet);
+      if (myGen !== gen) throw STALE;
+      // The fits take under 30 ms (core/work.ts) and run here.
+      const fit = fitMotion(ms, target);
+      const curves = realCurve(ms, target);
+      const usable = ms.filter((m) => m.seen && !m.lower && !m.saturated && !m.skipped && Number.isFinite(m.flux));
+      const spectrum = channelSpectrum(usable.map((m) => ({ lam: m.lam, det: m.det, flux: m.flux, err: m.fluxErr })));
+      return { ms: [...ms], fit, curves, lower: lowerLimits(ms), spectrum } satisfies TargetResult;
+    }
+    case 'stack': {
+      if (!set) throw new Error('no real exposures');
+      usePatch(`lane-e-${myGen}`, field, set);
+      const dets = [...new Set(field.frames.map((f) => f.det))].sort((a, b) => a - b);
+      const out: StackSet = [];
+      // One detector after another; the detector on screen first.
+      for (const d of [S.det, ...dets.filter((x) => x !== S.det)].filter((x) => dets.includes(x))) {
+        out.push(await stack(d, set.data.catalogue, job.how, { signal }).catch(quiet));
+        if (myGen !== gen) throw STALE;
+      }
+      return out.sort((a, b) => a.det - b.det);
+    }
+    case 'spot':
+      return spot(job.ra, job.dec);
+  }
+}
+
+function spot(ra: number, dec: number): Promise<SpotResult> {
+  const w = spotWorkerOf();
   const myGen = gen;
   if (!w) {
-    // No worker (tests, or a browser without module workers): run here, after a turn.
     return new Promise((resolve, reject) =>
       setTimeout(() => {
         if (myGen !== gen) return reject(STALE);
         try {
-          resolve(runJob(job, S.set, S.field));
+          resolve(runSpot({ ra, dec }, S.set, S.field));
         } catch (err) {
           reject(err);
         }
       }, 0),
     );
   }
-  if (lane.sent !== gen) {
-    w.postMessage({ type: 'data', gen, set: S.set, field: S.field });
-    lane.sent = gen;
+  if (spotSent !== gen) {
+    w.postMessage({ type: 'data', gen, set: S.set, field: null });
+    spotSent = gen;
   }
   const id = nextId++;
   return new Promise((resolve, reject) => {
-    lane.pending.set(id, { resolve, reject });
-    w.postMessage({ type: 'job', id, gen, job });
+    spotPending.set(id, { resolve, reject });
+    w.postMessage({ type: 'job', id, gen, job: { ra, dec } });
   });
 }
 
-/** True while a change search is running. */
-export function searching(): boolean {
-  return lanes.search.pending.size > 0;
+function spotWorkerOf(): Worker | null {
+  if (spotWorker || typeof Worker === 'undefined') return spotWorker;
+  try {
+    const w = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+    w.onmessage = (e: MessageEvent) => {
+      const m = e.data as { id: number; ok: boolean; result?: SpotResult; error?: string };
+      const p = spotPending.get(m.id);
+      if (!p) return;
+      spotPending.delete(m.id);
+      if (m.ok && m.result) p.resolve(m.result);
+      else p.reject(m.error === STALE ? STALE : new Error(m.error ?? 'failed'));
+    };
+    w.onerror = (e) => {
+      e.preventDefault();
+      for (const p of spotPending.values()) p.reject(new Error(e.message || 'the worker failed'));
+      spotPending.clear();
+      spotWorker?.terminate();
+      spotWorker = null;
+      spotSent = -1;
+    };
+    spotWorker = w;
+  } catch {
+    spotWorker = null;
+  }
+  return spotWorker;
 }

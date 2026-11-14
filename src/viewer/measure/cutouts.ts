@@ -93,7 +93,7 @@ export function paintCutout(
   const range = opts.diff
     ? { lo: -6 * sigma, hi: 6 * sigma }
     : limits(cut, p, { sky: Number.isFinite(sky) ? sky : 0, sigma });
-  const lut = makeLut(opts.diff ? { ...p, cmap: 'mono', stretch: 'linear', invert: false } : p, det);
+  const lut = makeLut(opts.diff ? { ...p, cmap: 'mono', stretch: 'linear', invert: false } : p, det, cut, range);
   const rgba = toRgba(cut, range, lut);
   canvas.width = side;
   canvas.height = side;

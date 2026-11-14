@@ -13,6 +13,7 @@ import { formatCoords, formatDate } from '../../core/astro.ts';
 import { chi2Test, weightedMean, type SpotPoint } from '../../core/stats.ts';
 import { toCsv, type Cell } from '../../core/csv.ts';
 import type { Candidate, ChangeSearch } from '../../core/detect.ts';
+import type { WorkTiming } from '../../core/work.ts';
 import { compute, STALE } from './compute.ts';
 import type { SpotResult } from './jobs.ts';
 import { current, mark, markOf, setList, setPic } from './settings.ts';
@@ -196,7 +197,12 @@ export function updateFind(root: HTMLElement): void {
   about.hidden = !r;
   if (r) {
     about.querySelector('summary')!.textContent = `About ${S.field?.target?.name ?? 'this patch'}, noise and limits`;
-    const took = r.ms ? ` The search took ${num(r.ms / 1000, 1)} s in the background, so the page was never held.` : '';
+    const t = r as ChangeSearch & Partial<WorkTiming>;
+    const took = !t.ms
+      ? ''
+      : t.ranOn === 'page'
+        ? ` The search took ${num(t.ms / 1000, 1)} s on the page, in slices; the longest held the page ${Math.round(t.longestMs ?? 0)} ms.`
+        : ` The search took ${num(t.ms / 1000, 1)} s in the background, so the page was never held.`;
     about.querySelector('[data-about-body]')!.innerHTML = [r.target, r.limits]
       .filter(Boolean)
       .map((t) => `<p>${esc(t)}</p>`)
