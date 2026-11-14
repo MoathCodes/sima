@@ -178,11 +178,26 @@
   pointer-events: none;
 }
 .pic-bar {
-  padding: 0 0 3px 2px;
-  border: 1.5px solid currentColor;
-  border-top: 0;
+  position: relative;
+  padding: 0 0 4px 1px;
+  border-bottom: 1.5px solid currentColor;
   font: var(--text-scale);
   white-space: nowrap;
+}
+.pic-bar::before,
+.pic-bar::after {
+  content: '';
+  position: absolute;
+  bottom: -1.5px;
+  width: 1.5px;
+  height: 5px;
+  background: currentColor;
+}
+.pic-bar::before {
+  left: 0;
+}
+.pic-bar::after {
+  right: 0;
 }
 .pic-ne {
   overflow: visible;
@@ -366,6 +381,8 @@
   }
 }
 .frame-exif {
+  /* Two lines kept, so the frame does not change height from one date to the next (O-I5). */
+  min-height: calc(2 * 1.4em);
   margin: 6px 0 0;
   color: var(--ink-2);
   font: var(--text-label);

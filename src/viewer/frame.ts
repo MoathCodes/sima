@@ -43,12 +43,12 @@ const VIEW_NAMES: Record<Mode, [string, IconName, string]> = {
 
 /** What each view shows, in Measure's explanation line. */
 const EXPLAIN: Record<Mode, string> = {
-  flip: 'Each frame is one SPHEREx visit, scaled to the reference brightness. Stars stay put; anything that shifts between visits is moving.',
-  swipe: 'Left of the line is the reference date, right of it the date on screen. Drag the line across anything that looks different.',
-  two: 'The reference date is red and the date on screen is cyan. What did not change is white or grey; a red and cyan pair is something that moved.',
-  diff: 'This date minus the median of all dates. White is where something is now, dark where it usually sits; grey did not change.',
-  stack: 'Every exposure in this detector added up, so faint things build up and the noise averages down. Along a catalogue motion when the target has one.',
-  trail: 'The date on screen in colour, earlier dates as a fading pale trail, so a mover draws its own path.',
+  flip: 'Each picture is one visit, scaled to the reference brightness. Stars stay put; what shifts is moving.',
+  swipe: 'Left of the line is the reference date, right of it this one. Drag the line over anything that differs.',
+  two: 'Red is the reference date, cyan this one. Unchanged is white; a red and cyan pair moved.',
+  diff: 'This date minus the median of all dates: white is here now, dark is where it usually sits.',
+  stack: 'Every exposure in this detector added up, so faint things build up and the noise drops.',
+  trail: 'This date in colour, earlier dates as a fading trail: a mover draws its own path.',
 };
 
 const SOURCE: Record<string, { cls: string; text: string; tip: string }> = {
@@ -199,9 +199,7 @@ function lines(): void {
   const ex = document.getElementById('frame-exif');
   if (ex) {
     ex.className = 'frame-exif';
-    const text = exif();
-    const extra = [stepNote, liveNote].filter(Boolean).join(' · ');
-    ex.textContent = extra ? `${text} · ${extra}` : text;
+    ex.textContent = exif();
   }
   const explain = document.getElementById('frame-explain');
   if (explain) {
@@ -214,7 +212,9 @@ function lines(): void {
     // The line keeps its height whether or not it has words, so the frame never grows (O-I5).
     load.className = 'frame-load';
     const busy = S.source === 'loading' && S.load;
-    load.textContent = busy ? 'Loading this spot. The sky keeps working meanwhile.' : stepNote ? `${stepNote}.` : '';
+    const note = [stepNote, liveNote].filter(Boolean).join(' · ');
+    load.textContent = busy ? 'Loading this spot. The sky keeps working meanwhile.' : note ? `${note}.` : '';
+    load.dataset.tip = load.textContent;
   }
 }
 

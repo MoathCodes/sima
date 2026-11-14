@@ -163,7 +163,19 @@ function dayRange(a: number, b: number): string {
 
 /** The pass or month a window is, in words: "Survey pass 2", "Month 5 (May 2025)". */
 export function passName(field: Field | null, window: number): string {
-  return field?.monthly ? `Month ${window + 1}` : `Survey pass ${window + 1}`;
+  return field?.monthly ? `Month ${window + 1} of ${field.windows}` : `Survey pass ${window + 1}`;
+}
+
+/**
+ * The date of a group: its own middle date, or for a date with no exposure in this detector, the
+ * middle of its pass from the other detectors' exposures (so the empty date still has a place on
+ * the scale and in the badge). NaN only when the pass has no exposure at all.
+ */
+export function groupDate(field: Field | null, g: Group): number {
+  if (Number.isFinite(g.mjd)) return g.mjd;
+  if (!field) return Number.NaN;
+  const m = field.frames.filter((f) => f.window === g.window).map((f) => f.mjd);
+  return m.length ? (Math.min(...m) + Math.max(...m)) / 2 : Number.NaN;
 }
 
 /** The groups the view on screen shows, for the badge and the data line. */
@@ -237,7 +249,7 @@ export function hud(): Hud | null {
   if (!g.frames.length) {
     return {
       letter: g.letter,
-      title: formatDate(g.mjd0, measure ? 'time' : 'month'),
+      title: formatDate(groupDate(field, g), 'month'),
       lines: [measure ? passName(field, g.window) : ''].filter(Boolean),
       warn: `No D${g.det} exposure on this date: nothing is filled in`,
     };
@@ -295,12 +307,13 @@ export function exif(): string {
   else parts.push(`Real SPHEREx data${releases ? `, ${releases}` : ''}`);
   const mjds = frames.map((x) => x.mjd).filter(Number.isFinite);
   const count = frames.length;
+  const noun = f.simulated ? 'picture' : 'exposure';
   if (S.mode === 'two' && groups.length === 2) {
     parts.push(
-      `${groups.map((g) => formatDate(g.mjd, 'month')).join(' and ')}, ${count} exposure${count === 1 ? '' : 's'}`,
+      `${groups.map((g) => formatDate(g.mjd, 'month')).join(' and ')}, ${count} ${noun}${count === 1 ? '' : 's'}`,
     );
   } else if (mjds.length) {
-    parts.push(`${dayRange(Math.min(...mjds), Math.max(...mjds))}, ${count} exposure${count === 1 ? '' : 's'}`);
+    parts.push(`${dayRange(Math.min(...mjds), Math.max(...mjds))}, ${count} ${noun}${count === 1 ? '' : 's'}`);
   } else {
     parts.push(`no D${S.det} exposure on this date`);
   }

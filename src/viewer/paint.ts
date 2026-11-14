@@ -153,9 +153,26 @@ export function imageOf(field: Field, key: string, pix: Float32Array, look: Look
   const c = cacheOf(field);
   const full = `${key}|${look.range.lo}|${look.range.hi}|${lutId(look.lut)}`;
   return remember(c.img, full, () => {
-    const rgba = toRgba(pix, look.range, look.lut);
-    return new ImageData(new Uint8ClampedArray(rgba), field.n, field.n);
+    const rgba = new Uint8ClampedArray(toRgba(pix, look.range, look.lut));
+    markMissing(pix, rgba);
+    return new ImageData(rgba, field.n, field.n);
   });
+}
+
+/**
+ * Pixels with no usable value (flagged, such as a saturated star's core, or not covered by the
+ * exposure) are drawn in the window's raised tone, not black, so they never pass for dark sky
+ * (H6). Beyond the field's grid the picture stays pure black.
+ */
+export const MISSING_RGB = [0x1a, 0x22, 0x40] as const; // --st-raise
+function markMissing(pix: Float32Array, rgba: Uint8ClampedArray): void {
+  for (let i = 0; i < pix.length; i++) {
+    if (Number.isFinite(pix[i] ?? Number.NaN)) continue;
+    rgba[i * 4] = MISSING_RGB[0];
+    rgba[i * 4 + 1] = MISSING_RGB[1];
+    rgba[i * 4 + 2] = MISSING_RGB[2];
+    rgba[i * 4 + 3] = 255;
+  }
 }
 
 const lutIds = new WeakMap<Uint8ClampedArray, number>();
@@ -222,6 +239,10 @@ export function twoDatesImage(
     for (let i = 0; i < a.length; i++) {
       const r = a[i] ?? Number.NaN;
       const g = b[i] ?? Number.NaN;
+      if (!Number.isFinite(r) && !Number.isFinite(g)) {
+        img.data.set([...MISSING_RGB, 255], i * 4);
+        continue;
+      }
       img.data[i * 4] = Number.isFinite(r) ? 255 * r : 0;
       img.data[i * 4 + 1] = Number.isFinite(g) ? 255 * g : 0;
       img.data[i * 4 + 2] = Number.isFinite(g) ? 255 * g : 0;
@@ -264,7 +285,11 @@ export function differenceImage(
       const v = pix[k] ?? Number.NaN;
       let t = Number.isFinite(v) ? 0.5 + 0.5 * Math.tanh(v / scale) : 0;
       if (p.invert && Number.isFinite(v)) t = 1 - t;
-      const g = Number.isFinite(v) ? Math.round(255 * t) : 0;
+      if (!Number.isFinite(v)) {
+        img.data.set([...MISSING_RGB, 255], k * 4);
+        continue;
+      }
+      const g = Math.round(255 * t);
       img.data.set([g, g, g, 255], k * 4);
     }
     return img;

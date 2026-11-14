@@ -16,7 +16,7 @@
  */
 import { S } from './state.ts';
 import { pause, setEpoch } from './playback.ts';
-import { passName, pair } from './render.ts';
+import { groupDate, passName, pair } from './render.ts';
 import { formatDate } from '../core/astro.ts';
 import type { Group } from '../core/types.ts';
 
@@ -24,12 +24,14 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 const DAY_MS = 86_400_000;
 const MJD_UNIX = 40587;
 
+/** A group's place in time (an empty date takes its pass's date). */
+const at = (g: Group) => groupDate(S.field, g);
 const mjdOf = (d: Date) => d.getTime() / DAY_MS + MJD_UNIX;
 const dateOf = (mjd: number) => new Date((mjd - MJD_UNIX) * DAY_MS);
 
 /** The time span the scale shows, MJD: the dates with a margin, and today if it is close. */
 function domain(groups: readonly Group[]): [number, number] | null {
-  const ok = groups.flatMap((g) => [g.mjd0, g.mjd1, g.mjd]).filter(Number.isFinite);
+  const ok = groups.flatMap((g) => [g.mjd0, g.mjd1, at(g)]).filter(Number.isFinite);
   if (!ok.length) return null;
   let lo = Math.min(...ok);
   let hi = Math.max(...ok);
@@ -76,11 +78,11 @@ export function paintDates(el: HTMLElement): void {
 
   // Passes: one bar per window, from halfway to the previous pass to halfway to the next.
   const cur = groups[S.epoch];
-  const head = cur?.mjd ?? t0;
+  const head = cur ? at(cur) : t0;
   const windows = [...new Set(groups.map((g) => g.window))].sort((a, b) => a - b);
   const centre = (w: number) => {
     const gs = groups.filter((g) => g.window === w);
-    const v = gs.flatMap((g) => [g.mjd0, g.mjd1]).filter(Number.isFinite);
+    const v = gs.flatMap((g) => [g.mjd0, g.mjd1, at(g)]).filter(Number.isFinite);
     return v.length ? (Math.min(...v) + Math.max(...v)) / 2 : Number.NaN;
   };
   const centres = windows.map(centre);
@@ -105,26 +107,28 @@ export function paintDates(el: HTMLElement): void {
       if (left - lastLeft < 64) return;
       lastLeft = left;
       const first = groups.find((g) => g.window === w);
-      const label = S.field?.monthly && first ? formatDate(first.mjd, 'month') : passName(S.field, w).replace('Survey p', 'P');
+      const label = S.field?.monthly && first ? formatDate(at(first), 'month') : passName(S.field, w).replace('Survey p', 'P');
       parts.push(`<span class="ds-passname" style="left:${x(c)}">${label}</span>`);
     });
     groups.forEach((g, i) => {
-      if (!Number.isFinite(g.mjd)) return;
+      const t = at(g);
+      if (!Number.isFinite(t)) return;
       parts.push(
-        `<button class="ds-dot${g.frames.length ? '' : ' empty'}" style="left:${x(g.mjd)}" data-epoch="${i}" tabindex="-1" aria-label="${formatDate(g.mjd, 'time')}"></button>`,
+        `<button class="ds-dot${g.frames.length ? '' : ' empty'}" style="left:${x(t)}" data-epoch="${i}" tabindex="-1" aria-label="${formatDate(t, 'day')}${g.frames.length ? '' : `, no D${g.det} exposure`}"></button>`,
       );
     });
-    if (cur && Number.isFinite(cur.mjd)) {
-      parts.push(`<span class="ds-playhead" style="left:${x(cur.mjd)}"></span>`);
+    if (cur && Number.isFinite(at(cur))) {
+      parts.push(`<span class="ds-playhead" style="left:${x(at(cur))}"></span>`);
     }
   } else {
     const [ref] = pair();
     groups.forEach((g, i) => {
-      if (!Number.isFinite(g.mjd)) return;
+      const t = at(g);
+      if (!Number.isFinite(t)) return;
       const on = i === S.epoch;
       const isRef = S.mode === 'two' && g === ref && !on;
       parts.push(
-        `<span class="ds-stem" style="left:${x(g.mjd)}"></span><button class="ds-stop${on ? ' on' : ''}${isRef ? ' ref' : ''}${g.frames.length ? '' : ' empty'}" style="left:${x(g.mjd)};--tint:var(--p${(g.window % 4) + 1})" data-epoch="${i}" aria-label="Date ${g.letter}, ${formatDate(g.mjd, 'month')}${isRef ? ', the red date in Two dates' : ''}" aria-current="${on}">${g.letter}</button>`,
+        `<span class="ds-stem" style="left:${x(t)}"></span><button class="ds-stop${on ? ' on' : ''}${isRef ? ' ref' : ''}${g.frames.length ? '' : ' empty'}" style="left:${x(t)};--tint:var(--p${(g.window % 4) + 1})" data-epoch="${i}" aria-label="Date ${g.letter}, ${formatDate(t, 'month')}${g.frames.length ? '' : `, no D${g.det} exposure`}${isRef ? ', the red date in Two dates' : ''}" aria-current="${on}">${g.letter}</button>`,
       );
     });
   }
@@ -141,8 +145,14 @@ export function watchDates(el: HTMLElement): void {
     const r = el.getBoundingClientRect();
     const mjd = dom[0] + ((clientX - r.left) / r.width) * (dom[1] - dom[0]);
     let best = 0;
+    const b = S.groups[best];
+    let bestD = b ? Math.abs(at(b) - mjd) : Infinity;
     S.groups.forEach((g, i) => {
-      if (Math.abs(g.mjd - mjd) < Math.abs((S.groups[best]?.mjd ?? Infinity) - mjd)) best = i;
+      const d = Math.abs(at(g) - mjd);
+      if (d < bestD || !Number.isFinite(bestD)) {
+        best = i;
+        bestD = d;
+      }
     });
     return best;
   };
@@ -158,7 +168,7 @@ export function watchDates(el: HTMLElement): void {
     const f = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
     const i = nearest(clientX);
     const g = i === null ? null : S.groups[i];
-    t.textContent = g ? formatDate(g.mjd, S.level === 'measure' ? 'time' : 'day') : formatDate(dom[0] + f * (dom[1] - dom[0]), 'day');
+    t.textContent = g ? formatDate(at(g), S.level === 'measure' ? 'time' : 'day') : formatDate(dom[0] + f * (dom[1] - dom[0]), 'day');
     t.style.left = `${f * 100}%`;
     t.hidden = false;
   };
