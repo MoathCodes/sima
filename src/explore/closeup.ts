@@ -184,20 +184,18 @@ function inset(
   ctx.lineWidth = 1;
   ctx.setLineDash(sim ? [5, 4] : []);
   ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.side - 1, b.side - 1);
-  const words = [
-    sim ? 'Simulated' : '',
-    `Close-up ×${zoom.toFixed(zoom < 10 ? 1 : 0)}`,
-    planet ? 'contrast raised here only' : '',
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const lines = [
+    `${sim ? 'Simulated · ' : ''}Close-up ×${zoom.toFixed(1)}`,
+    planet ? 'Contrast raised here only' : '',
+  ].filter(Boolean);
   ctx.font = `500 12px ${token('--font')}`;
-  const w = Math.min(b.side - 8, ctx.measureText(words).width + 12);
+  const w = Math.min(b.side - 8, Math.max(...lines.map((l) => ctx.measureText(l).width)) + 12);
+  const h = 6 + 16 * lines.length;
   ctx.fillStyle = token('--badge-bg');
-  ctx.fillRect(b.x + 4, b.y + b.side - 24, w, 20);
+  ctx.fillRect(b.x + 4, b.y + b.side - 4 - h, w, h);
   ctx.fillStyle = token('--st-ink');
   ctx.textBaseline = 'middle';
-  ctx.fillText(words, b.x + 10, b.y + b.side - 14, b.side - 20);
+  lines.forEach((l, i) => ctx.fillText(l, b.x + 10, b.y + b.side - 4 - h + 11 + 16 * i));
   ctx.restore();
   void view;
 }

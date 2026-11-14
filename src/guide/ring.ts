@@ -10,7 +10,10 @@ import { currentView } from '../viewer/render.ts';
 import { toScreen } from '../sky/sky.ts';
 import { onFrameMove } from '../shell/shell.ts';
 
-/** Something to point at: a part by its `data-guide` name, or a spot on the sky. */
+/**
+ * Something to point at: a part by its `data-guide` name (or several, comma separated: the first
+ * on screen), or a spot on the sky.
+ */
 export type PointAt = { guide: string } | { ra: number; dec: number; label?: string };
 
 export interface RingOptions {
@@ -65,6 +68,18 @@ export function find(name: string): HTMLElement | null {
   return null;
 }
 
+/**
+ * The first part on screen of several names given as one string, comma separated
+ * ("headline,measure-panel"): the more exact part when it is there, else the broader one.
+ */
+export function findAny(names: string): HTMLElement | null {
+  for (const name of names.split(',')) {
+    const el = find(name.trim());
+    if (el) return el;
+  }
+  return null;
+}
+
 /** Shows or hides `#tour` as a whole: it is shown while any of its parts is. */
 export function sync(): void {
   const tour = document.getElementById('tour');
@@ -81,7 +96,7 @@ function loop(): void {
 }
 
 function boxOf(p: PointAt): DOMRect | null {
-  if ('guide' in p) return find(p.guide)?.getBoundingClientRect() ?? null;
+  if ('guide' in p) return findAny(p.guide)?.getBoundingClientRect() ?? null;
   const view = currentView();
   const canvas = document.querySelector<HTMLCanvasElement>('#frame-pic canvas[data-picture]');
   const at = view?.skyToPic(p.ra, p.dec);

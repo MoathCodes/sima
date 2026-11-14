@@ -316,6 +316,8 @@ function showResult(box: HTMLElement, t: TaskCopy & { key: string; simulated: bo
     num.hidden = false;
     if (result) num.innerHTML = result;
     else num.textContent = MEASURING;
+    // The big type is for a measured number only.
+    num.className = result.startsWith('<b>') ? 'task-big' : 'task-line';
   }
   const cap = box.querySelector<HTMLElement>('[data-caption]');
   if (!cap) return;

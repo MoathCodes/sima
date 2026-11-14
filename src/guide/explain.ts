@@ -78,8 +78,9 @@ export function explainScreen(): void {
     const tag = document.createElement('span');
     tag.className = 'explain-tag';
     tag.textContent = NAMES[name] ?? PARTS.find((p) => p[0] === name)?.[1] ?? name;
-    tag.style.left = `${Math.round(r.left + 6)}px`;
-    tag.style.top = `${Math.round(r.top + 6)}px`;
+    // On the part's top edge, so it covers as little of the part as it can.
+    tag.style.left = `${Math.round(r.left + 10)}px`;
+    tag.style.top = `${Math.round(Math.max(2, r.top - 10))}px`;
     root.append(tag);
   }
   root.hidden = false;

@@ -23,7 +23,7 @@ import {
   setLevel,
   taskDone,
 } from '../explore/game.ts';
-import { find, ring, sync } from './ring.ts';
+import { findAny, ring, sync } from './ring.ts';
 import { placeBeside, type Box } from './place.ts';
 import { readStore, saveStore, type TourId } from './store.ts';
 
@@ -172,15 +172,9 @@ const NUMBERS: Tour = {
       body: 'Measure opens with one number measured from these pictures, and a label that says whether it matches the star catalogues.',
       action: 'Point at a word with a dotted line to read what it means.',
       ring: ['headline', 'measure-panel'],
-      done: () => {
-        const tip = document.getElementById('tooltip');
-        const panel = document.getElementById('measure');
-        return (
-          !!tip?.matches(':popover-open') &&
-          !!panel &&
-          (panel.matches(':hover') || panel.contains(document.activeElement))
-        );
-      },
+      done: () =>
+        !!document.getElementById('tooltip')?.matches(':popover-open') &&
+        !!document.querySelector('#measure .term:hover, #measure .term:focus'),
     },
     {
       title: 'All the numbers',
@@ -436,8 +430,7 @@ function render(): void {
     card.querySelector<HTMLElement>('[data-hint]')?.focus();
   });
   if (!done) {
-    const name = step.ring.find((g) => find(g)) ?? step.ring[0]!;
-    ring({ guide: name }, { dim: true, holes: step.holes, onBox: (b) => placed(b) });
+    ring({ guide: step.ring.join(',') }, { dim: true, holes: step.holes, onBox: (b) => placed(b) });
   }
   place(true);
 }
@@ -489,8 +482,7 @@ function place(force = false): void {
 /** The card that holds the ringed part, if any. */
 function holderBox(): DOMRect | null {
   const step = tour?.steps[at];
-  const name = step?.ring.find((g) => find(g));
-  const el = name ? find(name)?.closest<HTMLElement>('[data-card]') : null;
+  const el = step ? findAny(step.ring.join(','))?.closest<HTMLElement>('[data-card]') : null;
   return el ? el.getBoundingClientRect() : null;
 }
 
