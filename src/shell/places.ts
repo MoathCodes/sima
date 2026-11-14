@@ -48,9 +48,14 @@ export async function startPlaces(): Promise<void> {
   const mod = (await import('../data/places.json')) as unknown as { default: PlacesCatalogue };
   const { cat } = setCatalogue(mod.default);
   setDots(
-    cat.places.map(
-      (p): Dot => ({ id: p.id, ra: p.ra, dec: p.dec, name: nameOf(p), tier: p.tier, kind: p.kind }),
-    ),
+    cat.places.map((p): Dot => ({
+      id: p.id,
+      ra: p.ra,
+      dec: p.dec,
+      name: nameOf(p),
+      tier: p.tier,
+      kind: p.kind,
+    })),
   );
   addSearchSource({ name: 'places', search });
 }
@@ -224,11 +229,17 @@ function fillMenu(): void {
   );
 
   const input = el<HTMLInputElement>('input.field', {
+    'data-guide': 'places-save-name',
     placeholder: 'Name it',
     'aria-label': 'Name for where the sky is now',
     maxlength: '60',
   });
-  const save = el('button.btn', { type: 'submit' }, iconNode(icon('bookmark')), 'Save');
+  const save = el(
+    'button.btn',
+    { type: 'submit', 'data-guide': 'places-save' },
+    iconNode(icon('bookmark')),
+    'Save',
+  );
   const form = el('form.pl-save', {}, input, save);
   const list = el('div.pl-saved');
   form.addEventListener('submit', (e) => {
@@ -265,7 +276,7 @@ function showSaved(box: HTMLElement, menu: HTMLElement): void {
     ...all.map((s, i) => {
       const go = el(
         'button.menu-item.pl-saved-go',
-        {},
+        { 'data-guide': 'saved-place' },
         el('span.window.pl-tile', {}, iconNode(icon('bookmark'))),
         el('span.pl-row-name', {}, s.name),
       );

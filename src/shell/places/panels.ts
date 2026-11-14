@@ -152,7 +152,11 @@ function drawKind(scrollTop = 0): void {
 
   const filters = el('div.pl-filters', { role: 'group', 'aria-label': 'Show' });
   v.chip.filters.forEach((f, i) => {
-    const b = el('button.btn.text.pl-filter', { 'aria-pressed': String(i === v.filter) }, f.name);
+    const b = el(
+      'button.btn.text.pl-filter',
+      { 'aria-pressed': String(i === v.filter), 'data-guide': `list-filter-${i}` },
+      f.name,
+    );
     b.addEventListener('click', () => {
       v.filter = i;
       v.shown = PAGE;
@@ -166,7 +170,14 @@ function drawKind(scrollTop = 0): void {
     ['Whole sky', false],
     ['In this view', true],
   ] as const) {
-    const b = el('button', { 'aria-pressed': String(v.inView === inside) }, label);
+    const b = el(
+      'button',
+      {
+        'aria-pressed': String(v.inView === inside),
+        'data-guide': inside ? 'list-in-view' : 'list-whole-sky',
+      },
+      label,
+    );
     b.addEventListener('click', () => {
       v.inView = inside;
       v.shown = PAGE;
@@ -199,7 +210,8 @@ function drawKind(scrollTop = 0): void {
     : v.inView
       ? `${count} in this view, best known first.`
       : `${count} ${v.chip.noun} on the map, best known first. Every one shows as a dot.`;
-  for (const p of places.slice(0, v.shown)) rows.append(placeRow(data, p, () => openCard(p, backToList(v))));
+  for (const p of places.slice(0, v.shown))
+    rows.append(placeRow(data, p, () => openCard(p, backToList(v))));
   if (places.length > v.shown) {
     const more = el(
       'button.btn.text.pl-more-rows',
@@ -243,7 +255,7 @@ function placeRow(data: Loaded, p: Place, choose: () => void): HTMLElement {
   if (p.names.arabic) name.append(' ', arabicSpan(p.names.arabic));
   const row = el(
     'button.menu-item.pl-row',
-    {},
+    { 'data-guide': 'list-row' },
     el('span.window.pl-tile', {}, iconNode(icon(kindIcon(p.kind)))),
     el('span.pl-row-text', {}, name, el('span.line', {}, rowLine(data.cat, p))),
   );
@@ -276,12 +288,16 @@ function drawTours(): void {
   if (!l) return;
   const body = frame(l, 'Tours', null);
   body.append(
-    el('p.pl-note', {}, 'Short trips around the sky. Each stop flies there and says why it matters.'),
+    el(
+      'p.pl-note',
+      {},
+      'Short trips around the sky. Each stop flies there and says why it matters.',
+    ),
   );
   for (const t of TOURS) {
     const row = el(
       'button.menu-item.pl-row',
-      {},
+      { 'data-guide': `tour-${t.id}` },
       el('span.window.pl-tile', {}, iconNode(icon('trail'))),
       el(
         'span.pl-row-text',
@@ -322,7 +338,7 @@ function drawTour(): void {
   });
   const play = el(
     'button.btn.primary.pl-play',
-    {},
+    { 'data-guide': 'tour-play' },
     iconNode(icon(v.playing ? 'pause' : 'play')),
     v.playing ? 'Pause' : v.at < 0 ? 'Play the tour' : 'Play',
   );
@@ -356,7 +372,7 @@ function drawTour(): void {
     );
     const row = el(
       'div.pl-stop',
-      { 'aria-current': i === v.at ? 'step' : undefined },
+      { 'aria-current': i === v.at ? 'step' : undefined, 'data-guide': `tour-stop-${i + 1}` },
       el('span.window.pl-cut-box', {}, canvas),
       text,
     );
@@ -395,7 +411,10 @@ function drawTour(): void {
 }
 
 /** Draws each stop's picture when its row scrolls into view. */
-function drawPictures(root: HTMLElement, pictures: { canvas: HTMLCanvasElement; p: Place }[]): void {
+function drawPictures(
+  root: HTMLElement,
+  pictures: { canvas: HTMLCanvasElement; p: Place }[],
+): void {
   const seen = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
@@ -513,9 +532,9 @@ export function openCard(
     );
   }
 
-  const look = el('button.btn.primary', {}, 'Look with the frame');
+  const look = el('button.btn.primary', { 'data-guide': 'card-look' }, 'Look with the frame');
   look.addEventListener('click', () => lookWithFrame(p));
-  const zoom = el('button.btn', {}, 'Zoom to it');
+  const zoom = el('button.btn', { 'data-guide': 'card-zoom' }, 'Zoom to it');
   zoom.addEventListener('click', () => flyFree(p.ra, p.dec, zoomFov(p)));
   body.append(el('div.pl-actions', {}, look, zoom));
 
@@ -545,7 +564,12 @@ export function openCard(
     for (const f of rows) {
       dl.append(
         el('dt', {}, f.label),
-        el('dd', {}, f.value, f.detail ? el('span.pl-detail', {}, f.detail) : null),
+        el(
+          'dd',
+          { 'data-fact': f.label },
+          f.value,
+          f.detail ? el('span.pl-detail', {}, f.detail) : null,
+        ),
       );
     }
     body.append(dl);

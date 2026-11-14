@@ -141,7 +141,9 @@ export function shortSource(s: PlaceSource): string {
 /** "SIMBAD and OpenNGC": the short names of a fact's sources. */
 export function sourceWords(cat: PlacesCatalogue, p: Place, key: FactKey): string {
   const names = [...new Set(sourcesOf(cat, p, key).map(shortSource))];
-  return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+  return names.length <= 1
+    ? (names[0] ?? '')
+    : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
 }
 
 /** Every source a card names at its foot, each once, in a stable order. */
@@ -352,7 +354,8 @@ export function arabicOf(cat: PlacesCatalogue, p: Place): ArabicName | null {
 
 /** What to try in the frame, by kind. Instructions only: no claim about the object (H9). */
 const TRY: Partial<Record<PlaceKind, string>> = {
-  'variable-star': 'Its catalogue class is a changing star. Play the dates and compare how bright it looks.',
+  'variable-star':
+    'Its catalogue class is a changing star. Play the dates and compare how bright it looks.',
   'brown-dwarf': 'Try the longer wavelengths on the bar, then play the dates and compare.',
   'fast-star': 'Play the dates and watch whether it shifts against the stars around it.',
   'nearby-star': 'Play the dates and watch whether it shifts against the stars around it.',
@@ -414,7 +417,10 @@ export function firstSentence(text: string): string {
   return m ? m[0] : t;
 }
 
-const ranks = new WeakMap<PlacesCatalogue, { fastest: Place | null; nearest: Place | null; n: number }>();
+const ranks = new WeakMap<
+  PlacesCatalogue,
+  { fastest: Place | null; nearest: Place | null; n: number }
+>();
 
 function rankOf(cat: PlacesCatalogue) {
   let r = ranks.get(cat);
@@ -451,7 +457,9 @@ export function noteSentence(cat: PlacesCatalogue, p: Place, say: Say): string |
     }
     case 'motion': {
       const v = motionPerYear(p);
-      return v !== null && v >= 0.1 ? `Moves ${v.toFixed(2)}″ a year across the sky${from('properMotion')}.` : null;
+      return v !== null && v >= 0.1
+        ? `Moves ${v.toFixed(2)}″ a year across the sky${from('properMotion')}.`
+        : null;
     }
     case 'arabic': {
       const a = arabicOf(cat, p);

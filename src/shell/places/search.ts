@@ -167,7 +167,8 @@ function level(q: Key, k: Key, fuzzy: boolean): number {
   let d = within(q.compact, k.compact, allow);
   d = Math.min(d, within(q.compact, k.compact.slice(0, q.compact.length), allow));
   for (const w of k.words) {
-    if (Math.abs(w.length - q.compact.length) <= allow) d = Math.min(d, within(q.compact, w, allow));
+    if (Math.abs(w.length - q.compact.length) <= allow)
+      d = Math.min(d, within(q.compact, w, allow));
   }
   return d <= allow ? 0.55 - 0.08 * d : 0;
 }
