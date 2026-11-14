@@ -500,7 +500,8 @@ export function linkTogether(a: Member, b: Member, kinds: Partial<Omit<LinkGroup
   setLinkOf(a, g.id);
   setLinkOf(b, g.id);
   tidyLinks();
-  follow(a, b, g);
+  // `a` joins `b`: every other member takes `b`'s date, spot or detector.
+  for (const m of mates(b)) follow(m, b, g);
   changed('frames');
   for (const f of list) hooks.head(f);
   return g;
