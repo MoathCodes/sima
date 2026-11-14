@@ -121,7 +121,7 @@ def parse_wgsn(text):
 
 def parse_arabic(text):
     soup = BeautifulSoup(text, "html.parser")
-    output = {}
+    output, identified = {}, {}
     for table in soup.select("table.wikitable"):
         spans = {}
         for tr in table.select("tr"):
@@ -139,9 +139,22 @@ def parse_arabic(text):
                     spans[col] = (value, int(td["rowspan"])-1)
                 col += 1
             if len(cells) >= 5 and cells[0] != "Common name":
-                output[cells[0].casefold()] = {"transliteration":cells[1],
-                    "meaning":cells[2], "arabic":cells[3]}
-    return output
+                facts = {"transliteration":cells[1], "meaning":cells[2], "arabic":cells[3]}
+                # Link titles retain sourced spellings such as Suhail (star).
+                first = tr.find(["th", "td"])
+                variants = [re.sub(r" \(star\)$", "", a["title"])
+                            for a in first.select('a[title$=" (star)"]')]
+                if variants:
+                    facts["transliteration"] = "; ".join(dict.fromkeys([cells[1]] + variants))
+                for variant in variants:
+                    identified.setdefault(variant.casefold(), facts)
+                output[cells[0].casefold()] = facts
+                # Some historical names identify several stars in the last column.
+                # Match those exact linked names too; direct common-name rows win.
+                last = tr.find_all(["th", "td"], recursive=False)[-1]
+                for a in last.select("a[title]"):
+                    identified.setdefault(a["title"].casefold(), facts)
+    return identified | output
 
 def ngc_name(s):
     return re.sub(r"^(NGC|IC)0*(\d+)", lambda m:m[1]+" "+str(int(m[2])), s)
@@ -158,6 +171,10 @@ def kind_of(row, ngc=None):
     if ngc:
         t = ngc["Type"]
         if t == "G":return galaxy_kind(ngc["Hubble"])
+        # Cl+N contains both a cluster and nebulosity. Let SIMBAD distinguish
+        # a nebula record from its embedded cluster instead of forcing OCl.
+        if t == "Cl+N" and row["otype"].strip() in {"HII","EmO","ISM","SFR","MoC","RNe"}:
+            return kind_of(row)
         mapping = {"OCl":"open-cluster","GCl":"globular-cluster","Cl+N":"open-cluster",
                    "HII":"emission-nebula","EmN":"emission-nebula","Neb":"emission-nebula",
                    "RfN":"reflection-nebula","DrkN":"dark-nebula","PN":"planetary-nebula",
@@ -201,7 +218,7 @@ def build():
     arabic = parse_arabic(fetch(ARABIC))
     wgsn = parse_wgsn(fetch(WGSN))
     ngc = list(csv.DictReader(io.StringIO(fetch(NGC)), delimiter=";"))
-    allowed = {"G","OCl","GCl","Cl+N","HII","EmN","RfN","DrkN","PN","SNR"}
+    allowed = {"G","OCl","GCl","Cl+N","HII","EmN","Neb","RfN","DrkN","PN","SNR"}
     ngc = [r for r in ngc if r["Type"] in allowed]
     ngc.sort(key=lambda r:(not bool(r["M"]),not bool(r["Common names"]),
              number(r["V-Mag"]) or number(r["B-Mag"]) or 99,r["Name"]))
@@ -209,7 +226,7 @@ def build():
     chosen = {r["Name"]:r for r in ngc[:1550]}
     for r in ngc:
         if r["Type"] in {"RfN","DrkN","SNR"}:chosen[r["Name"]] = r
-    names = [ngc_name(n) for n in sorted(chosen)] + list(TARGETS)
+    names = [ngc_name(n) for n in sorted(chosen)] + ["M 45"] + list(TARGETS)
     # Official names resolve through SIMBAD, so all shipped positions share one frame.
     names += [r["name"] for r in wgsn]
     resolved = resolve(names)
@@ -247,6 +264,8 @@ def build():
         if n and n["Common names"]:common=n["Common names"].split(",")[0]
         if not common:
             common=next((a[5:] for a in aliases if a.startswith("NAME ")),None)
+        if n and n["M"]:
+            aliases.append("M "+str(int(n["M"])))
         aliases=[re.sub(r"^(NAME |V\* |\* )","",a) for a in aliases]
         if oid in target_ids:
             common = {"barnard":"Barnard's Star","eps-indi-b":"Epsilon Indi B",
@@ -259,7 +278,7 @@ def build():
         kind=kind_of(r,n)
         p={"id":target_ids.get(oid,"simbad-"+str(oid)), "simbad":clean(r["main_id"]),
            "names":names_obj,"kind":kind,"ra":round(r["ra"],8),"dec":round(r["dec"],8),
-           "tier":4,"sources":{"names":[0],"kind":[1 if n else 0],"position":[0]}}
+           "tier":4,"sources":{"names":[0],"kind":([0,1] if n and n["Type"] == "Cl+N" else [1 if n else 0]),"position":[0]}}
         if official:p["sources"]["names"].append(2)
         if n:p["sources"]["names"].append(1)
         if a:
@@ -308,6 +327,25 @@ def build():
     print("Kinds:",dict(Counter(p["kind"] for p in places)))
     print("Tiers:",dict(Counter(p["tier"] for p in places)))
 
+def introduction(content):
+    # Keep the first prose paragraph even when it is short. Continue into the
+    # next paragraph for two sentences, so a pronoun keeps its named subject.
+    sentences = []
+    for p in content.find_all("p"):
+        if p.find_parent("table"):
+            continue
+        text = clean(p.get_text(" ", strip=True))
+        if not text:
+            continue
+        sentences.extend(re.split(r"(?<=[.!?])\s+", text))
+        if len(sentences) >= 2:
+            break
+    excerpt = " ".join(sentences[:2])
+    # Never ship an orphaned pronoun when the source itself lacks a lead.
+    if re.match(r"^(It|Its|This|That|They|Their|These|Those|He|She)\b", excerpt, re.I):
+        return None
+    return excerpt or None
+
 def enrich(places,sources):
     # Only exact article titles from named entries; never fuzzy-join sky objects.
     selected = [p for p in places if p["tier"] == 0]
@@ -324,16 +362,14 @@ def enrich(places,sources):
             soup = BeautifulSoup(html,"html.parser")
             content = soup.select_one(".mw-parser-output")
             if not content:continue
-            paragraph = next((clean(x.get_text(" ",strip=True)) for x in content.find_all("p")
-                              if len(clean(x.get_text()))>70),None)
+            paragraph = introduction(content)
             # An exact word can name an unrelated topic (for example a beehive).
             # Do not attach that topic's text or Wikidata label to a sky object.
             if not paragraph or not re.search(r"\b(star|stars|galaxy|galaxies|nebula|cluster|constellation|brown dwarf)\b",paragraph,re.I):
                 print("No astronomical introduction:",title,flush=True)
                 continue
             if paragraph:
-                sentences = re.split(r"(?<=[.!?])\s+",paragraph)
-                p["text"] = " ".join(sentences[:2])
+                p["text"] = paragraph
                 idx=len(sources)
                 sources.append(source("Simple English Wikipedia (CC BY-SA 4.0)",url))
                 p["sources"]["text"]=[idx]
