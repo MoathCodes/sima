@@ -1,0 +1,31 @@
+{
+  "name": "sima",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Sima (سيما): NASA SPHEREx's infrared sky, the same spot on separate dates.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "seed:sky": "node scripts/seed-tiles.ts",
+    "smoke": "node tests/smoke/run.ts"
+  },
+  "dependencies": {
+    "aladin-lite": "3.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "playwright-core": "1.63.0",
+    "prettier": "3.10.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.8"
+  }
+}

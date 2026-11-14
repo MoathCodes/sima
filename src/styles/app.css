@@ -1,0 +1,1023 @@
+/* ==========================================================================================
+   Sima (سيما): tokens, fonts, base rules, shared components and the page skeleton.
+   Owner: lane F. Every value comes from DESIGN.md, which is binding word for word.
+
+   Rules for every lane (docs/lanes.md):
+   - Use these tokens. Never type a colour, radius, shadow or z-index by hand.
+   - Style only your own classes, in your own stylesheet. The shared classes below (.btn, .seg,
+     .tabs, .switch, .card, .popover, .tooltip, .pill, …) are used as they are; to change one,
+     ask lane F.
+   - The mount points (#ids in index.html) are placed in the "Page skeleton" section at the end.
+     The lane that owns a mount point styles what is inside it.
+   ========================================================================================== */
+
+/* ------------------------------------------------------------------------------------------
+   Fonts. SIL Open Font License 1.1: see fonts/OFL-Archivo.txt and fonts/OFL-Reem-Kufi.txt.
+   Downloaded from Google Fonts (css2 API). No font host is contacted at run time.
+   ------------------------------------------------------------------------------------------ */
+
+/* Archivo, variable weight 100 to 900. Latin covers µ ′ ″ − · × … and the arrows ↑ ↓. */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/archivo-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* Archivo, extended Latin (names such as Añañuca or Ögmios). Loaded only when a page uses it. */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/archivo-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+/* Reem Kufi 600: the wordmark (سيما, Sima) and the Arabic name in About. */
+@font-face {
+  font-family: 'Reem Kufi';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./fonts/reem-kufi-arabic-600.woff2') format('woff2');
+  unicode-range:
+    U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011,
+    U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+}
+@font-face {
+  font-family: 'Reem Kufi';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./fonts/reem-kufi-latin-600.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ------------------------------------------------------------------------------------------
+   Tokens
+   ------------------------------------------------------------------------------------------ */
+:root {
+  /* Colour: the chrome is two inks, card and ink (The Two Inks Rule). */
+  --action: #2740e0; /* Press Ultramarine: can be pressed; links; focus; caret; chosen tab; switch on */
+  --action-hi: #1a2fc0; /* hover fill of a primary button */
+  --action-soft: #e1e4fa; /* a control that is on or open; its text turns --action */
+  --on-action: #ffffff; /* text and icons on ultramarine */
+  --mark: #ff4a9c; /* Marker Magenta: where the user looks, on the sky and in dark windows */
+  --mark-ink: #c2135f; /* the same on the card: date playhead, current stop ring, wavelength handle */
+  --card: #f6f3ec; /* every panel */
+  --card-2: #ece7da; /* quiet fills, hover rows, segmented trough, the Share field */
+  --card-3: #dfd8c8; /* hover of a quiet fill, switch off, minor ticks, unplayed date scale */
+  --rule: #d5cebd; /* 1px lines between sections and table rows */
+  --ink: #0f1a3c; /* main text and icons; tooltip and toast fill */
+  --ink-2: #414c75; /* supporting text, unselected choices, played date scale */
+  --ink-3: #626c92; /* group labels, hints, placeholders, scale lettering, major ticks */
+
+  /* Colour: the sky and the dark data windows. */
+  --sky: #05070d; /* the page behind the map */
+  --st-bg: #090d1c; /* Window Night: background of a data window */
+  --st-raise: #1a2240; /* raised fills in a data window */
+  --st-line: #27305a; /* grid lines in a data window */
+  --st-ink: #eef0f8; /* text in a data window, strongest; catalogue marks */
+  --st-ink-2: #aab2d0;
+  --st-ink-3: #7c86ab;
+  --st-accent: var(--mark); /* canvas code reads magenta under this name */
+  --st-accent-2: #ffb03a; /* Path Amber: worked out, not observed; simulated patch on the sky */
+  --badge-bg: rgba(9, 13, 28, 0.74); /* labels over the picture */
+  --note-bg: rgba(5, 7, 13, 0.82); /* sky notes */
+
+  /* Colour: data only (The Rainbow Rule). Never chrome. */
+  --d1: #8f7cff; /* detector hues, shortest wavelength first */
+  --d2: #4fa8ff;
+  --d3: #3fd0c0;
+  --d4: #a8d34f;
+  --d5: #f4b740;
+  --d6: #ff7650;
+  --p1: #e6e9f7; /* pass tints, oldest survey pass first */
+  --p2: #c3cbea;
+  --p3: #9fabd8;
+  --p4: #8291c9;
+
+  /* Colour: status labels, always with words (The Honesty Rule). */
+  --good: #12754a;
+  --good-soft: #dcefe3;
+  --warn: #8a5200;
+  --warn-soft: #f5e5c4;
+  --bad: #b3262f;
+  --bad-soft: #f7dedd;
+
+  /* Type. Five interface sizes: 11, 12, 14, 17, 25px (The Five Sizes Rule). */
+  --font: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-wordmark: 'Reem Kufi', 'Archivo', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; /* code only */
+  --text-headline: 600 25px/1.15 var(--font); /* pair with --tracking-headline */
+  --tracking-headline: -0.02em;
+  --text-title: 600 17px/1.2 var(--font);
+  --text-body: 400 14px/1.45 var(--font);
+  --text-control: 500 14px/1.45 var(--font);
+  --text-label: 500 12px/1.4 var(--font);
+  --text-group: 600 12px/1.4 var(--font); /* group labels inside panels, in --ink-3 */
+  --text-scale: 400 11px/1 var(--font); /* scale and axis lettering only */
+  --text-reading: 400 16px/1.6 var(--font); /* About's long text */
+  --reading-measure: 72ch;
+  --text-wordmark: 600 24px/1 var(--font-wordmark); /* سيما */
+  --text-wordmark-latin: 600 19px/1 var(--font-wordmark); /* Sima */
+
+  /* Corners: rounder as the surface gets bigger. */
+  --r-tip: 7px; /* tooltips, text buttons, the badge on the picture */
+  --r-window: 8px; /* data windows, small icon buttons, segmented choices */
+  --r-control: 9px; /* buttons, icon buttons, list rows */
+  --r-seg: 10px; /* segmented trough */
+  --r-panel: 13px; /* chrome cards on the sky: wordmark, search, actions, rail, popovers */
+  --r-frame: 14px; /* the frame and its panels: Measure, tools, overlays */
+  --r-bar: 16px; /* the bar, dialogs, the welcome card */
+  --r-pill: 999px;
+  --r-stop: 6px; /* lettered date stop */
+  --r-handle: 5px; /* wavelength handle */
+
+  /* Spacing. */
+  --gap-group: 2px; /* buttons in a group */
+  --gap-tight: 6px; /* related items */
+  --inset: 10px; /* the frame's padding */
+  --bar-gap: 14px;
+  --gutter: 16px; /* cards from the window's left and right edges */
+  --top: 14px; /* cards from the window's top */
+  --pad-group: 5px; /* around a group of buttons or rows in a card */
+  --pad-panel: 14px 16px; /* Measure panels */
+  --pad-dialog: 18px;
+
+  /* Sizes. */
+  --h-control: 34px; /* button, small field */
+  --h-text-btn: 28px;
+  --h-seg: 32px; /* segmented choice */
+  --h-top: 46px; /* wordmark card, search field, top-right card */
+  --size-play: 46px;
+  --size-icon-btn: 36px;
+  --size-icon-btn-sm: 30px; /* frame header, close buttons */
+  --size-icon: 20px; /* icons: line drawings, 1.6px stroke, round ends */
+  --size-icon-in-btn: 18px; /* optional icon 6px before a button label */
+  --icon-stroke: 1.6px;
+  --switch-w: 34px;
+  --switch-h: 20px;
+  --switch-sm-w: 24px; /* "Same wavelength only" on the bar */
+  --switch-sm-h: 14px;
+  --stop: 20px; /* lettered date stop */
+  --visit-dot: 8px; /* Measure: one ink dot per visit */
+  --playhead-knob: 14px;
+  --handle-w: 14px; /* wavelength handle */
+  --handle-h: 20px;
+  --band-strip: 6px; /* the six detector segments */
+  --band-gap: 2px;
+  --pass-bar: 4px;
+  --date-scale-h: 60px;
+  --edge-tint: 3px; /* pass tint inside the picture's edge while it flips */
+  --source-dot: 7px; /* the dot of the frame's source line */
+  --pin: 14px; /* saved and starter places on the sky */
+  --tether: 1.5px; /* patch to frame: dotted, 2px dashes, 5px gaps */
+  --tether-dash: 2px;
+  --tether-gap: 5px;
+  --bar-h: 84px;
+  --bar-bottom: 30px; /* the bar sits this far above the window's bottom */
+  --bar-pad: 0 18px 0 12px;
+  --frame-top: 76px; /* the frame hangs from its top right corner */
+  --picture: 480px; /* default picture side; it is square */
+  --frame-pad: 0 10px 10px;
+  --measure-w: clamp(380px, 40vw, 760px);
+  --measure-col: 300px; /* numbers column when Measure splits (1600px and wider) */
+  --welcome-w: 372px;
+
+  /* Elevation: one level (The One Lift Rule). */
+  --lift: 0 14px 34px -14px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-chosen: 0 1px 3px rgba(15, 26, 60, 0.22); /* chosen segment */
+  --shadow-knob: 0 1px 2px rgba(15, 26, 60, 0.35); /* switch knob */
+  --shadow-handle: 0 1px 4px rgba(15, 26, 60, 0.5); /* wavelength handle */
+  --ring-mark: 0 0 0 2px var(--card), 0 0 0 4px var(--mark-ink); /* current date stop */
+  --ring-action: 0 0 0 2px var(--card), 0 0 0 4px var(--action); /* chosen detector thumbnail */
+
+  /* Stacking, from the back. DESIGN.md: sky, marks on the sky, sky notes, frame and rail, bar,
+     top row, popovers, tip card, toast. The tour sits between popovers and the tip card.
+     Native popovers ([popover]) and modal dialogs live in the browser's top layer, above all of
+     these, in the order they were opened. */
+  --z-sky: 0;
+  --z-marks: 10; /* patch outline, tether, dots, labels, pins */
+  --z-notes: 20; /* sky note, pointer coordinates */
+  --z-card: 30; /* frame, rail, Measure, tools, places list and card, welcome card */
+  --z-bar: 40;
+  --z-top: 50; /* wordmark, search, chips, top-right card, sky loading card */
+  --z-popover: 60; /* cards that open next to a control without the popover attribute */
+  --z-tour: 70; /* tour dimmer, ring and step card */
+  --z-tip: 80; /* one-time tip card */
+  --z-toast: 90;
+  --z-tooltip: 100;
+
+  /* Motion: short, says where a thing came from, never decorates. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fade: 0.18s; /* panels and popovers fade */
+  --t-settle: 0.32s; /* … and settle 6 to 14px into place */
+  --settle: 8px;
+  --settle-welcome: 14px;
+  --t-glide: 0.42s; /* the frame glides when Measure opens or the window resizes */
+  --t-slide: 0.26s; /* the picture slides when lines above it change height */
+  --t-crossfade: 0.26s; /* the sky changes wavelength */
+  --t-knob: 0.15s; /* switch knob */
+  --delay-tooltip: 0.35s;
+  --delay-sky-loader: 0.3s; /* show the sky's loading card only if the wait lasts */
+  --delay-frame-loader: 0.25s; /* show the frame's busy cover only if the wait lasts */
+  /* Pictures swap with hard cuts, never faster than 2.5 a second: at least 400 ms apart. */
+}
+
+/* ------------------------------------------------------------------------------------------
+   Base
+   ------------------------------------------------------------------------------------------ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* the page never scrolls (GEN-7) */
+  overscroll-behavior: none;
+}
+
+html {
+  background: var(--sky);
+  color-scheme: light;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font: var(--text-body);
+  font-variant-numeric: tabular-nums; /* The Tabular Figures Rule */
+  color: var(--ink);
+  caret-color: var(--action);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* `hidden` always hides, even when a lane gives the element its own display. The fade and settle
+   below still run, because a transition outranks !important in the cascade. */
+[hidden] {
+  display: none !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+dl,
+dd,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--action);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code,
+kbd,
+samp {
+  font-family: var(--font-mono);
+}
+
+/* Icons: 20px line drawings, 1.6px stroke, round ends, in the current text colour. */
+.icon {
+  flex: none;
+  width: var(--size-icon);
+  height: var(--size-icon);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--icon-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------------------------------------------
+   Shared components (DESIGN.md "Components")
+   ------------------------------------------------------------------------------------------ */
+
+/* Buttons: 34px, 9px corners, 12px sides, 14px medium. One primary per card, at most. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-tight);
+  height: var(--h-control);
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--card-2);
+  color: var(--ink);
+  font: var(--text-control);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.btn:hover {
+  background: var(--card-3);
+  text-decoration: none;
+}
+.btn:active {
+  translate: 0 1px; /* press: down 1px */
+}
+.btn > .icon {
+  width: var(--size-icon-in-btn);
+  height: var(--size-icon-in-btn);
+}
+.btn.primary {
+  background: var(--action);
+  color: var(--on-action);
+}
+.btn.primary:hover {
+  background: var(--action-hi);
+}
+.btn.quiet {
+  background: transparent;
+}
+.btn.quiet:hover {
+  background: var(--card-2);
+}
+.btn.text {
+  height: var(--h-text-btn);
+  padding: 0 8px;
+  border-radius: var(--r-tip);
+  background: transparent;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.btn.text:hover {
+  background: var(--card-2);
+}
+/* On or open: a pressed toggle, an open menu button, the chosen row. */
+.btn[aria-pressed='true'],
+.btn[aria-expanded='true'],
+.btn.on,
+.icon-btn[aria-pressed='true'],
+.icon-btn[aria-expanded='true'],
+.icon-btn.on {
+  background: var(--action-soft);
+  color: var(--action);
+}
+.btn:disabled,
+.icon-btn:disabled,
+.play-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+  translate: none;
+  scale: none;
+}
+
+/* Link: ultramarine medium text; underline on hover. Use <a> or <button class="link">. */
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--action);
+  font-weight: 500;
+  text-decoration: none;
+}
+.link:hover {
+  text-decoration: underline;
+}
+
+/* Icon buttons: 36px (30px in the frame header and for close buttons), no fill. Each one has a
+   tooltip: give it aria-label and data-tip (see "Tooltips" in docs/lanes.md). */
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--size-icon-btn);
+  height: var(--size-icon-btn);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--ink);
+}
+.icon-btn:hover {
+  background: var(--card-2);
+}
+.icon-btn:active {
+  translate: 0 1px;
+}
+.icon-btn.sm {
+  width: var(--size-icon-btn-sm);
+  height: var(--size-icon-btn-sm);
+  border-radius: var(--r-window);
+}
+
+/* The Play button: the screen's primary action, the only round button. */
+.play-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--size-play);
+  height: var(--size-play);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--action);
+  color: var(--on-action);
+}
+.play-btn:hover {
+  background: var(--action-hi);
+}
+.play-btn:active {
+  scale: 0.94;
+}
+
+/* Segmented control: one choice on. Children are buttons with aria-pressed (or radio roles
+   with aria-checked). */
+.seg {
+  display: inline-flex;
+  gap: var(--gap-group);
+  padding: 3px;
+  border-radius: var(--r-seg);
+  background: var(--card-2);
+  color: var(--ink-2);
+}
+.seg > button {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-tight);
+  height: var(--h-seg);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-window);
+  background: transparent;
+  color: inherit;
+  font: var(--text-control);
+  white-space: nowrap;
+}
+.seg > button:hover {
+  color: var(--ink);
+}
+.seg > button[aria-pressed='true'],
+.seg > button[aria-checked='true'] {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow-chosen);
+}
+.seg > button > .icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Tabs: text on a 1px ruled line, 16px apart; the chosen one is ink with a 2px ultramarine
+   underline. Children have role="tab" and aria-selected. */
+.tabs {
+  display: flex;
+  gap: 16px;
+  border-bottom: 1px solid var(--rule);
+}
+.tabs > [role='tab'] {
+  margin-bottom: -1px;
+  padding: 6px 0 7px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--ink-3);
+  font: var(--text-control);
+  white-space: nowrap;
+}
+.tabs > [role='tab']:hover {
+  color: var(--ink);
+}
+.tabs > [role='tab'][aria-selected='true'] {
+  color: var(--ink);
+  border-bottom-color: var(--action);
+}
+
+/* Switch: <button class="switch" role="switch" aria-checked="false">. 34 by 20px, Card Deep off,
+   ultramarine on, white knob. .sm is the bar's 24 by 14px one. */
+.switch {
+  position: relative;
+  flex: none;
+  width: var(--switch-w);
+  height: var(--switch-h);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--card-3);
+  transition: background-color var(--t-knob);
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(var(--switch-h) - 4px);
+  height: calc(var(--switch-h) - 4px);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-knob);
+  transition: translate var(--t-knob) var(--ease-out);
+}
+.switch[aria-checked='true'] {
+  background: var(--action);
+}
+.switch[aria-checked='true']::after {
+  translate: calc(var(--switch-w) - var(--switch-h)) 0;
+}
+.switch.sm {
+  --switch-w: var(--switch-sm-w);
+  --switch-h: var(--switch-sm-h);
+}
+
+/* Card: anything that floats over the sky. Solid, never tinted or see-through; one shadow. */
+.card {
+  border-radius: var(--r-panel);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--lift);
+}
+.card.panel {
+  border-radius: var(--r-frame); /* the frame and its panels: Measure, tools, overlays */
+}
+.card.big {
+  border-radius: var(--r-bar); /* the bar, dialogs, the welcome card */
+}
+
+/* Popover: a card that opens next to its button. For native [popover] elements this also
+   resets the browser's own box. Rows inside are .menu-item. */
+.popover {
+  margin: 0;
+  padding: var(--pad-group);
+  border: 0;
+  border-radius: var(--r-panel);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--lift);
+}
+.popover[popover] {
+  position: fixed;
+  inset: auto;
+  overflow: visible;
+}
+
+/* A row in a popover or list: 9px corners, a medium name and a 12px supporting line. */
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font: var(--text-control);
+}
+.menu-item:hover {
+  background: var(--card-2);
+}
+.menu-item[aria-checked='true'],
+.menu-item[aria-selected='true'] {
+  background: var(--action-soft);
+  color: var(--action);
+}
+.menu-item .line {
+  display: block;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+
+/* Dialog: <dialog class="dialog">, opened with showModal(). */
+.dialog {
+  max-width: min(560px, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100vh - 2 * var(--gutter));
+  padding: var(--pad-dialog);
+  border: 0;
+  border-radius: var(--r-bar);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--lift);
+}
+.dialog::backdrop {
+  background: rgba(5, 7, 13, 0.45);
+}
+
+/* Tooltip: ink fill, card text, 12px. Shown after 0.35s on hover or keyboard focus; below by
+   default, to the right on the rail, above on the bar. */
+.tooltip {
+  max-width: 280px;
+  margin: 0;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: var(--r-tip);
+  background: var(--ink);
+  color: var(--card);
+  font: var(--text-label);
+  pointer-events: none;
+}
+
+/* Status label: a small pill that always says what it means in words. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: var(--r-pill);
+  background: var(--card-2);
+  color: var(--ink-2);
+  font: var(--text-label);
+  white-space: nowrap;
+}
+.pill.good {
+  background: var(--good-soft);
+  color: var(--good);
+}
+.pill.warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.pill.bad {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+/* Data window: a dark rectangle cut into a card (picture, charts, thumbnails). No shadow, no
+   border. Labels over a picture sit on .window-badge. */
+.window {
+  border-radius: var(--r-window);
+  background: var(--st-bg);
+  color: var(--st-ink);
+}
+.window-badge {
+  padding: 4px 8px;
+  border-radius: var(--r-tip);
+  background: var(--badge-bg);
+  color: var(--st-ink);
+  font: var(--text-label);
+}
+
+/* Small field: 34px, Card Shade, no border. Placeholder text in Soft Ink, because Faint Ink on
+   Card Shade is only 4.2:1. */
+.field {
+  height: var(--h-control);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--card-2);
+  color: var(--ink);
+  font: var(--text-body);
+}
+.field::placeholder {
+  color: var(--ink-2);
+}
+.field:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 0;
+}
+
+/* Key hint, as in the search field's "/". */
+.kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: var(--card-2);
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+
+/* A term that explains itself on hover or focus (MSR-4): dotted underline. */
+.term {
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  cursor: help;
+}
+
+/* Group label inside a panel: 600, Faint Ink, sentence case. */
+.group-label {
+  color: var(--ink-3);
+  font: var(--text-group);
+}
+
+/* Panel motion: fade in 0.18s and settle into place in 0.32s, leave the same way, while the
+   hidden attribute (or a closed popover) still decides what is shown. Set --settle-x and
+   --settle-y on the element for the direction it comes from (default: 8px from below). */
+.appear {
+  transition-property: opacity, translate, display, overlay;
+  transition-duration: var(--t-fade), var(--t-settle), var(--t-settle), var(--t-settle);
+  transition-timing-function: linear, var(--ease-out), linear, linear;
+  transition-behavior: allow-discrete;
+}
+.appear[hidden],
+.appear[popover]:not(:popover-open) {
+  opacity: 0;
+  translate: var(--settle-x, 0) var(--settle-y, var(--settle));
+}
+@starting-style {
+  .appear:not([hidden]),
+  .appear[popover]:popover-open {
+    opacity: 0;
+    translate: var(--settle-x, 0) var(--settle-y, var(--settle));
+  }
+}
+
+/* Reduced motion: whatever slides, grows or glides only fades. */
+@media (prefers-reduced-motion: reduce) {
+  .appear {
+    --settle-x: 0;
+    --settle-y: 0;
+  }
+  .switch,
+  .switch::after {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------------------------------
+   Page skeleton: where each mount point sits (docs/lanes.md lists their owners).
+   The sky fills the window and everything else floats on it in a fixed place. Containers that
+   span empty sky let the pointer through; only the cards in them catch it.
+   ------------------------------------------------------------------------------------------ */
+
+/* Lane C: the sky and what is drawn on it. */
+#sky {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-sky);
+  background: var(--sky);
+}
+#sky-marks {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-marks);
+  pointer-events: none;
+}
+#sky-note,
+#sky-coords {
+  position: fixed;
+  bottom: 8px;
+  z-index: var(--z-notes);
+  max-width: calc(100vw - 2 * 12px);
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--note-bg);
+  color: var(--st-ink);
+  font: var(--text-label);
+  white-space: nowrap;
+}
+#sky-note {
+  left: 12px;
+}
+#sky-coords {
+  right: 12px;
+}
+#sky-click {
+  position: fixed;
+  z-index: var(--z-popover);
+}
+
+/* Lane F: the top row. */
+#top-left {
+  position: fixed;
+  top: var(--top);
+  left: var(--gutter);
+  z-index: var(--z-top);
+  display: grid;
+  grid-template-columns: auto 400px;
+  gap: 8px 10px;
+  pointer-events: none;
+}
+#top-left > * {
+  pointer-events: auto;
+}
+#wordmark {
+  grid-area: 1 / 1;
+  height: var(--h-top);
+}
+#search {
+  grid-area: 1 / 2;
+  height: var(--h-top);
+}
+#chips {
+  grid-area: 2 / 2;
+  justify-self: start;
+  width: max-content;
+}
+#actions {
+  position: fixed;
+  top: var(--top);
+  right: var(--gutter);
+  z-index: var(--z-top);
+  height: var(--h-top);
+}
+#sky-loading {
+  position: fixed;
+  top: var(--top);
+  left: 50%;
+  translate: -50% 0;
+  z-index: var(--z-top);
+}
+
+/* Lane F: the map's tool rail, centred on the window's height. */
+#rail {
+  position: fixed;
+  top: 50%;
+  left: var(--gutter);
+  translate: 0 -50%;
+  z-index: var(--z-card);
+}
+
+/* Lane F places the frame; lane D fills it. It hangs from its top right corner. Phase 0 sizes
+   the picture to fit between the frame's top and the bar; lane F replaces this with the user's
+   remembered box (frame-box). */
+:root {
+  --frame-picture: min(var(--picture), calc(100vh - 420px));
+  --frame-w: calc(var(--frame-picture) + 20px);
+}
+#frame {
+  position: fixed;
+  top: var(--frame-top);
+  right: var(--gutter);
+  z-index: var(--z-card);
+  width: var(--frame-w);
+}
+
+/* Lane E: Measure beside the frame (the frame glides left of it), the picture tools left of
+   the frame. */
+#measure {
+  position: fixed;
+  top: var(--frame-top);
+  right: var(--gutter);
+  z-index: var(--z-card);
+  width: var(--measure-w);
+  max-height: calc(100vh - var(--frame-top) - var(--bar-bottom) - var(--bar-h) - 14px);
+}
+body:has(#measure:not([hidden])) #frame {
+  right: calc(var(--gutter) + var(--measure-w) + 10px);
+}
+#tools {
+  position: fixed;
+  top: var(--frame-top);
+  right: calc(var(--gutter) + var(--frame-w) + 10px);
+  z-index: var(--z-card);
+  width: 320px;
+}
+body:has(#measure:not([hidden])) #tools {
+  right: calc(var(--gutter) + var(--measure-w) + 10px + var(--frame-w) + 10px);
+}
+
+/* Lane D: the bar, 30px above the bottom, centred. */
+#bar {
+  position: fixed;
+  bottom: var(--bar-bottom);
+  left: 50%;
+  translate: -50% 0;
+  z-index: var(--z-bar);
+  max-width: calc(100vw - 2 * var(--gutter));
+}
+
+/* Lane G: lists and place cards open at the left, beside the rail; menus by their button. */
+#places-list,
+#place-card {
+  position: fixed;
+  top: 88px;
+  left: calc(var(--gutter) + 58px);
+  bottom: calc(var(--bar-bottom) + var(--bar-h) + 14px);
+  z-index: var(--z-card);
+  width: 360px;
+}
+#places-menu {
+  top: calc(var(--top) + var(--h-top) + 6px);
+  right: var(--gutter);
+  width: 330px;
+}
+
+/* Lane H: the welcome card at the left, beside the rail; the guide menu under its button. */
+#welcome {
+  position: fixed;
+  top: 50%;
+  left: calc(var(--gutter) + 58px);
+  translate: 0 -50%;
+  z-index: var(--z-card);
+  width: var(--welcome-w);
+}
+#guide-menu {
+  top: calc(var(--top) + var(--h-top) + 6px);
+  right: calc(var(--gutter) + 170px);
+  width: 340px;
+}
+#tour {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-tour);
+  pointer-events: none;
+}
+#tip {
+  position: fixed;
+  z-index: var(--z-tip);
+}
+
+/* Lane F: toasts above the bar. */
+#toasts {
+  position: fixed;
+  bottom: calc(var(--bar-bottom) + var(--bar-h) + 14px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: var(--z-toast);
+  display: grid;
+  justify-items: center;
+  gap: var(--gap-tight);
+  pointer-events: none;
+}
+#toasts > * {
+  pointer-events: auto;
+}
+
+/* Lane F: phones are not designed yet (O-W3). */
+#narrow-note {
+  display: none;
+}
+@media (max-width: 699px) {
+  #narrow-note {
+    position: fixed;
+    inset: auto var(--gutter) var(--gutter);
+    z-index: var(--z-toast);
+    display: block;
+  }
+}
+
+/* Lane F: embed mode (embed=1). Only the frame, the bar and Measure, stacked in the page flow on
+   a card background, with no shadows and no rounded outer corners. */
+html[data-embed],
+html[data-embed] body {
+  height: auto;
+  overflow: auto;
+  background: var(--card);
+}
+html[data-embed] body > :not(#frame, #bar, #measure, #toasts, script) {
+  display: none !important;
+}
+html[data-embed] :is(#frame, #bar, #measure) {
+  position: static;
+  width: auto;
+  max-width: none;
+  max-height: none;
+  translate: none;
+  border-radius: 0;
+  box-shadow: none;
+}
