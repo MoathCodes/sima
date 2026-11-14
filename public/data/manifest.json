@@ -1,0 +1,22 @@
+{
+ "version": 1,
+ "generated": "2026-11-14T09:13:54Z",
+ "source": "NASA/IPAC Infrared Science Archive (IRSA), SPHEREx Level 2 spectral images",
+ "collections": [
+  "spherex_dr1",
+  "spherex_qr3"
+ ],
+ "targets": {
+  "barnard": {
+   "path": "data/barnard/",
+   "label": "Barnard's Star",
+   "frames": 72,
+   "bytes": 549278,
+   "releases": [
+    "spherex_dr1",
+    "spherex_qr3"
+   ],
+   "windows": 3
+  }
+ }
+}
