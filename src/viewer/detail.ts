@@ -496,11 +496,24 @@ function statsHtml(): string {
       }
     }
   }
-  // Every value says where it comes from (H4): measured, a named catalogue, or a model.
-  return rows
-    .map((r) => {
-      const name = r.name.includes('(') ? r.name : `${r.name} (${r.from})`;
-      return `<dt>${term(name, r.tip)}</dt><dd>${esc(r.value)}</dd>`;
+  // Every value says where it comes from (H4): grouped under "Measured from the pixels", the
+  // named catalogue, or "Model".
+  const source = rows.find((r) => r.name === 'Catalogue values from' || r.name === 'Catalogue');
+  const groups: [string, string, string][] = [
+    ['measured', 'Measured from the pixels', 'Worked out by Sima from the SPHEREx exposures of this patch.'],
+    ['catalogue', source ? `Catalogue: ${source.value}` : 'Catalogue', source?.tip ?? 'From a named catalogue, not measured here.'],
+    ['model', 'Model', 'Worked out from a model, not measured.'],
+  ];
+  return groups
+    .map(([from, head, tip]) => {
+      const mine = rows.filter((r) => r.from === from && r !== source);
+      if (!mine.length) return '';
+      return (
+        `<dt class="ms-group">${term(head, tip)}</dt>` +
+        mine
+          .map((r) => `<dt>${term(r.name.replace(/ \((measured|catalogue)\)$/, ''), r.tip)}</dt><dd>${esc(r.value)}</dd>`)
+          .join('')
+      );
     })
     .join('');
 }

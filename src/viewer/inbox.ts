@@ -41,7 +41,11 @@ export function renderFound(host: HTMLElement): void {
       <span class="ms-find-line">The patch’s own target · ${esc(t.line)}</span>
       <span class="ms-find-tags">${pill('Catalogue position')}${pill('Real SPHEREx', 'good')}</span></button>`);
   }
-  const list = shown(s.result).filter((c) => c.known?.cat !== 'target').slice(0, 20);
+  // The target's own row is above; its "Known" candidate would repeat it. Any doubt about the
+  // target (Not confirmed, Likely artefact) stays listed.
+  const list = shown(s.result)
+    .filter((c) => !(c.known?.cat === 'target' && c.verdict === 'known'))
+    .slice(0, 20);
   for (const c of list) {
     const label = rowLabel(c);
     const on = S.selected?.kind === 'candidate' && S.selected.id === c.id;

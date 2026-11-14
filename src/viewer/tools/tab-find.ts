@@ -293,7 +293,7 @@ function fillDetail(host: HTMLElement, c: Candidate): void {
     </dl>
     <div class="window tl-mini"><canvas data-mini></canvas></div>
     <p class="tl-line" data-mini-note>Measuring the light here on every exposure…</p>
-    <p class="tl-not">Not a discovery: a candidate to check.</p>
+    ${/not a discovery/i.test(c.why) ? '' : '<p class="tl-not">Not a discovery: a candidate to check.</p>'}
     <div class="tl-actions">
       <button type="button" class="btn" data-act="checked" data-id="${esc(c.id)}" aria-pressed="${markOf(c.id) === 'checked'}">Checked <span class="kbd">C</span></button>
       <button type="button" class="btn" data-act="reject" data-id="${esc(c.id)}" aria-pressed="${markOf(c.id) === 'reject'}">Reject <span class="kbd">X</span></button>
@@ -314,6 +314,11 @@ async function miniChart(host: HTMLElement, c: Candidate): Promise<void> {
   const canvas = host.querySelector<HTMLCanvasElement>('[data-mini]');
   const note = host.querySelector<HTMLElement>('[data-mini-note]');
   if (!canvas || !note) return;
+  if (c.kind === 'mover') {
+    note.textContent = `A mover walks out of a fixed circle, so its light is not measured here. Its positions and fitted line are on Measure’s Path tab.`;
+    canvas.parentElement?.setAttribute('hidden', '');
+    return;
+  }
   if (!S.set) {
     note.textContent = S.field?.simulated
       ? 'Simulated pictures: there are no original exposures to measure.'

@@ -99,7 +99,7 @@ function motionHeadline(t: TargetInput): Headline {
   const stab = Number.isFinite(f.stability)
     ? ` It is ${f.stability > f.totalErr ? 'not ' : ''}stable: ${term(`leaving out one of the ${f.visits} visits moves it by ±${num(f.stability, 2)}″`, 'Each visit is left out in turn and the motion fitted again. A large change means one visit decides the answer.')}.`
     : '';
-  const plx = f.parallax ? (f.parallax.shown ? ` Parallax measured ${num(f.parallax.value, 0)} ± ${num(f.parallax.err, 0)} mas.` : ` Parallax was fitted too but is not shown: ${esc(f.parallax.why)}.`) : '';
+  const plx = f.parallax ? (f.parallax.shown ? ` Parallax measured ${num(f.parallax.value, 0)} ± ${num(f.parallax.err, 0)} mas.` : ` Parallax was fitted too but is not shown: ${esc(f.parallax.why.replace(/\.+$/, ''))}.`) : '';
   return {
     value: `${num(f.total, 2)}″/yr`,
     valueTip: `How far the star moves across the sky in a year, measured from the pixels: ${num(f.total, 2)} ± ${num(f.totalErr, 2)} arcseconds a year. An arcsecond is 1/3600 of a degree; one SPHEREx pixel is 6.15″.`,

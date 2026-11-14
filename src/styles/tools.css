@@ -195,6 +195,15 @@
   text-align: right;
   white-space: nowrap;
 }
+.ms-stats .ms-group {
+  grid-column: 1 / -1;
+  padding-top: 6px;
+  overflow: hidden;
+  color: var(--ink-3);
+  font: var(--text-group);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 .ms-stats dt,
 .ms-stats dd {
   padding-bottom: 3px;
