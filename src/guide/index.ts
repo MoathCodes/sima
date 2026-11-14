@@ -7,6 +7,7 @@
  */
 import { openStarter, openTarget, STARTERS, type StarterId } from '../explore/game.ts';
 import { greet } from '../shell/shell.ts';
+import { S } from '../viewer/state.ts';
 import { icon } from '../shell/icons.ts';
 import { dropSavedTour, endTour, onTourEnd, savedTour, startTour, touring } from './tour.ts';
 import { startTips, tourHomeTip } from './tips.ts';
@@ -51,7 +52,12 @@ export function startGuide(): void {
     tourHomeTip();
     if (how === 'ended') fillWelcome();
   });
-  greet();
+  // The welcome card greets a visitor in Explore. Someone who comes back to Measure (the level
+  // is remembered, or a link asks for it) is not greeted: the card would sit over their work and
+  // take the first Escape meant for Measure. The link is read after this, so wait one task.
+  queueMicrotask(() => {
+    if (S.level === 'explore') greet();
+  });
 }
 
 function fillWelcome(): void {

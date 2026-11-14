@@ -19,7 +19,6 @@ import { icon } from '../shell/icons.ts';
 import { fitMotion } from '../core/fit.ts';
 import { targetByKey } from '../core/targets.ts';
 import { SCENARIOS } from '../core/field.ts';
-import { readStore, saveStore } from '../guide/store.ts';
 import { ring, type PointAt } from '../guide/ring.ts';
 import {
   HINT_LABELS,
@@ -114,8 +113,6 @@ export function startGame(): void {
   } catch {
     // Storage can be blocked: start in Explore.
   }
-  S.allNumbers = readStore().allNumbers;
-  watch(['allNumbers'], () => saveStore((s) => (s.allNumbers = S.allNumbers)));
   startCloseup();
   onTap(tapped);
   watch(['target', 'field', 'source', 'groups', 'level'], renderTask);

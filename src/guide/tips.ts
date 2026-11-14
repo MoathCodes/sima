@@ -6,7 +6,7 @@
  * 50 in index.html presses its `data-close` button). Owner: lane H.
  */
 import { S, type Mode } from '../viewer/state.ts';
-import { toast } from '../shell/shell.ts';
+import { onFrameMove, toast } from '../shell/shell.ts';
 import { TASKS } from '../explore/copy.ts';
 import { find } from './ring.ts';
 import { placeBeside, type Box, type Side } from './place.ts';
@@ -78,6 +78,8 @@ const TOUR_HOME: Tip = {
 let shown: Tip | null = null;
 let candidate: { tip: Tip; since: number } | null = null;
 let extra: Tip | null = null;
+/** When the user last pressed or typed something. */
+let lastInput = 0;
 
 /** Starts watching for tips. Called once by guide/index.ts. */
 export function startTips(): void {
@@ -86,6 +88,11 @@ export function startTips(): void {
   el.className = 'tip-card';
   el.setAttribute('role', 'note');
   window.setInterval(check, 400);
+  for (const type of ['pointerdown', 'keydown', 'wheel'])
+    addEventListener(type, () => (lastInput = performance.now()), { capture: true, passive: true });
+  // The frame moves (Measure opens, a drag, a new size): the tip moves with it at once, so it
+  // never sits over the frame even for a moment.
+  onFrameMove(() => shown && placeTip(shown));
   addEventListener('resize', () => shown && placeTip(shown));
 }
 
@@ -109,6 +116,15 @@ function quiet(): boolean {
   if (!document.getElementById('welcome')?.hidden) return false;
   if (document.querySelector('[popover]:popover-open:not(#tooltip), dialog[open]')) return false;
   if (!document.getElementById('explain')?.hidden) return false;
+  // A list, a place card, the sky's click card or the picture tools are open: the user is busy
+  // there, and a tip would take the Escape meant for it.
+  if (
+    document.querySelector(
+      '#places-list:not([hidden]), #place-card:not([hidden]), #sky-click:not([hidden]), #tools:not([hidden])',
+    )
+  ) {
+    return false;
+  }
   return S.source !== 'loading';
 }
 
@@ -135,9 +151,10 @@ function check(): void {
     candidate = { tip: next, since: performance.now() };
     return;
   }
-  if (performance.now() - candidate.since < 1500) return;
+  // …and the user has not pressed or typed anything for a moment either.
+  if (performance.now() - Math.max(candidate.since, lastInput) < 2500) return;
   if (show(next)) return;
-  if (next.fallback && performance.now() - candidate.since > 4000) {
+  if (next.fallback && performance.now() - candidate.since > 6000) {
     toast(next.fallback);
     markSeen(next.id);
     if (extra === next) extra = null;

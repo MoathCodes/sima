@@ -1,7 +1,9 @@
 /**
  * What the guide remembers in the browser, under `sima-guide` (SPEC 8.5): the tour in progress,
- * tours the user ended, the one-time tips already seen, the things tried, and "Show all the
- * numbers". Owner: lane H.
+ * tours the user ended, the one-time tips already seen and the things tried. Owner: lane H.
+ *
+ * The entry is shared: lane E keeps "Show all the numbers" (`allNumbers`) in it too. So the
+ * guide only ever merges its own fields into what is there, and never writes the whole entry.
  *
  * `parseStore` is pure; `readStore` and `saveStore` wrap storage in `try`, because it can be
  * blocked (then the guide remembers for this visit only).
@@ -21,8 +23,6 @@ export interface GuideStore {
   tips: string[];
   /** Things to try that the user has done (the Guide menu's checklist). */
   tried: string[];
-  /** "Show all the numbers" in Measure (MSR-2). */
-  allNumbers: boolean;
 }
 
 export const STORE_KEY = 'sima-guide';
@@ -31,7 +31,7 @@ const TOURS: readonly TourId[] = ['main', 'numbers'];
 
 /** An empty store. */
 export function emptyStore(): GuideStore {
-  return { tour: null, ended: [], finished: [], tips: [], tried: [], allNumbers: false };
+  return { tour: null, ended: [], finished: [], tips: [], tried: [] };
 }
 
 /** Reads what storage held; anything unexpected is dropped, never trusted. */
@@ -63,7 +63,6 @@ export function parseStore(raw: string | null): GuideStore {
   out.finished = tours(o.finished);
   out.tips = strings(o.tips);
   out.tried = strings(o.tried);
-  out.allNumbers = o.allNumbers === true;
   // A tour the user ended is never in progress (O-G9).
   if (out.tour && out.ended.includes(out.tour.id)) out.tour = null;
   return out;
@@ -84,14 +83,33 @@ export function readStore(): GuideStore {
   return cache;
 }
 
-/** Changes the store and saves it. */
+/** Changes the guide's fields and saves them, keeping every other field in the entry. */
 export function saveStore(change: (s: GuideStore) => void): GuideStore {
   const s = readStore();
   change(s);
+  let others: Record<string, unknown> = {};
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(s));
+    const raw: unknown = JSON.parse(localStorage.getItem(STORE_KEY) ?? '{}');
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) others = raw as Record<string, unknown>;
+  } catch {
+    // Blocked, or not JSON: there is nothing of anyone's to keep.
+  }
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(mergeStore(others, s)));
   } catch {
     // Storage can be blocked: kept for this visit only.
   }
   return s;
+}
+
+/** The entry to write: what was there, with the guide's own fields replaced. Pure. */
+export function mergeStore(others: Record<string, unknown>, s: GuideStore): Record<string, unknown> {
+  return {
+    ...others,
+    tour: s.tour,
+    ended: s.ended,
+    finished: s.finished,
+    tips: s.tips,
+    tried: s.tried,
+  };
 }
