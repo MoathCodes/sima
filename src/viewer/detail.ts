@@ -33,7 +33,7 @@ import { lastView, noiseOf } from './tools/view.ts';
 import { download, esc, fileName, num, pill, sig, term, token } from './tools/dom.ts';
 import { drawChart, drawPath, mjdDate, moverPath, type Pt } from './measure/charts.ts';
 import type { Candidate } from '../core/detect.ts';
-import { paintCutout, triplet } from './measure/cutouts.ts';
+import { paintCutout, triplet, tripletReady } from './measure/cutouts.ts';
 import { ABSORPTION, candidateLines, moverLine, neighbours, pathLine, showDet, spotHeadline, targetHeadline, targetStats, type Headline } from './measure/model.ts';
 import { plainP, trendWords } from './measure/words.ts';
 import { renderFound, startInbox } from './inbox.ts';
@@ -887,7 +887,8 @@ function drawCuts(host: HTMLElement): void {
   let pos: { ra: number; dec: number } | null = sel.kind === 'target' ? null : { ra: sel.ra, dec: sel.dec };
   const t = field.target;
   if (sel.kind === 'target' && t && g) pos = atDate({ cat: 'gaia', id: t.name, ra: t.ra, dec: t.dec, ep: t.ep, pmra: t.pmra, pmdec: t.pmdec, mag: 0 }, g.mjd);
-  const tri = !stackOnly && g && pos ? triplet(field, S.det, g.window, { ...pos, half: 7 }) : null;
+  const making = !stackOnly && !!g && !!pos && !tripletReady(field, S.det, chart);
+  const tri = !stackOnly && !making && g && pos ? triplet(field, S.det, g.window, { ...pos, half: 7 }) : null;
   const fig = (k: string, cap: string) => `<figure><canvas data-cut="${k}"></canvas><figcaption>${cap}</figcaption></figure>`;
   const snr = (v: number) => (Number.isFinite(v) ? `${num(v, 1)}σ` : 'not measured');
   const stackRow = stack
@@ -896,10 +897,12 @@ function drawCuts(host: HTMLElement): void {
     : '';
   const dateRow = stackOnly
     ? ''
-    : tri
-      ? `<p class="ms-cuthead">${term(`One date: ${g ? formatDate(g.mjd, 'day') : ''}, D${S.det}`, `The picture on screen, against ${tri.refText}, and the difference.`)}</p>
-        <div class="ms-cutrow">${fig('ref', 'Reference')}${fig('now', 'This date')}${fig('diff', 'Difference')}</div>`
-      : `<p class="ms-cutnote">${esc(g ? 'No other date in this detector to compare with.' : 'No picture on screen.')}</p>`;
+    : making
+      ? '<p class="ms-cutnote">Making the cutouts…</p>'
+      : tri
+        ? `<p class="ms-cuthead">${term(`One date: ${g ? formatDate(g.mjd, 'day') : ''}, D${S.det}`, `The picture on screen, against ${tri.refText}, and the difference.`)}</p>
+          <div class="ms-cutrow">${fig('ref', 'Reference')}${fig('now', 'This date')}${fig('diff', 'Difference')}</div>`
+        : `<p class="ms-cutnote">${esc(g ? 'No other date in this detector to compare with.' : 'No picture on screen.')}</p>`;
   host.innerHTML = stackRow + dateRow;
   if (pos && tri) {
     const sigma = field.noise[S.det - 1];

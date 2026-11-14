@@ -22,7 +22,7 @@ import { allRows } from './catalogue.ts';
 import { download, esc, fileName, num, pill, pressSeg, seg, setSwitch, sig, term, token } from './dom.ts';
 import { drawChart, drawPath, moverPath } from '../measure/charts.ts';
 import { moverLine } from '../measure/model.ts';
-import { paintCutout, triplet } from '../measure/cutouts.ts';
+import { paintCutout, triplet, tripletReady } from '../measure/cutouts.ts';
 import { detail } from '../detail.ts';
 import { plainP } from '../measure/words.ts';
 
@@ -270,7 +270,11 @@ export function passWords(window: number): string {
 function fillDetail(host: HTMLElement, c: Candidate): void {
   const field = S.field;
   if (!field) return;
-  const tri = triplet(field, S.det, c.window, { ra: c.ra, dec: c.dec, half: 7 });
+  // The cutouts' blends are made off the page's thread; the details fill again once they are.
+  const ready = tripletReady(field, S.det, () => {
+    if (host.isConnected && search().open === c.id && S.field === field) fillDetail(host, c);
+  });
+  const tri = ready ? triplet(field, S.det, c.window, { ra: c.ra, dec: c.dec, half: 7 }) : null;
   const single = !S.pic.combinePass;
   const motion = c.motion ? `<p>${moverLine(c, search().result?.det ?? S.det, S.field?.target?.values)}</p>` : '';
   // The row's verdict label is followed at once by its evidence (the small chart, the cutouts),
