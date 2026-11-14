@@ -12,6 +12,7 @@ import './styles/frame.css';
 import './styles/tools.css';
 import './styles/places.css';
 import './styles/guide.css';
+import './styles/intro.css';
 import './styles/extras.css';
 import './styles/workspace.css';
 
@@ -29,6 +30,7 @@ import { startMotion } from './viewer/motion.ts';
 import { readLink, startUrl } from './viewer/url.ts';
 import { startGame } from './explore/game.ts';
 import { startGuide } from './guide/index.ts';
+import { startIntro } from './intro/intro.ts';
 import { startWorkspace } from './workspace/index.ts';
 import { S } from './viewer/state.ts';
 import * as bus from './shell/bus.ts';
@@ -56,6 +58,8 @@ function start(name: string, fn: () => unknown): void {
   }
 }
 
+// The intro first: it covers the page while every part starts under it as usual.
+if (!link.embed) start('intro', startIntro);
 start('shell', startShell);
 start('search', startSearch);
 start('frame', startFrame);

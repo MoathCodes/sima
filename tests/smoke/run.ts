@@ -151,6 +151,15 @@ async function runFlow(
 ): Promise<{ failed: number; lines: string[] }> {
   const lines: string[] = [];
   const context = await browser.newContext({ viewport: size, deviceScaleFactor: 1 });
+  // The opening intro plays once per browser: every flow starts as a return visit, except flows
+  // that ask for it with ?intro=1 (flows/intro.ts).
+  await context.addInitScript(() => {
+    try {
+      localStorage.setItem('sima-intro', '1');
+    } catch {
+      // storage blocked: no intro either
+    }
+  });
   const page = await context.newPage();
   // 20 s: under load one sky frame can take seconds, and a click waits for two steady frames.
   page.setDefaultTimeout(20_000);

@@ -40,7 +40,8 @@ export interface Link {
 }
 
 const MODES: readonly Mode[] = ['flip', 'swipe', 'two', 'diff', 'stack', 'trail'];
-const KNOWN = new Set(['ra', 'dec', 'fov', 'det', 'view', 'target', 'date', 'pic', 'embed']);
+// `intro` is read by index.html and src/intro/intro.ts (play or skip the opening intro).
+const KNOWN = new Set(['ra', 'dec', 'fov', 'det', 'view', 'target', 'date', 'pic', 'embed', 'intro']);
 const MJD_UNIX = 40587; // MJD of 1970-01-01
 
 /**
