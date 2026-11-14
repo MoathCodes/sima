@@ -94,7 +94,7 @@ TOOLS = f'''
 
 def frame(left):
     return f'''
-<section class="xframe glass d-only" style="left:{left}" aria-label="Frame: Barnard's Star">
+<section class="xframe slate d-only" style="left:{left}" aria-label="Frame: Barnard's Star">
   <div class="fh">
     <div class="grow"><div class="name">Barnard's Star</div><div class="src"><span class="dot"></span>Real data</div></div>
     <span class="icon-btn fovb">{i("minus")}</span><span class="fov">6′</span><span class="icon-btn fovb">{i("plus")}</span>
@@ -161,7 +161,7 @@ COACH = f'''
 
 # ---- phone: Expert on a phone ----
 PHONE = f'''
-<section class="pframe glass m-only" aria-label="Frame: Barnard's Star">
+<section class="pframe slate m-only" aria-label="Frame: Barnard's Star">
   <div class="fh"><div><div class="name">Barnard's Star</div><div class="src"><span class="dot"></span>Real data · QR3 · D3 1.77 µm</div></div></div>
   <div class="well ppic"><img class="px" src="img/pic-barnard-2.png" alt="Barnard's Star, 17 August 2026">
     <div class="badge" style="left:8px;top:8px"><b style="display:flex;gap:7px;align-items:center"><span class="letter" style="background:var(--p3)">C</span>17 Aug 2026</b>Pass 3 · D3, 1.77 µm</div></div>
