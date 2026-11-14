@@ -28,7 +28,12 @@ import { S } from './viewer/state.ts';
 import * as bus from './shell/bus.ts';
 
 const link = readLink(location.search);
-if (link.embed) document.documentElement.dataset.embed = '';
+if (link.embed) {
+  document.documentElement.dataset.embed = '';
+  // The page flow is the frame, the bar, then Measure (GEN-3); index.html has Measure first.
+  const bar = document.getElementById('bar');
+  if (bar) document.getElementById('measure')?.before(bar);
+}
 
 const running: Promise<unknown>[] = [];
 
