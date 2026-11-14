@@ -82,6 +82,15 @@ export const flows: Flow[] = [
       },
       keyStep('Escape', 'Escape closes the click card'),
       {
+        name: 'A click by the bottom-right corner puts the card clear of the bar (O-I9)',
+        async run(page, size) {
+          // At 1366×768 this is (1200, 700): every spot beside it touches the bar or the frame.
+          await page.mouse.click(size.width - 166, size.height - 68);
+          await page.locator(guide('move-frame-here')).waitFor({ state: 'visible' });
+        },
+      },
+      keyStep('Escape', 'Escape closes it again'),
+      {
         name: 'The patch is grabbed from inside and dropped; the sky stays still (FRM-2)',
         async run(page) {
           const box = await patchOf(page);
