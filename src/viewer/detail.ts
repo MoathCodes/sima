@@ -91,7 +91,7 @@ function render(): void {
       <div class="window" data-guide="chart" style="height:180px;display:grid;place-items:center;font:var(--text-label)">Chart placeholder (phase 0)</div>
       <p style="margin:0">Placeholder (phase 0): one paragraph on what the number means.</p>
       <label style="display:flex;align-items:center;gap:8px;font:var(--text-control)">
-        <button class="switch sm" role="switch" data-all aria-checked="${S.allNumbers}" aria-label="Show all the numbers"></button>
+        <button class="switch sm" role="switch" data-all data-guide="all-numbers" aria-checked="${S.allNumbers}" aria-label="Show all the numbers"></button>
         Show all the numbers
       </label>
       ${more}`

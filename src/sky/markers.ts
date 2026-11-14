@@ -5,10 +5,11 @@
  * Labels never cover a card: every visible `[data-card]` is kept clear, and so is anything given
  * to `keepClear` (rule 5 in SPEC 9.4).
  *
- * PHASE 0 STUB: every dot shows at every zoom, with its label to the right unless that would
- * touch a card. No tiers, no collision between labels.
+ * PHASE 0 STUB: a crude tier rule by zoom (see `maxTier`), labels to the right unless that would
+ * touch a card, no collision between labels, every dot drawn as a DOM span.
  */
 import { camera, onZoom, toScreen } from './sky.ts';
+import type { PlaceKind } from '../data/schema.ts';
 
 /** One place on the sky. */
 export interface Dot {
@@ -21,14 +22,14 @@ export interface Dot {
   name: string;
   /** Importance: 0 shows at the widest view, 4 only when zoomed far in. */
   tier: 0 | 1 | 2 | 3 | 4;
-  /** The place's kind, as places.json names it (`star`, `cluster`, `galaxy`, …). */
-  kind: string;
+  /** The place's kind, as places.json names it (src/data/schema.ts). */
+  kind: PlaceKind;
   /** A practice spot: drawn dashed amber with "Simulated" in its label (H3). */
   simulated?: boolean;
 }
 
 let dots: readonly Dot[] = [];
-let groups: readonly string[] | null = null;
+let groups: readonly PlaceKind[] | null = null;
 let hover: string | null = null;
 let chosen: string | null = null;
 const clear = new Set<Element>();
@@ -55,7 +56,7 @@ export function setDots(next: readonly Dot[]): void {
  * With a kind chip on, every dot of those kinds shows at any zoom (PLC-2).
  * @param kinds Kinds to show at every zoom, or null to go back to showing by importance.
  */
-export function showGroups(kinds: readonly string[] | null): void {
+export function showGroups(kinds: readonly PlaceKind[] | null): void {
   groups = kinds;
   paint();
 }
@@ -125,6 +126,11 @@ export function onRest(fn: () => void): () => void {
 
 // ----- Phase 0 drawing ------------------------------------------------------------------------
 
+/** Phase 0: the faintest tier shown at a sky width (degrees). Lane C replaces this rule. */
+function maxTier(fov: number): number {
+  return fov > 60 ? 0 : fov > 20 ? 1 : fov > 6 ? 2 : fov > 2 ? 3 : 4;
+}
+
 function paint(): void {
   const host = document.getElementById('sky-marks');
   if (!host) return;
@@ -134,11 +140,12 @@ function paint(): void {
     host.append(layer);
   }
   const avoid = [...document.querySelectorAll('[data-card]'), ...clear]
-    .filter((el) => el instanceof HTMLElement && !el.hidden && el.offsetParent !== null)
+    .filter((el) => el.checkVisibility())
     .map((el) => el.getBoundingClientRect());
   const parts: string[] = [];
+  const tier = maxTier(camera().fov);
   for (const d of dots) {
-    if (groups && !groups.includes(d.kind) && d.tier > 0) continue;
+    if (d.tier > tier && !groups?.includes(d.kind)) continue;
     const p = toScreen(d.ra, d.dec);
     if (!p) continue;
     const label = new DOMRect(p.x + 8, p.y - 8, 8 + d.name.length * 6.5, 16);

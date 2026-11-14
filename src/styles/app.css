@@ -863,10 +863,19 @@ samp {
   grid-area: 1 / 2;
   height: var(--h-top);
 }
+/* The chips row: one line. shell.ts sets max-width to the room left of the nearest card; chips
+   that do not fit wrap onto a second line that is clipped away. overflow-clip-margin keeps the
+   chips' Lift shadow; the 40px row gap puts the second line beyond it. */
 #chips {
   grid-area: 2 / 2;
   justify-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 40px var(--gap-tight);
   width: max-content;
+  height: 30px;
+  overflow: clip;
+  overflow-clip-margin: 16px;
 }
 #actions {
   position: fixed;
@@ -909,7 +918,7 @@ samp {
    the picture to fit between the frame's top and the bar; lane F replaces this with the user's
    remembered box (frame-box). */
 :root {
-  --frame-picture: min(var(--picture), calc(100vh - 420px));
+  --frame-picture: min(var(--picture), calc(100vh - 440px));
   --frame-w: calc(var(--frame-picture) + 20px);
 }
 #frame {
@@ -933,9 +942,11 @@ samp {
 body:has(#measure:not([hidden])) #frame {
   right: calc(var(--gutter) + var(--measure-w) + 10px);
 }
+/* The tools hang under the chips row (as in spec-img/06), so the chips keep their room. */
 #tools {
   position: fixed;
-  top: var(--frame-top);
+  top: 112px;
+  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-h) - 14px);
   right: calc(var(--gutter) + var(--frame-w) + 10px);
   z-index: var(--z-card);
   width: 320px;
@@ -960,9 +971,14 @@ body:has(#measure:not([hidden])) #tools {
   position: fixed;
   top: 112px; /* under the chips row (68 to 98px) */
   left: calc(var(--gutter) + 58px);
-  bottom: calc(var(--bar-bottom) + var(--bar-h) + 14px);
   z-index: var(--z-card);
   width: 360px;
+}
+#places-list {
+  bottom: calc(var(--bar-bottom) + var(--bar-h) + 14px);
+}
+#place-card {
+  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-h) - 14px);
 }
 #places-menu {
   top: calc(var(--top) + var(--h-top) + 6px);

@@ -45,7 +45,7 @@ function render(): void {
     </div>
     <div class="tabs" role="tablist">${TABS.map(
       ([key, label]) =>
-        `<button role="tab" data-tab="${key}" aria-selected="${S.toolsTab === key}">${label}</button>`,
+        `<button role="tab" data-tab="${key}" data-guide="tools-tab-${key}" aria-selected="${S.toolsTab === key}">${label}</button>`,
     ).join('')}</div>
     <p style="margin:0;color:var(--ink-2)">Placeholder (phase 0). ${tab?.[2] ?? ''}</p>`;
   panel.querySelector('[data-close]')?.addEventListener('click', () => (S.tools = false));
@@ -58,10 +58,11 @@ function render(): void {
 function picTools(): void {
   const box = document.getElementById('pic-tools');
   if (!box) return;
-  box.style.cssText = 'position:absolute;left:8px;bottom:30px;z-index:1';
+  box.style.cssText = 'position:absolute;right:8px;bottom:8px;z-index:1';
   box.hidden = S.level !== 'measure';
   if (box.hidden || box.firstElementChild) return;
-  box.innerHTML = '<button class="btn quiet" data-original>Original</button>';
+  box.innerHTML =
+    '<button class="window-badge" data-original data-guide="original" style="border:0;cursor:pointer" data-tip="Hold to see the pixels as recorded (\\)" data-tip-pos="above">Original</button>';
   const btn = box.querySelector<HTMLElement>('[data-original]');
   const hold = (on: boolean) => () => {
     S.original = on;

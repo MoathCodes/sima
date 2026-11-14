@@ -31,15 +31,13 @@ const VIEW_NAMES: Record<Mode, [string, IconName]> = {
 const SOURCE_LINE: Record<string, string> = {
   real: '<span style="color:var(--good)">●</span> Real data',
   live: '<span style="color:var(--good)">●</span> Real data, fetched live',
-  simulated: '<span style="color:var(--warn)">◌</span> Simulated: placeholder pictures (phase 0)',
+  simulated: '<span style="color:var(--warn)">◌</span> Simulated: placeholder',
   none: 'No pictures here',
   loading: 'Loading',
 };
 
 /** Fills the frame and answers `aim` and `band`. Called once by main.ts. */
 export function startFrame(): void {
-  const frame = document.getElementById('frame');
-  if (frame) Object.assign(frame.style, { display: 'grid', gap: '8px', padding: '10px' });
   on('aim', (m) => {
     if (m.target) void loadTarget(m.target);
     else void aimAt(m.ra, m.dec, m.fov);
@@ -70,14 +68,14 @@ function header(): void {
   head.innerHTML = `
     <div style="flex:1;min-width:0">
       <h2 style="margin:0;font:var(--text-title);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></h2>
-      <p style="margin:0;color:var(--ink-2);font:var(--text-label)">${SOURCE_LINE[S.source] ?? ''}</p>
+      <p style="margin:0;color:var(--ink-2);font:var(--text-label);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${SOURCE_LINE[S.source] ?? ''}</p>
     </div>
-    <button class="icon-btn sm" data-fov="-1" aria-label="Smaller field" data-tip="Smaller field">${icon('minus')}</button>
+    <button class="icon-btn sm" data-fov="-1" aria-label="Smaller field" data-tip="Smaller field" data-guide="fov-smaller">${icon('minus')}</button>
     <span style="font:var(--text-label);color:var(--ink-2)">${S.fov}′</span>
-    <button class="icon-btn sm" data-fov="1" aria-label="Larger field" data-tip="Larger field">${icon('plus')}</button>
-    ${measure ? `<button class="icon-btn sm" data-tools aria-pressed="${S.tools}" aria-label="Picture tools" data-tip="Picture tools">${icon('sliders')}</button>` : ''}
+    <button class="icon-btn sm" data-fov="1" aria-label="Larger field" data-tip="Larger field" data-guide="fov-larger">${icon('plus')}</button>
+    ${measure ? `<button class="icon-btn sm" data-tools aria-pressed="${S.tools}" aria-label="Picture tools" data-tip="Picture tools" data-guide="tools-button">${icon('sliders')}</button>` : ''}
     <button class="btn text" data-measure aria-pressed="${measure}" data-guide="measure">${icon('chart')}Measure</button>
-    <button class="icon-btn sm" data-hide aria-label="Hide the frame" data-tip="Hide the frame">${icon('close')}</button>`;
+    <button class="icon-btn sm" data-hide aria-label="Hide the frame" data-tip="Hide the frame" data-guide="frame-hide">${icon('close')}</button>`;
   const title = head.querySelector('h2');
   if (title) {
     title.textContent = S.label;
@@ -106,7 +104,7 @@ function views(): void {
   box.innerHTML = VIEWS[S.level]
     .map((m) => {
       const [label, name] = VIEW_NAMES[m];
-      return `<button data-mode="${m}" aria-pressed="${S.mode === m}">${icon(name)}${label}</button>`;
+      return `<button data-mode="${m}" data-guide="view-${m}" aria-pressed="${S.mode === m}">${icon(name)}${label}</button>`;
     })
     .join('');
   box

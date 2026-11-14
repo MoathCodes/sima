@@ -54,11 +54,15 @@ let canvas: HTMLCanvasElement | null = null;
 let marks: SVGSVGElement | null = null;
 let queued = false;
 
-// A fixed placeholder star field around the starting view: [ra, dec, brightness 0..1].
+// A fixed placeholder star field: [ra, dec, brightness 0..1]. Made-up dots, evenly over the
+// whole sky, plus a denser field around the starting view so the first screen is not empty.
 const STARS: [number, number, number][] = (() => {
   let seed = 7;
   const rand = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
   const out: [number, number, number][] = [];
+  for (let i = 0; i < 30000; i++) {
+    out.push([rand() * 360, (Math.asin(2 * rand() - 1) * 180) / Math.PI, rand() ** 8]);
+  }
   for (let i = 0; i < 2600; i++) {
     out.push([cam.ra + (rand() - 0.5) * 16, cam.dec + (rand() - 0.5) * 16, rand() ** 6]);
   }
@@ -374,7 +378,7 @@ function showClickCard(p: SkyPoint): void {
       <span style="font:var(--text-label);color:var(--ink-2)">${formatCoords(p.ra, p.dec)}</span>
       <button class="icon-btn sm" data-close aria-label="Close">${icon('close')}</button>
     </div>
-    <button class="btn primary" data-move>Move the frame here</button>`;
+    <button class="btn primary" data-move data-guide="move-frame-here">Move the frame here</button>`;
   card.hidden = false;
   card.querySelector('[data-close]')?.addEventListener('click', () => (card.hidden = true));
   card.querySelector('[data-move]')?.addEventListener('click', () => {

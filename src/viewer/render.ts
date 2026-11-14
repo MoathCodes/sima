@@ -111,7 +111,7 @@ export function exif(): string {
   const f = S.field;
   if (!f) return S.source === 'loading' ? 'Loading pictures…' : 'No pictures here';
   if (f.simulated) {
-    return `Simulated placeholder (phase 0) · ${f.windows} made-up dates · ${f.frames.length} pictures · D1 to D6`;
+    return `Simulated placeholder · ${f.windows} made-up dates · ${f.frames.length} pictures · D1–D6`;
   }
   return `Real SPHEREx data, ${f.releases.join(', ')} · ${f.frames.length} exposures`;
 }
@@ -252,7 +252,11 @@ function labels(host: HTMLElement | null, size: number, k: number): void {
   if (scale) {
     const arcminPx = (60 / 6.15) * k;
     scale.style.cssText = `position:absolute;left:10px;bottom:10px;width:${arcminPx}px;border-bottom:1.5px solid var(--st-ink);color:var(--st-ink);font:var(--text-scale);padding-bottom:3px;pointer-events:none`;
-    scale.innerHTML = `1 arcmin<span style="position:absolute;left:${size - 40}px;bottom:0">E ⟵ N ↑</span>`;
+    // North up, east left: an L of two arrows, lettered N and E, just right of the scale bar.
+    scale.innerHTML = `1 arcmin<svg viewBox="0 0 30 30" width="30" height="30" aria-label="North up, east left"
+      style="position:absolute;left:calc(100% + 12px);bottom:-1px;overflow:visible;stroke:currentColor;fill:none;stroke-width:1.5">
+      <path d="M24 28V8M24 28H4"/><text x="21" y="5" fill="currentColor" stroke="none">N</text>
+      <text x="-6" y="31" fill="currentColor" stroke="none">E</text></svg>`;
     scale.hidden = !S.field;
   }
 }

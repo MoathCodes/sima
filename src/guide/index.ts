@@ -27,11 +27,11 @@ export function startGuide(): void {
       <p style="margin:0;color:var(--ink-2)">Play pictures of one spot taken months apart and see what moves.</p>
       ${FIRST.map((id, i) => {
         const s = STARTERS[id];
-        return `<button class="btn ${i === 0 ? 'primary' : ''}" data-starter="${id}"
+        return `<button class="btn ${i === 0 ? 'primary' : ''}" data-starter="${id}" data-guide="starter-${id}"
           style="height:auto;justify-content:space-between;padding:10px 12px;text-align:left">
           <span><b>${s.title}</b><br><span style="font:var(--text-label)">${s.line}</span></span>${icon('arrow-right')}</button>`;
       }).join('')}
-      <button class="link" data-close style="justify-self:start;border:0;background:none;padding:0">Or explore the sky on my own</button>`;
+      <button class="link" data-close data-guide="welcome-own" style="justify-self:start;border:0;background:none;padding:0">Or explore the sky on my own</button>`;
     welcome
       .querySelectorAll<HTMLElement>('[data-close]')
       .forEach((b) => b.addEventListener('click', () => (welcome.hidden = true)));

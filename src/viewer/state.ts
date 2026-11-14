@@ -287,6 +287,23 @@ export function pic(): PicSettings {
 }
 
 /**
+ * Visit windows with no exposure in a detector. R Draconis's months often see the star in only
+ * one or two detector pairs; the flip-book skips such months in that detector, and the bar names
+ * them, instead of showing an empty picture for each (docs/data-format.md). Pure.
+ *
+ * @param field The patch; null gives [].
+ * @param det Detector, 1 to 6.
+ * @returns Window numbers, ascending.
+ */
+export function emptyPasses(field: Pick<Field, 'frames' | 'windows'> | null, det: Det): number[] {
+  if (!field) return [];
+  const seen = new Set(field.frames.filter((f) => f.det === det).map((f) => f.window));
+  const out: number[] = [];
+  for (let w = 0; w < field.windows; w++) if (!seen.has(w)) out.push(w);
+  return out;
+}
+
+/**
  * The field size step closest to a size in arcminutes, compared by ratio: 8′ gives 6′ and 9′
  * gives 12′. A size that is not a positive number gives 6′.
  *

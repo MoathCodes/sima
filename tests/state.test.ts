@@ -8,6 +8,7 @@ import {
   S,
   SPEEDS,
   VIEWS,
+  emptyPasses,
   nearestFov,
   pic,
   watch,
@@ -214,4 +215,17 @@ test('nearestFov snaps any size to the closest step, by ratio', () => {
   assert.equal(nearestFov(500), 48);
   assert.equal(nearestFov(Number.NaN), 6);
   assert.equal(nearestFov(-3), 6);
+});
+
+test('emptyPasses names the windows with no exposure in a detector, in order', () => {
+  // R Draconis-like months: window 0 has D1 and D4, window 1 has D2 and D5, window 2 has all six.
+  const frame = (det: number, window: number) => ({ det, window });
+  const field = {
+    windows: 4,
+    frames: [frame(1, 0), frame(4, 0), frame(2, 1), frame(5, 1), frame(1, 2), frame(2, 2)],
+  } as unknown as Parameters<typeof emptyPasses>[0];
+  assert.deepEqual(emptyPasses(field, 1), [1, 3]);
+  assert.deepEqual(emptyPasses(field, 2), [0, 3]);
+  assert.deepEqual(emptyPasses(field, 6), [0, 1, 2, 3]);
+  assert.deepEqual(emptyPasses(null, 3), []);
 });

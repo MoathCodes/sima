@@ -61,18 +61,18 @@ export function startShell(): void {
     `
     <button class="btn quiet" popovertarget="guide-menu" data-guide="guide-button">${icon('compass')}Guide</button>
     <button class="btn quiet" popovertarget="places-menu" data-guide="places-button">${icon('pin')}Places</button>
-    <button class="icon-btn" data-open="share" aria-label="Share" data-tip="Share this view">${icon('share')}</button>
-    <button class="icon-btn" data-open="about" aria-label="About Sima" data-tip="About Sima">${icon('info')}</button>`,
+    <button class="icon-btn" data-open="share" aria-label="Share" data-tip="Share this view" data-guide="share-button">${icon('share')}</button>
+    <button class="icon-btn" data-open="about" aria-label="About Sima" data-tip="About Sima" data-guide="about-button">${icon('info')}</button>`,
   );
   style('actions', 'display:flex;align-items:center;gap:2px;padding:0 5px');
 
   fill(
     'rail',
     `
-    <button class="icon-btn" data-zoom="0.5" aria-label="Zoom the sky in" data-tip="Zoom in (+)" data-tip-pos="right">${icon('plus')}</button>
-    <button class="icon-btn" data-zoom="2" aria-label="Zoom the sky out" data-tip="Zoom out (−)" data-tip-pos="right">${icon('minus')}</button>
-    <button class="icon-btn" popovertarget="sky-layers" aria-label="Sky map" data-tip="Sky map" data-tip-pos="right">${icon('layers')}</button>
-    <button class="icon-btn" data-grid aria-pressed="false" aria-label="Coordinate grid" data-tip="Coordinate grid" data-tip-pos="right">${icon('globe')}</button>`,
+    <button class="icon-btn" data-zoom="0.5" aria-label="Zoom the sky in" data-tip="Zoom in (+)" data-tip-pos="right" data-guide="zoom-in">${icon('plus')}</button>
+    <button class="icon-btn" data-zoom="2" aria-label="Zoom the sky out" data-tip="Zoom out (−)" data-tip-pos="right" data-guide="zoom-out">${icon('minus')}</button>
+    <button class="icon-btn" popovertarget="sky-layers" aria-label="Sky map" data-tip="Sky map" data-tip-pos="right" data-guide="sky-map-button">${icon('layers')}</button>
+    <button class="icon-btn" data-grid aria-pressed="false" aria-label="Coordinate grid" data-tip="Coordinate grid" data-tip-pos="right" data-guide="grid-button">${icon('globe')}</button>`,
   );
   style('rail', 'display:grid;gap:2px;padding:5px');
 
@@ -80,9 +80,9 @@ export function startShell(): void {
     'sky-layers',
     `
     <p class="group-label" style="padding:4px 10px">Sky map</p>
-    <button class="menu-item" role="menuitemradio" aria-checked="true" data-layer="spherex">SPHEREx, at the wavelength on the bar</button>
-    <button class="menu-item" role="menuitemradio" aria-checked="false" data-layer="wise-w1">AllWISE 3.4 µm</button>
-    <button class="menu-item" role="menuitemradio" aria-checked="false" data-layer="wise-w2">AllWISE 4.6 µm</button>`,
+    <button class="menu-item" role="menuitemradio" aria-checked="true" data-layer="spherex" data-guide="sky-map-spherex">SPHEREx, at the wavelength on the bar</button>
+    <button class="menu-item" role="menuitemradio" aria-checked="false" data-layer="wise-w1" data-guide="sky-map-wise-w1">AllWISE 3.4 µm</button>
+    <button class="menu-item" role="menuitemradio" aria-checked="false" data-layer="wise-w2" data-guide="sky-map-wise-w2">AllWISE 4.6 µm</button>`,
   );
 
   fill(
@@ -107,6 +107,7 @@ export function startShell(): void {
   document.addEventListener('click', onClick);
   document.addEventListener('keydown', onKey);
   startTooltips();
+  fitChips();
 }
 
 /**
@@ -115,7 +116,7 @@ export function startShell(): void {
  */
 export function frameRect(): DOMRect | null {
   const frame = document.getElementById('frame');
-  if (!frame || frame.hidden || frame.offsetParent === null) return null;
+  if (!frame?.checkVisibility()) return null; // offsetParent is always null for a fixed card
   return frame.getBoundingClientRect();
 }
 
@@ -179,6 +180,49 @@ export function skyReady(load: SkyLoad): void {
 }
 
 // ----- Phase 0 helpers --------------------------------------------------------------------------
+
+/**
+ * The chips row never runs under a card: it gets the room left of the nearest card in its band
+ * (the frame, when Measure pushes it left), and chips that do not fit wrap onto a clipped second
+ * line (app.css #chips), as in the reference picture at 1366 (spec-img/20). With no room for
+ * even one chip, the row hides. Lane G may offer the hidden ones in a "More" menu.
+ */
+function fitChips(): void {
+  const chips = document.getElementById('chips');
+  if (!chips) return;
+  const fit = () => {
+    const row = chips.getBoundingClientRect(); // its left, top and height do not depend on its width
+    let right = innerWidth - 16;
+    for (const el of document.querySelectorAll<HTMLElement>('[data-card]')) {
+      if (el.closest('#top-left') || !el.checkVisibility()) continue;
+      const r = el.getBoundingClientRect();
+      if (r.top < row.bottom && r.bottom > row.top && r.right > row.left) {
+        right = Math.min(right, r.left - 10);
+      }
+    }
+    const room = Math.max(0, Math.floor(right - row.left));
+    const width = `${room}px`;
+    const visibility = room < 80 ? 'hidden' : '';
+    if (chips.style.maxWidth !== width) chips.style.maxWidth = width;
+    if (chips.style.visibility !== visibility) chips.style.visibility = visibility;
+  };
+  const watcher = new ResizeObserver(fit);
+  for (const id of ['frame', 'measure', 'tools', 'places-list', 'place-card', 'welcome']) {
+    const el = document.getElementById(id);
+    if (el) watcher.observe(el);
+  }
+  // Cards that appear or move without changing size (the frame when Measure opens).
+  new MutationObserver((records) => {
+    const card = (n: Node) => n instanceof Element && n.matches('[data-card]:not(#top-left *)');
+    if (records.some((r) => card(r.target))) fit();
+  }).observe(document.body, {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['hidden', 'style'],
+  });
+  addEventListener('resize', fit);
+  fit();
+}
 
 function fill(id: string, html: string): void {
   const el = document.getElementById(id);
