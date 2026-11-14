@@ -1,6 +1,7 @@
-/* Catalogue search (O-V5, shell/finds.ts) and the sandbox card (O-V7, shell/sandbox.ts).
-   Both sit in the left column where the places list sits (app.css places #finds and #sandbox).
-   Classes: fd- (catalogue search), sb- (sandbox). Tokens and shared components are in app.css. */
+/* Catalogue search (O-V5, shell/finds.ts), the motion handle (O-V6, viewer/motion.ts) and the
+   sandbox card (O-V7, shell/sandbox.ts). The catalogue search and the sandbox sit in the left
+   column where the places list sits (app.css places #finds and #sandbox).
+   Classes: fd- (catalogue search), mh- (motion handle), sb- (sandbox). Tokens and shared components are in app.css. */
 
 .fd-panel,
 .sb-panel {
@@ -170,4 +171,109 @@
 .fd-pages {
   color: var(--ink-2);
   font: var(--text-label);
+}
+
+/* ----- The motion handle (O-V6): the knob on the picture and the readout under the views ----- */
+.mh-knob {
+  position: absolute;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  padding: 0;
+  border: 2px solid var(--st-accent-2);
+  border-radius: var(--r-pill);
+  background: rgba(9, 13, 28, 0.55);
+  cursor: grab;
+  touch-action: none;
+}
+.mh-knob:hover {
+  background: rgba(9, 13, 28, 0.85);
+}
+:root[data-motion-drag] .mh-knob {
+  cursor: grabbing;
+}
+.mh-knob[hidden] {
+  display: none;
+}
+#frame-explain[data-motion] {
+  display: none;
+}
+.mh-strip {
+  display: grid;
+  gap: 4px;
+  padding-top: 6px;
+  container-type: inline-size;
+}
+.mh-strip[hidden] {
+  display: none;
+}
+.mh-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 var(--gap-tight);
+}
+.mh-words {
+  margin: 0;
+  font: var(--text-label);
+  color: var(--ink-2);
+  text-decoration-color: var(--ink-3);
+}
+.mh-words b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.mh-snap {
+  margin-right: -8px;
+}
+.mh-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap-tight);
+}
+.mh-row.pending .mh-thumb {
+  opacity: 0.7;
+}
+.mh-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+}
+.mh-thumb {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-window);
+  background: var(--st-bg);
+  image-rendering: pixelated;
+}
+.mh-cell figcaption {
+  min-width: 0;
+  overflow: hidden;
+  font: var(--text-label);
+  color: var(--ink-2);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mh-cell figcaption b {
+  display: block;
+  overflow: hidden;
+  color: var(--ink);
+  font: var(--text-control);
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+/* A narrow frame (1366 wide with Measure open): the numbers keep their room and the small
+   pictures go (Measure's Cutouts show the same three stacks beside it). */
+@container (max-width: 330px) {
+  .mh-thumb {
+    display: none;
+  }
+  .mh-cell figcaption {
+    white-space: normal;
+  }
 }

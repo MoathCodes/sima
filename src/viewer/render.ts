@@ -33,7 +33,9 @@ import {
   trailImage,
   twoDatesImage,
   type Look,
+  type StackView,
 } from './paint.ts';
+import { trialView } from './motion.ts';
 
 /** The picture on screen, for draw hooks and taps. */
 export interface PictureView {
@@ -397,8 +399,14 @@ let stackCache: ReturnType<typeof stackPicture> | null = null;
 function stackNow() {
   const field = S.field;
   if (!field || S.mode !== 'stack') return null;
-  stackCache = stackPicture(field, S.groups, S.det, S.set?.data.catalogue ?? null, pic(), draw);
+  // The motion handle's trial stack (motion.ts, O-V6) when its arrow is off the catalogue motion.
+  stackCache = trialView() ?? stackPicture(field, S.groups, S.det, S.set?.data.catalogue ?? null, pic(), draw);
   return stackCache;
+}
+
+/** The Stack view's stack on screen (null in other views, or while it is being made). */
+export function stackShown(): StackView | null {
+  return S.mode === 'stack' ? stackCache : null;
 }
 
 function paint(now = false): void {

@@ -12,7 +12,7 @@ import './styles/frame.css';
 import './styles/tools.css';
 import './styles/places.css';
 import './styles/guide.css';
-import './styles/finds.css';
+import './styles/extras.css';
 
 import { startShell } from './shell/shell.ts';
 import { startPlaces } from './shell/places.ts';
@@ -23,6 +23,7 @@ import { startFrame } from './viewer/frame.ts';
 import { startBar } from './viewer/bar.ts';
 import { startMeasure } from './viewer/detail.ts';
 import { startTools } from './viewer/tools.ts';
+import { startMotion } from './viewer/motion.ts';
 import { readLink, startUrl } from './viewer/url.ts';
 import { startGame } from './explore/game.ts';
 import { startGuide } from './guide/index.ts';
@@ -58,6 +59,7 @@ start('frame', startFrame);
 start('bar', startBar);
 start('measure', startMeasure);
 start('tools', startTools);
+start('motion', startMotion);
 start('game', startGame);
 if (!link.embed) start('guide', startGuide);
 // The sky, places and the link start in the next task: starting every part in one task blocked
