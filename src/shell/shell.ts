@@ -42,6 +42,8 @@ export interface SkyLoad {
   failed: number;
   /** True until the very first view of the visit has drawn once. */
   first: boolean;
+  /** Why the sharp map is slow, when the sky can tell (O-I15). Replaces the "meanwhile" line. */
+  why?: string;
 }
 
 /**
@@ -202,9 +204,11 @@ function setCard(card: HTMLElement, load: SkyLoad, pct: number): void {
       : `Loading the ${name}map · ${pct}%`;
   const meanwhile = failed
     ? 'The rest of the page works.'
-    : load.first
-      ? 'The frame and the bar work meanwhile.'
-      : 'You can keep working meanwhile.';
+    : load.why
+      ? load.why
+      : load.first
+        ? 'The frame and the bar work meanwhile.'
+        : 'You can keep working meanwhile.';
   card.innerHTML = `
     <p class="sky-loading-head"></p>
     <p class="sky-loading-line"></p>

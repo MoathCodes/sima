@@ -15,7 +15,7 @@
  *   moves only when the user moves it: never because pictures arrived.
  */
 import { emit, on, type BusEvents } from '../shell/bus.ts';
-import { frameRect, onFrameMove, skyReady } from '../shell/shell.ts';
+import { frameRect, onFrameMove, skyReady, type SkyLoad } from '../shell/shell.ts';
 import { icon } from '../shell/icons.ts';
 import { formatCoords } from '../core/astro.ts';
 import { CHANNEL_LAM, DEFAULT_LAM, WISE_HIPS, channelFor, detectorOf } from './hips.ts';
@@ -649,6 +649,11 @@ let firstDone = false;
 let roundDone = false;
 let doneTimer = 0;
 let reportTimer = 0;
+/** When the current round of loading started, and the timer that looks again after 10 s. */
+let roundStart = 0;
+let slowTimer = 0;
+/** After this long without the whole sharp map, the card says why (O-I15). */
+const SLOW_MS = 10_000;
 
 function onTile(e: TileEvent): void {
   const key = `spherex/${e.ch}/${e.rev}`;
@@ -680,6 +685,7 @@ function report(): void {
   if (!shown.key.startsWith('spherex/')) {
     firstDone = true;
     roundDone = true;
+    roundStart = 0;
     skyReady({ layer: LAYER_NAMES[layer], loaded: 1, total: 1, failed: 0, first: false });
     return;
   }
@@ -688,7 +694,7 @@ function report(): void {
   const loaded = (t?.done.size ?? 0) + (t?.failed.size ?? 0);
   const failed = t?.failed.size ?? 0;
   const done = total > 0 && loaded >= total;
-  const load = {
+  const load: SkyLoad = {
     layer: LAYER_NAMES.spherex,
     loaded: total ? loaded : 0,
     total: total || 1,
@@ -699,9 +705,22 @@ function report(): void {
     clearTimeout(doneTimer);
     doneTimer = 0;
     roundDone = false;
+    // Every tile not yet in is waiting on NASA's tile server: cached, shipped and Allsky tiles
+    // answer at once. After 10 s the card says so, with how many (O-I15).
+    const now = performance.now();
+    roundStart ||= now;
+    const waiting = total - loaded;
+    if (now - roundStart >= SLOW_MS && waiting > 0) {
+      load.why = `${waiting} ${waiting === 1 ? 'tile is' : 'tiles are'} still waiting on NASA's tile server (IRSA) after ${Math.round((now - roundStart) / 1000)} s.`;
+    }
+    clearTimeout(slowTimer);
+    slowTimer = window.setTimeout(report, Math.max(1000, roundStart + SLOW_MS - now));
     skyReady(load);
     return;
   }
+  clearTimeout(slowTimer);
+  slowTimer = 0;
+  roundStart = 0;
   // Done only once loading has been quiet for a moment: tiles arrive in bursts while the view
   // moves, and the loading card should not flicker between them.
   if (roundDone || doneTimer) return;
