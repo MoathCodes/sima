@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en" data-theme="night">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sima v2: switching to Expert view</title>
+<link rel="stylesheet" href="glass.css"><link rel="stylesheet" href="discover.css">
+<style>
+  .mgrid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 1600px) { .mgrid { grid-template-columns: 1fr 260px; } }
+  @media (max-width: 1599px) { .statcol { display: none; } }
+  @media (max-width: 1420px) { .narrow-hide { display: none; } }
+  .find { width: 400px; white-space: nowrap; overflow: hidden; }
+  .bar { bottom: 36px; }
+  .sky-note { bottom: 6px; height: 24px; background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; text-shadow: 0 1px 2px #000; }
+  .sky-note::before, .sky-note::after { display: none; }
+  .xframe .fh .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .xframe .fh .grow { min-width: 0; }
+  @media (max-width: 1420px) { .xframe .seg span { font-size: 12px; padding: 0 4px; white-space: nowrap; } .xframe .fov, .xframe .fh .icon-btn.fovb { display: none; } }
+  .icon-btn.on { background: var(--action-soft); color: var(--on-action-soft); }
+  @media (max-width: 699px) {
+    .pframe { position: fixed; left: 12px; right: 12px; top: 64px; border-radius: 20px; padding: 8px; }
+    .pframe .fh { padding: 2px 4px 8px; } .pframe .name { font: 600 17px/1.2 var(--font); }
+    .pframe .src { font: 500 12px/1 var(--font); color: var(--on-glass-2); display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+    .ppic { width: 100%; aspect-ratio: 1; }
+    .pbar { display: flex; align-items: center; gap: 6px; padding: 8px 2px 0; }
+    .pbar svg.scale text { font: 400 11px var(--font); fill: var(--on-glass-3); }
+    .msheetx { height: 36vh; overflow: hidden; }
+    .coachsheet { padding-bottom: 24px; }
+  }
+</style>
+</head>
+<body>
+<!-- Background: the real app's sky map around Barnard's Star (captured 15 Nov 2026). Charts and pictures are real captures of the app. -->
+<div class="sky" style="background-image:url(img/sky-barnard-1900.jpg)"></div>
+
+<header class="top">
+  <div class="glass brand"><span class="wordmark"><span class="ar">سيما</span><span class="la">Sima</span></span></div>
+  <div class="glass-thin find d-only"><svg class="icon"><use href="icons.svg#search"/></svg>Search a star or galaxy, or paste coordinates<span class="kbd">/</span></div>
+  <div class="spacer"></div>
+  <nav class="glass cluster d-only">
+    <span class="btn"><svg class="icon"><use href="icons.svg#compass"/></svg>Guide</span><span class="btn"><svg class="icon"><use href="icons.svg#pin"/></svg>Places</span>
+    <span class="btn icon-only"><svg class="icon"><use href="icons.svg#share"/></svg></span><span class="btn icon-only"><svg class="icon"><use href="icons.svg#info"/></svg></span>
+  </nav>
+  <div class="glass switch2" data-guide="view-switch"><span><svg class="icon d-only"><use href="icons.svg#sun"/></svg>Discover</span><span class="on"><svg class="icon d-only"><use href="icons.svg#chart"/></svg>Expert</span></div>
+</header>
+<div class="chips d-only">
+  <span class="chip glass-thin"><svg class="icon"><use href="icons.svg#pin"/></svg>Stars</span><span class="chip glass-thin"><svg class="icon"><use href="icons.svg#pin"/></svg>Nearby</span><span class="chip glass-thin"><svg class="icon"><use href="icons.svg#chart"/></svg>Changing</span>
+  <span class="chip glass-thin"><svg class="icon"><use href="icons.svg#globe"/></svg>Clusters</span><span class="chip glass-thin narrow-hide"><svg class="icon"><use href="icons.svg#layers"/></svg>Nebulae</span><span class="chip glass-thin narrow-hide"><svg class="icon"><use href="icons.svg#globe"/></svg>Galaxies</span>
+  <span class="chip glass-thin narrow-hide"><svg class="icon"><use href="icons.svg#arrow"/></svg>Tours</span><span class="chip glass-thin">More<svg class="icon"><use href="icons.svg#chev-down"/></svg></span>
+</div>
+<nav class="rail glass d-only">
+  <span class="icon-btn"><svg class="icon"><use href="icons.svg#plus"/></svg></span><span class="icon-btn"><svg class="icon"><use href="icons.svg#minus"/></svg></span><hr>
+  <span class="icon-btn"><svg class="icon"><use href="icons.svg#layers"/></svg></span><span class="icon-btn"><svg class="icon"><use href="icons.svg#globe"/></svg></span><hr>
+  <span class="icon-btn"><svg class="icon"><use href="icons.svg#frame-add"/></svg></span>
+</nav>
+<section class="xframe glass d-only" style="left:calc(100vw - 16px - clamp(380px, 40vw, 760px) - 16px - min(480px, calc(100vh - 440px)) - 20px)" aria-label="Frame: Barnard's Star">
+  <div class="fh">
+    <div class="grow"><div class="name">Barnard's Star</div><div class="src"><span class="dot"></span>Real data</div></div>
+    <span class="icon-btn fovb"><svg class="icon"><use href="icons.svg#minus"/></svg></span><span class="fov">6′</span><span class="icon-btn fovb"><svg class="icon"><use href="icons.svg#plus"/></svg></span>
+    <span class="icon-btn "><svg class="icon"><use href="icons.svg#sliders"/></svg></span><span class="btn on" style="height:30px;padding:0 9px;font-size:13px"><svg class="icon"><use href="icons.svg#chart"/></svg>Measure</span><span class="icon-btn"><svg class="icon"><use href="icons.svg#close"/></svg></span>
+  </div>
+  <div class="well pic">
+    <img class="px" src="img/pic-barnard-2.png" alt="Barnard's Star, 17 August 2026, detector D3">
+    <div class="badge xbadge"><b><span class="letter" style="background:var(--p3)">C</span>17 Aug 2026, 00:53 UTC</b>Survey pass 3<br>D3, 1.77 µm<br>Different colour: 1.77 vs 1.67 µm</div>
+    <span class="badge orig">Original</span>
+    <div class="edge" style="box-shadow:inset 0 0 0 3px var(--p3)"></div>
+  </div>
+  <div class="seg"><span class="on">Flip</span><span>Swipe</span><span>Two dates</span><span>Difference</span><span>Stack</span><span>Trail</span></div>
+  <div class="exif">Real SPHEREx data, QR3 · 17 Aug 2026, 1 exposure · D3 1.77 µm</div>
+</section>
+<section class="measure slate d-only" style="width:clamp(380px, 40vw, 760px)" aria-label="Measure">
+  <div class="mh"><div><div class="obj">Barnard's Star</div><div class="kind">Red dwarf (M4V), <span class="term">1.83 pc</span></div></div><span class="icon-btn"><svg class="icon"><use href="icons.svg#close"/></svg></span></div>
+  <div class="mgrid">
+    <div>
+      <div class="head"><span class="v">10.50″/yr</span><span class="pill good"><span class="dot"></span>matches catalogue</span></div>
+      <div class="how"><span class="term">Measured ±0.26″</span> from the pixels of 71 of 72 real exposures, catalogue 10.39″/yr</div>
+      <div class="tabs"><span class="on">Path</span><span>Spectrum</span><span>Brightness</span><span>Cutouts</span><span>Exposure</span></div>
+      <div class="chartwin"><img src="img/chart-barnard-0.png" alt="Path chart: each exposure's measured position, moving north"></div>
+      <p>Moving toward <span class="term">position angle 357°</span> (each dot is one exposure; colours are survey passes). The catalogue value is from Gaia DR3 4472832130942575872. Parallax is not shown: three passes cannot measure it, so only the catalogue value is given.</p>
+      <p><span class="textlink" style="font-size:13px">Download these numbers (CSV)</span></p>
+    </div>
+    <div class="statcol">
+      <div class="label" style="margin-bottom:4px">The numbers</div>
+      <div class="stat"><span>Motion</span><span>10.50 ± 0.26″/yr</span></div>
+      <div class="stat"><span>Direction</span><span>357°</span></div>
+      <div class="stat"><span>Catalogue (Gaia DR3)</span><span>10.39″/yr</span></div>
+      <div class="stat"><span>Parallax</span><span>547 mas, catalogue</span></div>
+      <div class="stat"><span>Exposures used</span><span>71 of 72</span></div>
+      <div class="stat"><span>Dates</span><span>Aug 2025 – Sep 2026</span></div>
+      <div class="stat"><span>Fit</span><span class="term">straight line</span></div>
+    </div>
+  </div>
+</section>
+<section class="bar glass d-only" style="width:min(1360px, calc(100vw - 120px))" aria-label="Dates and wavelength">
+  <span class="icon-btn"><svg class="icon"><use href="icons.svg#prev"/></svg></span><span class="play"><svg class="icon"><use href="icons.svg#pause"/></svg></span><span class="icon-btn"><svg class="icon"><use href="icons.svg#next"/></svg></span>
+  <div style="flex:1.5;min-width:0"><svg class="scale" viewBox="0 0 600 60" width="100%" height="60" preserveAspectRatio="none" aria-label="Dates: 12 visits in 3 survey passes, August 2025 to September 2026"><line x1="8.0" x2="8.0" y1="30" y2="38" stroke="rgb(255 255 255 / .22)" stroke-width="1"/><line x1="49.7" x2="49.7" y1="30" y2="38" stroke="rgb(255 255 255 / .22)" stroke-width="1"/><line x1="91.4" x2="91.4" y1="26" y2="38" stroke="var(--on-glass-3)" stroke-width="1"/><text x="91.4" y="54" text-anchor="middle">Oct</text><line x1="133.1" x2="133.1" y1="30" y2="38" stroke="rgb(255 255 255 / .22)" stroke-width="1"/><line x1="174.9" x2="174.9" y1="30" y2="38" stroke="rgb(255 255 255 / .22)" stroke-width="1"/><line x1="216.6" x2="216.6" y1="26" y2="38" stroke="var(--on-glass-3)" stroke-width="1"/><text x="216.6" y="54" text-anchor="middle">2026</text><line x1="258.3" x2="258.3" y1="30" y2="38" stroke="rgb(255 255 255 / .22)" stroke-width="1"/><line x1="300.0" x2="300.0" y1="30" y2="38" stroke="rgb(255 255 255 / .22)" stroke-width="1"/><line x1="341.7" x2="341.7" y1="26" y2="38" stroke="var(--on-glass-3)" stroke-width="1"/><text x="341.7" y="54" text-anchor="middle">Apr</text><line x1="383.4" x2="383.4" y1="30" y2="38" stroke="rgb(255 255 255 / .22)" stroke-width="1"/><line x1="425.1" x2="425.1" y1="30" y2="38" stroke="rgb(255 255 255 / .22)" stroke-width="1"/><line x1="466.9" x2="466.9" y1="26" y2="38" stroke="var(--on-glass-3)" stroke-width="1"/><text x="466.9" y="54" text-anchor="middle">Jul</text><line x1="508.6" x2="508.6" y1="30" y2="38" stroke="rgb(255 255 255 / .22)" stroke-width="1"/><line x1="550.3" x2="550.3" y1="30" y2="38" stroke="rgb(255 255 255 / .22)" stroke-width="1"/><line x1="592.0" x2="592.0" y1="26" y2="38" stroke="var(--on-glass-3)" stroke-width="1"/><text x="592.0" y="54" text-anchor="middle">Oct</text><rect x="8.0" y="30" width="125.1" height="4" rx="2" fill="rgb(255 255 255 / .55)"/><text x="12.0" y="16">Pass 1</text><rect x="195.7" y="30" width="166.9" height="4" rx="2" fill="rgb(255 255 255 / .55)"/><text x="199.7" y="16">Pass 2</text><rect x="404.3" y="30" width="154.3" height="4" rx="2" fill="rgb(255 255 255 / .55)"/><text x="408.3" y="16">Pass 3</text><circle cx="20.5" cy="32" r="3.2" fill="var(--on-glass)"/><circle cx="26.8" cy="32" r="3.2" fill="var(--on-glass)"/><circle cx="33.0" cy="32" r="3.2" fill="var(--on-glass)"/><circle cx="39.3" cy="32" r="3.2" fill="var(--on-glass)"/><circle cx="224.9" cy="32" r="3.2" fill="var(--on-glass)"/><circle cx="231.2" cy="32" r="3.2" fill="var(--on-glass)"/><circle cx="237.4" cy="32" r="3.2" fill="var(--on-glass)"/><circle cx="243.7" cy="32" r="3.2" fill="var(--on-glass)"/><circle cx="521.1" cy="32" r="3.2" fill="var(--on-glass)"/><circle cx="527.3" cy="32" r="3.2" fill="var(--on-glass)"/><circle cx="533.6" cy="32" r="3.2" fill="var(--on-glass)"/><circle cx="539.9" cy="32" r="3.2" fill="var(--on-glass)"/><line x1="533.6" x2="533.6" y1="20" y2="44" stroke="var(--mark)" stroke-width="2"/><circle cx="533.6" cy="32" r="7" fill="var(--mark)" stroke="rgb(var(--tint))" stroke-width="2"/></svg></div>
+  <span style="font:500 12px/1 var(--font);color:var(--on-glass-2);white-space:nowrap" class="term">12 / 12</span>
+  <span class="icon-btn"><svg class="icon"><use href="icons.svg#loop"/></svg></span><span style="font:500 12px/1 var(--font);color:var(--on-glass-2)">1×</span>
+  <span class="vr"></span>
+  <div style="flex:1;min-width:0">
+    <div class="wl-head"><span class="term" style="color:var(--on-glass-3)">Wavelength</span><b>2.00 µm</b><span class="narrow-hide">Deeper infrared</span><span style="margin-left:auto" class="narrow-hide">Same wavelength only</span></div>
+    <svg class="scale" viewBox="0 0 420 40" width="100%" height="40" preserveAspectRatio="none" aria-label="Wavelength 2.00 micrometres, detector D3"><rect x="0.0" y="10" width="68.3" height="6" rx="2" fill="var(--d1)"/><rect x="70.3" y="10" width="68.3" height="6" rx="2" fill="var(--d2)"/><rect x="140.7" y="10" width="68.3" height="6" rx="2" fill="var(--d3)"/><rect x="211.0" y="10" width="68.3" height="6" rx="2" fill="var(--d4)"/><rect x="281.3" y="10" width="68.3" height="6" rx="2" fill="var(--d5)"/><rect x="351.7" y="10" width="68.3" height="6" rx="2" fill="var(--d6)"/><line x1="0.0" x2="0.0" y1="6" y2="20" stroke="var(--on-glass)" stroke-width="1"/><text x="0.0" y="36" text-anchor="start">0.75</text><line x1="70.3" x2="70.3" y1="6" y2="20" stroke="var(--on-glass)" stroke-width="1"/><text x="70.3" y="36" text-anchor="middle">1.11</text><line x1="140.7" x2="140.7" y1="6" y2="20" stroke="var(--on-glass)" stroke-width="1"/><text x="140.7" y="36" text-anchor="middle">1.63</text><line x1="211.0" x2="211.0" y1="6" y2="20" stroke="var(--on-glass)" stroke-width="1"/><text x="211.0" y="36" text-anchor="middle">2.41</text><line x1="281.3" x2="281.3" y1="6" y2="20" stroke="var(--on-glass)" stroke-width="1"/><text x="281.3" y="36" text-anchor="middle">3.83</text><line x1="351.7" x2="351.7" y1="6" y2="20" stroke="var(--on-glass)" stroke-width="1"/><text x="351.7" y="36" text-anchor="middle">4.41</text><line x1="419.0" x2="419.0" y1="6" y2="20" stroke="var(--on-glass)" stroke-width="1"/><text x="419.0" y="36" text-anchor="end">5.0 µm</text><rect x="164.4" y="3" width="14" height="20" rx="5" fill="var(--mark)" stroke="rgb(var(--tint))" stroke-width="2"/></svg>
+  </div>
+</section>
+<section class="coach glass-raised d-only" style="right:16px;top:70px" role="dialog" aria-labelledby="c-h">
+  <h3 id="c-h">You're in Expert view</h3>
+  <p>Every number, picture tool, frame and workspace. You are looking at the same star, date and wavelength as before.</p>
+  <ul>
+    <li><svg class="icon"><use href="icons.svg#check"/></svg>Your missions, skills and field guide are kept.</li>
+    <li><svg class="icon"><use href="icons.svg#check"/></svg>Switch back to Discover here, any time.</li>
+  </ul>
+  <div class="actions"><button class="btn primary">Tour the numbers (3 steps)</button><button class="btn">Got it</button></div>
+</section>
+
+<section class="pframe glass m-only" aria-label="Frame: Barnard's Star">
+  <div class="fh"><div><div class="name">Barnard's Star</div><div class="src"><span class="dot"></span>Real data · QR3 · D3 1.77 µm</div></div></div>
+  <div class="well ppic"><img class="px" src="img/pic-barnard-2.png" alt="Barnard's Star, 17 August 2026">
+    <div class="badge" style="left:8px;top:8px"><b style="display:flex;gap:7px;align-items:center"><span class="letter" style="background:var(--p3)">C</span>17 Aug 2026</b>Pass 3 · D3, 1.77 µm</div></div>
+  <div class="pbar"><span class="icon-btn" style="width:44px;height:44px"><svg class="icon"><use href="icons.svg#prev"/></svg></span><span class="play" style="width:48px;height:48px;border-radius:50%;background:var(--action);color:#fff;display:grid;place-items:center"><svg class="icon"><use href="icons.svg#pause"/></svg></span><span class="icon-btn" style="width:44px;height:44px"><svg class="icon"><use href="icons.svg#next"/></svg></span><div style="flex:1;min-width:0;padding:0 6px"><svg viewBox="0 0 200 24" width="100%" height="24" aria-label="12 visits in 3 passes, Aug 2025 to Sep 2026"><rect x="2" y="10" width="44" height="4" rx="2" fill="rgb(255 255 255 / .5)"/><rect x="72" y="10" width="48" height="4" rx="2" fill="rgb(255 255 255 / .5)"/><rect x="150" y="10" width="48" height="4" rx="2" fill="rgb(255 255 255 / .5)"/><circle cx="6" cy="12" r="1.8" fill="var(--on-glass)"/><circle cx="10" cy="12" r="1.8" fill="var(--on-glass)"/><circle cx="14" cy="12" r="1.8" fill="var(--on-glass)"/><circle cx="18" cy="12" r="1.8" fill="var(--on-glass)"/><circle cx="84" cy="12" r="1.8" fill="var(--on-glass)"/><circle cx="88" cy="12" r="1.8" fill="var(--on-glass)"/><circle cx="92" cy="12" r="1.8" fill="var(--on-glass)"/><circle cx="96" cy="12" r="1.8" fill="var(--on-glass)"/><circle cx="182" cy="12" r="1.8" fill="var(--on-glass)"/><circle cx="186" cy="12" r="1.8" fill="var(--on-glass)"/><circle cx="190" cy="12" r="1.8" fill="var(--on-glass)"/><circle cx="194" cy="12" r="1.8" fill="var(--on-glass)"/><circle cx="190" cy="12" r="5" fill="var(--mark)" stroke="rgb(var(--tint))" stroke-width="1.5"/></svg><div style="display:flex;justify-content:space-between;font:400 11px/1 var(--font);color:var(--on-glass-3);margin-top:2px"><span>Aug 2025</span><span>Sep 2026</span></div></div><span style="font-size:12px;color:var(--on-glass-2)">12/12</span></div>
+</section>
+<section class="msheet glass-raised m-only coachsheet">
+  <div class="grabber"></div>
+  
+  <h3 style="margin:8px 0 0;font:600 17px/1.2 var(--font)">Expert view on a phone</h3>
+  <p style="font-size:14px;color:var(--on-glass-2);line-height:1.5;margin:8px 0 0">Here you get the frame, every date and every number. Picture tools, several frames and workspaces need a computer.</p>
+  <div class="actions" style="margin-top:14px"><button class="btn primary lg" style="flex:1"><svg class="icon"><use href="icons.svg#laptop"/></svg>Send this to my computer</button><button class="btn lg">Got it</button></div>
+</section>
+<div class="sky-note glass-thin d-only"><b>Average of all dates:</b> moving things blur here · SPHEREx 2.00 µm</div>
+</body>
+</html>

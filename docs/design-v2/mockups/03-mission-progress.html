@@ -19,6 +19,11 @@
     .mission .tools .btn { flex: 1; height: 48px; }
   }
   .nowm { display: none; }
+  @media (max-width: 1500px) and (min-width: 700px) {
+    .ctl { flex-wrap: wrap; gap: 10px; }
+    .dates { order: 2; flex-basis: 100%; margin: 0; }
+    .datechip span.sm { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -69,7 +74,6 @@
   <div class="well pic">
     <img class="px" src="img/pic-barnard-1.png" alt="Picture B of Barnard's Star, March 2026">
     <div class="badge date"><span class="letter" style="background:var(--p2)">B</span>Mar 2026<span style="font-weight:500;color:var(--st-ink-2);font-size:12px">· picture 2 of 3</span></div>
-    <div class="scale">1 arcmin<i></i></div><div class="ne">N ↑ E ←</div>
     <div class="edge"></div>
   </div>
   <div class="ctl">
