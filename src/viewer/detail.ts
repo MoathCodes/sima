@@ -29,7 +29,7 @@ import { compute, STALE } from './tools/compute.ts';
 import type { SpotResult, StackSet, TargetResult } from './tools/jobs.ts';
 import { allRows, catalogue } from './tools/catalogue.ts';
 import { candidate, search } from './tools/search.ts';
-import { lastView, noiseOf } from './tools/view.ts';
+import { lastView, noiseOf, onPaint } from './tools/view.ts';
 import { download, esc, fileName, num, pill, sig, term, token } from './tools/dom.ts';
 import { drawChart, drawPath, mjdDate, moverPath, type Pt } from './measure/charts.ts';
 import type { Candidate } from '../core/detect.ts';
@@ -87,6 +87,15 @@ export function startMeasure(): void {
     if (!panel()?.hidden) chart();
   });
   watch(['allNumbers'], saveAllNumbers);
+  // "The picture on screen" follows each paint, so it always says what the frame shows (MSR-5).
+  onPaint(() => {
+    const p = panel();
+    const state = p?.querySelector<HTMLElement>('[data-wrap]')?.dataset.state;
+    const under = p?.querySelector<HTMLElement>('[data-under]');
+    if (p?.hidden || !under || (state !== 'picture' && state !== 'sim')) return;
+    const html = pictureDetails();
+    if (under.dataset.pic !== html) under.innerHTML = under.dataset.pic = html;
+  });
   startInbox(() => {
     const host = panel()?.querySelector<HTMLElement>('[data-found]');
     if (host && !panel()?.hidden && S.allNumbers) renderFound(host);
@@ -312,7 +321,7 @@ function render(): void {
     title.textContent = S.label;
     kind.innerHTML = pill('Simulated', 'warn');
     head.innerHTML = `<p class="ms-sub">Simulated pictures, made up for practice. Measure works only on real exposures, so nothing here is measured, listed or saved as a result.</p>`;
-    under.innerHTML = pictureDetails();
+    under.innerHTML = under.dataset.pic = pictureDetails();
     return;
   }
   if (state === 'picture') {
@@ -320,7 +329,7 @@ function render(): void {
     kind.textContent = S.label;
     head.innerHTML = `<p class="ms-sub">Tap a star in the picture to measure it${field?.target ? `, or <button type="button" class="link" data-do-target>measure ${esc(field.target.name)}</button>` : ''}.</p>`;
     head.querySelector('[data-do-target]')?.addEventListener('click', () => detail({ kind: 'target' }));
-    under.innerHTML = pictureDetails();
+    under.innerHTML = under.dataset.pic = pictureDetails();
     return;
   }
 
@@ -636,9 +645,10 @@ function hasNumbers(): boolean {
 
 /** "The picture on screen": what it is, where it came from, its noise (MSR-5). */
 function pictureDetails(): string {
+  // The picture the frame last painted, not the state it is about to paint.
   const view = lastView();
-  const g = S.groups[S.epoch];
-  const field = S.field;
+  const g = view?.group;
+  const field = view?.field;
   if (!field || !g) return '';
   const frames = g.frames.map((i) => field.frames[i]).filter((f) => !!f);
   const noise = view ? noiseOf(view) : null;
