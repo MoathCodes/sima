@@ -60,7 +60,11 @@ function interleave(x: number, y: number): number {
  * @param ra Degrees.
  * @param dec Degrees.
  */
-export function healpixXY(ra: number, dec: number, order: number): { face: number; x: number; y: number } {
+export function healpixXY(
+  ra: number,
+  dec: number,
+  order: number,
+): { face: number; x: number; y: number } {
   const nside = 2 ** order;
   const z = Math.sin((dec * Math.PI) / 180);
   const za = Math.abs(z);
@@ -73,7 +77,11 @@ export function healpixXY(ra: number, dec: number, order: number): { face: numbe
     const ifp = Math.floor(jp / nside);
     const ifm = Math.floor(jm / nside);
     const face = ifp === ifm ? (ifp % 4) + 4 : ifp < ifm ? ifp % 4 : (ifm % 4) + 8;
-    return { face, x: ((jm % nside) + nside) % nside, y: nside - (((jp % nside) + nside) % nside) - 1 };
+    return {
+      face,
+      x: ((jm % nside) + nside) % nside,
+      y: nside - (((jp % nside) + nside) % nside) - 1,
+    };
   }
   const ntt = Math.min(3, Math.floor(tt));
   const tp = tt - ntt;

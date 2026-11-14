@@ -73,7 +73,9 @@ export function paintDates(el: HTMLElement): void {
   }
   const today = mjdOf(new Date());
   if (today > t0 && today < t1) {
-    parts.push(`<span class="ds-today" style="left:${x(today)}" data-tip="Today" data-tip-pos="above"></span>`);
+    parts.push(
+      `<span class="ds-today" style="left:${x(today)}" data-tip="Today" data-tip-pos="above"></span>`,
+    );
   }
 
   // Passes: one bar per window, from halfway to the previous pass to halfway to the next.
@@ -107,7 +109,10 @@ export function paintDates(el: HTMLElement): void {
       if (left - lastLeft < 64) return;
       lastLeft = left;
       const first = groups.find((g) => g.window === w);
-      const label = S.field?.monthly && first ? formatDate(at(first), 'month') : passName(S.field, w).replace('Survey p', 'P');
+      const label =
+        S.field?.monthly && first
+          ? formatDate(at(first), 'month')
+          : passName(S.field, w).replace('Survey p', 'P');
       parts.push(`<span class="ds-passname" style="left:${x(c)}">${label}</span>`);
     });
     groups.forEach((g, i) => {
@@ -168,7 +173,9 @@ export function watchDates(el: HTMLElement): void {
     const f = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
     const i = nearest(clientX);
     const g = i === null ? null : S.groups[i];
-    t.textContent = g ? formatDate(at(g), S.level === 'measure' ? 'time' : 'day') : formatDate(dom[0] + f * (dom[1] - dom[0]), 'day');
+    t.textContent = g
+      ? formatDate(at(g), S.level === 'measure' ? 'time' : 'day')
+      : formatDate(dom[0] + f * (dom[1] - dom[0]), 'day');
     t.style.left = `${f * 100}%`;
     t.hidden = false;
   };
@@ -176,7 +183,7 @@ export function watchDates(el: HTMLElement): void {
   el.addEventListener('pointerdown', (e) => {
     if (el.classList.contains('off') || e.button !== 0) return;
     dragging = true;
-    el.setPointerCapture(e.pointerId);
+    capture(el, e.pointerId);
     pause();
     const i = nearest(e.clientX);
     if (i !== null) setEpoch(i);
@@ -199,4 +206,13 @@ export function watchDates(el: HTMLElement): void {
       setEpoch(Number(b.dataset.epoch));
     }
   });
+}
+
+/** Captures the pointer when the browser allows it (a synthetic or ended pointer cannot be). */
+function capture(el: Element, id: number): void {
+  try {
+    el.setPointerCapture(id);
+  } catch {
+    // Nothing to capture: the drag still works while the pointer stays over the element.
+  }
 }

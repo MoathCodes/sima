@@ -540,11 +540,7 @@
   top: 30px;
   height: var(--pass-bar);
   border-radius: 2px;
-  background: linear-gradient(
-    to right,
-    var(--ink-2) var(--played),
-    var(--card-3) var(--played)
-  );
+  background: linear-gradient(to right, var(--ink-2) var(--played), var(--card-3) var(--played));
 }
 .ds-tick {
   top: 35px;

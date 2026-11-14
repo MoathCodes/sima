@@ -298,7 +298,10 @@ async function pollLive(id: number, signal: AbortSignal): Promise<void> {
           announceLines();
           return;
         }
-        return giveUp(id, `NASA’s archive could not give the pictures (${status.error || 'no reason given'}).`);
+        return giveUp(
+          id,
+          `NASA’s archive could not give the pictures (${status.error || 'no reason given'}).`,
+        );
     }
     await wait(POLL_MS, signal);
   }
@@ -313,7 +316,12 @@ async function showLive(
   const folder = step === 'full' ? status.full : status.first;
   if (!folder) return false;
   try {
-    const set = await fetchSet(folder.endsWith('/') ? folder : `${folder}/`, status.id, 'live', signal);
+    const set = await fetchSet(
+      folder.endsWith('/') ? folder : `${folder}/`,
+      status.id,
+      'live',
+      signal,
+    );
     if (!current(id)) return false;
     stepNote = step === 'first' ? 'First look' : '';
     const keepEpoch = S.groups[S.epoch]?.mjd ?? null;
@@ -381,7 +389,11 @@ export function panTo(ra: number, dec: number): void {
 
 /** Tells the sky where the patch is while the user drags inside the picture (no reload). */
 export function previewPatch(ra: number, dec: number): void {
-  emit('patch', { ...patchMsg(), ra: ((ra % 360) + 360) % 360, dec: Math.max(-90, Math.min(90, dec)) });
+  emit('patch', {
+    ...patchMsg(),
+    ra: ((ra % 360) + 360) % 360,
+    dec: Math.max(-90, Math.min(90, dec)),
+  });
 }
 
 // ----- Showing a set ----------------------------------------------------------------------------
@@ -623,5 +635,8 @@ function releasesText(list: readonly string[]): string {
 /** `spherex_dr1_deep` → "DR1 deep". */
 export function releaseName(r: string): string {
   if (r === 'simulated') return 'simulated';
-  return r.replace(/^spherex_/, '').replace('_', ' ').replace(/^(\w+)/, (m) => m.toUpperCase());
+  return r
+    .replace(/^spherex_/, '')
+    .replace('_', ' ')
+    .replace(/^(\w+)/, (m) => m.toUpperCase());
 }

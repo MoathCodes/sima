@@ -44,7 +44,8 @@ const VIEW_NAMES: Record<Mode, [string, IconName, string]> = {
 /** What each view shows, in Measure's explanation line. */
 const EXPLAIN: Record<Mode, string> = {
   flip: 'Each picture is one visit, scaled to the reference brightness. Stars stay put; what shifts is moving.',
-  swipe: 'Left of the line is the reference date, right of it this one. Drag the line over anything that differs.',
+  swipe:
+    'Left of the line is the reference date, right of it this one. Drag the line over anything that differs.',
   two: 'Red is the reference date, cyan this one. Unchanged is white; a red and cyan pair moved.',
   diff: 'This date minus the median of all dates: white is here now, dark is where it usually sits.',
   stack: 'Every exposure in this detector added up, so faint things build up and the noise drops.',
@@ -67,8 +68,16 @@ const SOURCE: Record<string, { cls: string; text: string; tip: string }> = {
     text: 'Simulated',
     tip: 'Made-up pictures for practice. They are never mixed with real results',
   },
-  none: { cls: 'none', text: 'No pictures here', tip: 'There are no real pictures of this spot in the frame' },
-  loading: { cls: 'loading', text: 'Loading…', tip: 'Real exposures of this spot are on their way' },
+  none: {
+    cls: 'none',
+    text: 'No pictures here',
+    tip: 'There are no real pictures of this spot in the frame',
+  },
+  loading: {
+    cls: 'loading',
+    text: 'Loading…',
+    tip: 'Real exposures of this spot are on their way',
+  },
 };
 
 /** Fills the frame and answers `aim` and `band`. Called once by main.ts. */
@@ -161,9 +170,9 @@ function header(): void {
     // One line; the whole name in the tooltip (O-I10).
     title.dataset.tip = S.label;
   }
-  head.querySelectorAll<HTMLButtonElement>('[data-fov]').forEach((b) =>
-    b.addEventListener('click', () => void setFov(nextFov(Number(b.dataset.fov)))),
-  );
+  head
+    .querySelectorAll<HTMLButtonElement>('[data-fov]')
+    .forEach((b) => b.addEventListener('click', () => void setFov(nextFov(Number(b.dataset.fov)))));
   head.querySelector('[data-tools]')?.addEventListener('click', () => (S.tools = !S.tools));
   head
     .querySelector('[data-measure]')
@@ -213,7 +222,11 @@ function lines(): void {
     load.className = 'frame-load';
     const busy = S.source === 'loading' && S.load;
     const note = [stepNote, liveNote].filter(Boolean).join(' · ');
-    load.textContent = busy ? 'Loading this spot. The sky keeps working meanwhile.' : note ? `${note}.` : '';
+    load.textContent = busy
+      ? 'Loading this spot. The sky keeps working meanwhile.'
+      : note
+        ? `${note}.`
+        : '';
     load.dataset.tip = load.textContent;
   }
 }

@@ -112,12 +112,17 @@ export function median(values: ArrayLike<number>): number {
 }
 
 /** The sky level and noise of a detector's pictures, µJy (the noise is the detector's median). */
-export function noiseOf(field: Field, det: Det, groups: readonly Group[]): { sky: number; sigma: number } {
+export function noiseOf(
+  field: Field,
+  det: Det,
+  groups: readonly Group[],
+): { sky: number; sigma: number } {
   const skies: number[] = [];
-  for (const g of groups) for (const i of g.frames) {
-    const f = field.frames[i];
-    if (f && Number.isFinite(f.sky)) skies.push(f.sky * (Number.isFinite(f.gain) ? f.gain : 1));
-  }
+  for (const g of groups)
+    for (const i of g.frames) {
+      const f = field.frames[i];
+      if (f && Number.isFinite(f.sky)) skies.push(f.sky * (Number.isFinite(f.gain) ? f.gain : 1));
+    }
   const sigma = field.noise[det - 1] ?? Number.NaN;
   return {
     sky: skies.length ? median(skies) : 0,
@@ -139,7 +144,9 @@ export function lookFor(
   det: Det,
 ): Look {
   const c = cacheOf(field);
-  const ref = groups[refIndex]?.frames.length ? groups[refIndex] : groups.find((g) => g.frames.length);
+  const ref = groups[refIndex]?.frames.length
+    ? groups[refIndex]
+    : groups.find((g) => g.frames.length);
   const key = `look|${ref ? groupKey(ref) : 'none'}|${cleanKey(p)}|${lookKey(p)}|${det}`;
   return remember(c.other as Map<string, Look>, key, () => {
     const noise = noiseOf(field, det, groups);
@@ -188,7 +195,12 @@ function lutId(lut: Uint8ClampedArray): number {
 
 /** Flip: one date's picture, through the flip-book's look. */
 export function flipImage(field: Field, group: Group, look: Look, p: PicSettings): ImageData {
-  return imageOf(field, `flip|${groupKey(group)}|${cleanKey(p)}`, groupPicture(field, group, p), look);
+  return imageOf(
+    field,
+    `flip|${groupKey(group)}|${cleanKey(p)}`,
+    groupPicture(field, group, p),
+    look,
+  );
 }
 
 /**
@@ -352,7 +364,9 @@ export function trailImage(
   const key = `trail|${groups.map(groupKey).join(';')}|${upTo}|${cleanKey(p)}|${lookKey(p)}|${look.range.lo}|${look.range.hi}`;
   return remember(c.img, key, () => {
     const cur = groups[upTo];
-    const base = cur ? flipImage(field, cur, look, p).data : new Uint8ClampedArray(field.n * field.n * 4);
+    const base = cur
+      ? flipImage(field, cur, look, p).data
+      : new Uint8ClampedArray(field.n * field.n * 4);
     const img = new ImageData(new Uint8ClampedArray(base), field.n, field.n);
     const acc = new Float32Array(field.n * field.n);
     for (let j = 0; j < upTo; j++) {

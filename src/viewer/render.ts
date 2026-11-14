@@ -139,10 +139,11 @@ function release(r: string): string {
 
 function framesOf(field: Field, groups: readonly (Group | null | undefined)[]) {
   const out = [];
-  for (const g of groups) for (const i of g?.frames ?? []) {
-    const f = field.frames[i];
-    if (f) out.push(f);
-  }
+  for (const g of groups)
+    for (const i of g?.frames ?? []) {
+      const f = field.frames[i];
+      if (f) out.push(f);
+    }
   return out;
 }
 
@@ -220,7 +221,9 @@ export function hud(): Hud | null {
     return {
       letter: g.letter,
       title: formatDate(g.mjd, measure ? 'time' : 'month'),
-      lines: [`Color: red ${ch('r') || 'none'} · green ${ch('g') || 'none'} · blue ${ch('b') || 'none'}`],
+      lines: [
+        `Color: red ${ch('r') || 'none'} · green ${ch('g') || 'none'} · blue ${ch('b') || 'none'}`,
+      ],
       warn: sim,
     };
   }
@@ -244,7 +247,12 @@ export function hud(): Hud | null {
       const [c1, c2] = st.result.controls;
       lines.push(`Checks: ${c1.label.toLowerCase()}, ${c2.label.toLowerCase()}`);
     }
-    return { letter: '', title: `Stack of ${count} exposure${count === 1 ? '' : 's'}`, lines, warn: sim };
+    return {
+      letter: '',
+      title: `Stack of ${count} exposure${count === 1 ? '' : 's'}`,
+      lines,
+      warn: sim,
+    };
   }
   if (!g.frames.length) {
     return {
@@ -263,12 +271,17 @@ export function hud(): Hud | null {
         ? ['This date minus the typical sky']
         : S.mode === 'trail'
           ? ['Earlier dates fade behind it']
-          : [n > 1 ? `Blends ${n} shots${mixed ? ' in slightly different colours' : ''}` : 'One shot'];
+          : [
+              n > 1
+                ? `Blends ${n} shots${mixed ? ' in slightly different colours' : ''}`
+                : 'One shot',
+            ];
     return { letter: g.letter, title: formatDate(g.mjd, 'month'), lines, warn: sim };
   }
   const f = frames[0];
   const lines = [passName(field, g.window)];
-  if (frames.length > 1) lines.push(`D${g.det}, ${lamRange(frames.map((x) => x.lam))}, ${frames.length} shots`);
+  if (frames.length > 1)
+    lines.push(`D${g.det}, ${lamRange(frames.map((x) => x.lam))}, ${frames.length} shots`);
   else if (f) lines.push(`D${g.det}, ${f.lam.toFixed(2)} µm`);
   const ref = S.groups[Math.min(S.ref, S.groups.length - 1)];
   const refFrame = ref ? framesOf(field, [ref])[0] : undefined;
@@ -303,7 +316,8 @@ export function exif(): string {
   const det = S.color ? 'D1–D6' : `D${S.det}`;
   const parts: string[] = [];
   if (f.simulated) parts.push('Simulated pictures for practice, not real data');
-  else if (S.source === 'live') parts.push(`Real SPHEREx data, fetched live${releases ? `, ${releases}` : ''}`);
+  else if (S.source === 'live')
+    parts.push(`Real SPHEREx data, fetched live${releases ? `, ${releases}` : ''}`);
   else parts.push(`Real SPHEREx data${releases ? `, ${releases}` : ''}`);
   const mjds = frames.map((x) => x.mjd).filter(Number.isFinite);
   const count = frames.length;
@@ -313,7 +327,9 @@ export function exif(): string {
       `${groups.map((g) => formatDate(g.mjd, 'month')).join(' and ')}, ${count} ${noun}${count === 1 ? '' : 's'}`,
     );
   } else if (mjds.length) {
-    parts.push(`${dayRange(Math.min(...mjds), Math.max(...mjds))}, ${count} ${noun}${count === 1 ? '' : 's'}`);
+    parts.push(
+      `${dayRange(Math.min(...mjds), Math.max(...mjds))}, ${count} ${noun}${count === 1 ? '' : 's'}`,
+    );
   } else {
     parts.push(`no D${S.det} exposure on this date`);
   }
@@ -442,7 +458,8 @@ function paint(): void {
       const q = wcsSky2Pix(field.wcs, ra, dec);
       return { x: o + (q.x + 0.5) * k, y: o + (q.y + 0.5) * k };
     },
-    picToSky: (cx, cy) => (field ? wcsPix2Sky(field.wcs, (cx - o) / k - 0.5, (cy - o) / k - 0.5) : null),
+    picToSky: (cx, cy) =>
+      field ? wcsPix2Sky(field.wcs, (cx - o) / k - 0.5, (cy - o) / k - 0.5) : null,
     field,
     group,
     mjd: group && Number.isFinite(group.mjd) ? group.mjd : null,
@@ -502,7 +519,10 @@ function imageFor(field: Field, group: Group, look: Look, p: PicSettings): Paint
       return { data: stackImage(field, st, look, p), values: st.pix };
     }
     case 'trail':
-      return { data: trailImage(field, S.groups, S.epoch, look, p), values: groupPicture(field, group, p) };
+      return {
+        data: trailImage(field, S.groups, S.epoch, look, p),
+        values: groupPicture(field, group, p),
+      };
     default:
       return { data: flipImage(field, group, look, p), values: groupPicture(field, group, p) };
   }
@@ -521,7 +541,13 @@ function colourPainted(field: Field, group: Group, p: PicSettings): Painted {
 }
 
 let scratch: OffscreenCanvas | null = null;
-function blit(ctx: CanvasRenderingContext2D, img: ImageData, o: number, k: number, n: number): void {
+function blit(
+  ctx: CanvasRenderingContext2D,
+  img: ImageData,
+  o: number,
+  k: number,
+  n: number,
+): void {
   if (!scratch || scratch.width !== img.width || scratch.height !== img.height) {
     scratch = new OffscreenCanvas(img.width, img.height);
   }
@@ -570,7 +596,10 @@ function labels(p: Parts, size: number, k: number, field: Field | null): void {
 }
 
 function esc(s: string): string {
-  return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
+  return s.replace(
+    /[&<>"]/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c,
+  );
 }
 
 // ----- Pointer: pan, tap, wheel -----------------------------------------------------------------
@@ -604,7 +633,7 @@ function watchPointer(canvas: HTMLCanvasElement): void {
   canvas.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
     down = { x: e.clientX, y: e.clientY, id: e.pointerId };
-    canvas.setPointerCapture(e.pointerId);
+    capture(canvas, e.pointerId);
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!down || e.pointerId !== down.id) return;
@@ -666,7 +695,7 @@ function watchDivider(divider: HTMLElement): void {
   const host = () => divider.parentElement?.getBoundingClientRect();
   divider.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
-    divider.setPointerCapture(e.pointerId);
+    capture(divider, e.pointerId);
   });
   divider.addEventListener('pointermove', (e) => {
     const r = host();
@@ -687,4 +716,13 @@ function watchDivider(divider: HTMLElement): void {
 export function nextFov(steps: number): (typeof FOVS)[number] {
   const i = FOVS.indexOf(S.fov) + steps;
   return FOVS[Math.max(0, Math.min(FOVS.length - 1, i))] ?? S.fov;
+}
+
+/** Captures the pointer when the browser allows it (a synthetic or ended pointer cannot be). */
+function capture(el: Element, id: number): void {
+  try {
+    el.setPointerCapture(id);
+  } catch {
+    // Nothing to capture: the drag still works while the pointer stays over the element.
+  }
 }

@@ -88,7 +88,22 @@ export function startBar(): void {
   watchStrip(bar.querySelector<HTMLElement>('[data-strip]'));
   document.addEventListener('keydown', onKey);
   watch(
-    ['playing', 'loop', 'speed', 'sameColour', 'lam', 'det', 'color', 'groups', 'epoch', 'ref', 'mode', 'level', 'field', 'source'],
+    [
+      'playing',
+      'loop',
+      'speed',
+      'sameColour',
+      'lam',
+      'det',
+      'color',
+      'groups',
+      'epoch',
+      'ref',
+      'mode',
+      'level',
+      'field',
+      'source',
+    ],
     () => paint(bar),
   );
   addEventListener('resize', () => paint(bar));
@@ -153,7 +168,8 @@ function paint(bar: HTMLElement): void {
   const same = bar.querySelector<HTMLButtonElement>('[data-same]');
   if (same) {
     // BAR-5: shown only where it applies: real exposures whose wavelengths differ in a detector.
-    const frames = S.field && !S.field.simulated ? S.field.frames.filter((f) => f.det === S.det) : [];
+    const frames =
+      S.field && !S.field.simulated ? S.field.frames.filter((f) => f.det === S.det) : [];
     const first = frames[0];
     const applies = !S.color && !!first && frames.some((f) => !colourMatch(f, first));
     same.hidden = !applies && !S.sameColour;
@@ -173,7 +189,9 @@ function paint(bar: HTMLElement): void {
     handle.setAttribute('aria-valuenow', S.lam.toFixed(2));
     handle.setAttribute('aria-valuetext', `${S.lam.toFixed(2)} µm, detector ${S.det}`);
   }
-  bar.querySelectorAll<HTMLElement>('.wl-band').forEach((b, i) => b.classList.toggle('on', i + 1 === S.det));
+  bar
+    .querySelectorAll<HTMLElement>('.wl-band')
+    .forEach((b, i) => b.classList.toggle('on', i + 1 === S.det));
 
   const dates = bar.querySelector<HTMLElement>('[data-dates]');
   if (dates) paintDates(dates);
@@ -192,7 +210,7 @@ function watchStrip(strip: HTMLElement | null): void {
     setLam(lamAt((e.clientX - r.left) / r.width));
   };
   strip.addEventListener('pointerdown', (e) => {
-    strip.setPointerCapture(e.pointerId);
+    capture(strip, e.pointerId);
     at(e);
   });
   strip.addEventListener('pointermove', (e) => {
@@ -200,7 +218,8 @@ function watchStrip(strip: HTMLElement | null): void {
   });
   strip.querySelector('.wl-handle')?.addEventListener('keydown', (e) => {
     const k = (e as KeyboardEvent).key;
-    const d = k === 'ArrowLeft' || k === 'ArrowDown' ? -1 : k === 'ArrowRight' || k === 'ArrowUp' ? 1 : 0;
+    const d =
+      k === 'ArrowLeft' || k === 'ArrowDown' ? -1 : k === 'ArrowRight' || k === 'ArrowUp' ? 1 : 0;
     if (!d) return;
     e.preventDefault();
     // One step is about one SPHEREx channel: a seventeenth of a detector's band.
@@ -211,7 +230,8 @@ function watchStrip(strip: HTMLElement | null): void {
 function onKey(e: KeyboardEvent): void {
   if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
   const t = e.target instanceof Element ? e.target : null;
-  if (t?.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"], dialog')) return;
+  if (t?.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"], dialog'))
+    return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === ' ' || e.code === 'Space') {
     if (t?.closest('button, a, [role="button"], [role="switch"], [role="slider"]')) return;
@@ -224,5 +244,14 @@ function onKey(e: KeyboardEvent): void {
     if (!S.groups.length) return;
     e.preventDefault();
     step(e.key === 'ArrowLeft' ? -1 : 1);
+  }
+}
+
+/** Captures the pointer when the browser allows it (a synthetic or ended pointer cannot be). */
+function capture(el: Element, id: number): void {
+  try {
+    el.setPointerCapture(id);
+  } catch {
+    // Nothing to capture: the drag still works while the pointer stays over the element.
   }
 }
