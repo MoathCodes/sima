@@ -1010,10 +1010,11 @@ samp {
 #tools {
   position: fixed;
   top: 112px;
-  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-h) - 14px);
+  left: var(--tools-left, auto);
   right: calc(var(--gutter) + var(--frame-w) + 10px);
   z-index: var(--z-card);
-  width: 320px;
+  width: var(--tools-width, 320px);
+  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-h) - 14px);
 }
 
 /* Lane D: the bar, 30px above the bottom, centred. */
@@ -1033,7 +1034,7 @@ samp {
   top: 112px; /* under the chips row (68 to 98px) */
   left: calc(var(--gutter) + 58px);
   z-index: var(--z-card);
-  width: 360px;
+  width: var(--left-col-width, 360px); /* layout.ts: the room left of the frame, at most 360px */
 }
 #places-list {
   bottom: calc(var(--bar-bottom) + var(--bar-h) + 14px);

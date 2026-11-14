@@ -39,7 +39,7 @@ const ABOVE_BAR = 14;
 const MIN_WIDTH = 300;
 const TOOLS_WIDTH = 320;
 const TOOLS_MIN = 280;
-const TOOLS_TOP = 112;
+const LIST_WIDTH = 360;
 /** The column at the left that holds one card at a time. */
 const LEFT_COLUMN = ['welcome', 'places-list', 'place-card', 'tools'];
 
@@ -96,8 +96,16 @@ export function startLayout(): void {
   }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
   addEventListener('resize', () => place());
   // The frame's contents change height (a task line, the loading line, Measure's explanation).
+  // Placed on the next drawn frame, not inside the observer, so a size change made here is not
+  // reported back in the same frame (a ResizeObserver loop).
+  let queued = false;
   new ResizeObserver(() => {
-    if (!moving) place();
+    if (moving || queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      if (!moving) place();
+    });
   }).observe(frame);
 }
 
@@ -160,7 +168,7 @@ function place(opts: { glide?: boolean; closing?: boolean } = {}): void {
     if (glides && reduced()) {
       frame.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'linear' });
     }
-    set(frame, 'translate', `${nextShift}px 0`);
+    set(frame, 'translate', `${Math.round(nextShift)}px`);
     if (glides && !reduced()) followGlide(frame);
     shift = nextShift;
 
@@ -201,10 +209,13 @@ function placeTools(frameLeft: number, frameRight: number, limit: number): void 
     left = frameRight + GAP;
     width = clamp(limit - GAP - left, TOOLS_MIN, TOOLS_WIDTH);
   }
-  set(tools, 'left', `${left}px`);
-  set(tools, 'right', 'auto');
-  set(tools, 'top', `${TOOLS_TOP}px`);
-  set(tools, 'width', `${width}px`);
+  // On :root, not on the panel: lane E rewrites the panel's own style when it draws.
+  const root = document.documentElement;
+  // The places list and card (left column) keep clear of the frame: as wide as the room allows.
+  const listLeft = RAIL_RIGHT + 2;
+  set(root, '--left-col-width', `${clamp(frameLeft - GAP - listLeft, 260, LIST_WIDTH)}px`);
+  set(root, '--tools-left', `${left}px`);
+  set(root, '--tools-width', `${width}px`);
 }
 
 /** While the frame is hidden, a small card in its place shows it again (FRM-5). */
@@ -244,7 +255,7 @@ function startDrag(frame: HTMLElement): void {
     moving = true;
     frame.setAttribute('data-moving', '');
     shift = 0;
-    set(frame, 'translate', '0px 0');
+    set(frame, 'translate', '0px');
     const move = (ev: PointerEvent) => {
       const width = frame.offsetWidth;
       const maxRight = measureOpen
@@ -365,7 +376,7 @@ function startChips(): void {
     for (const el of document.querySelectorAll<HTMLElement>('[data-card]')) {
       if (el.closest('#top-left') || !el.checkVisibility()) continue;
       const r = el.getBoundingClientRect();
-      if (r.top < row.bottom + 8 && r.bottom > row.top - 8 && r.right > row.left) {
+      if (r.top < row.bottom && r.bottom > row.top && r.right > row.left) {
         right = Math.min(right, r.left - GAP);
       }
     }
@@ -374,30 +385,28 @@ function startChips(): void {
     if (!more.hidden) moreWidth = more.offsetWidth || moreWidth;
     // Lay the chips out in one line, from their own widths: first in the whole room, then, if
     // some do not fit, in the room left beside "More".
+    // `used` is where the last chip that fits ends.
+    let used = 0;
     const lay = (limit: number) => {
       let x = 0;
+      used = 0;
       return all.filter((c) => {
         x += c.offsetWidth;
         const out = x > limit;
+        if (!out) used = x;
         x += 6;
         return out;
       });
     };
-    let limit = room;
-    let hidden = lay(limit);
-    if (hidden.length) {
-      limit = Math.max(0, room - moreWidth - 6);
-      hidden = lay(limit);
-    }
-    set(chips, 'maxWidth', `${limit}px`);
+    let hidden = lay(room);
+    if (hidden.length) hidden = lay(Math.max(0, room - moreWidth - 6));
+    set(chips, 'maxWidth', `${used}px`);
     hide(more, hidden.length === 0 || room < moreWidth);
-    const shown = all.filter((c) => !hidden.includes(c));
-    const last = shown.at(-1);
-    set(
-      more,
-      'left',
-      `${chips.offsetLeft + (last ? last.offsetLeft + last.offsetWidth + 6 : 0)}px`,
-    );
+    for (const c of all) if (c.inert !== hidden.includes(c)) c.inert = hidden.includes(c);
+    set(chips, 'visibility', all.length && hidden.length === all.length ? 'hidden' : '');
+    // Offsets are from #top-left, the chips' and the button's positioned parent.
+    const last = all.filter((c) => !hidden.includes(c)).at(-1);
+    set(more, 'left', `${last ? last.offsetLeft + last.offsetWidth + 6 : chips.offsetLeft}px`);
     set(more, 'top', `${chips.offsetTop}px`);
     menu.replaceChildren(
       ...hidden.map((chip) => {
@@ -440,6 +449,10 @@ function startChips(): void {
     attributeFilter: ['hidden', 'style'],
   });
   onFrameMove(later);
+  // A card that fades out is still in the way until its fade ends.
+  document.addEventListener('transitionend', (e) => {
+    if (e.target instanceof Element && e.target.matches('[data-card]')) later();
+  });
   addEventListener('resize', later);
   void document.fonts?.ready.then(later);
   later();
@@ -471,17 +484,19 @@ function startLeftColumn(): void {
 
 // ----- Helpers -------------------------------------------------------------------------------
 
-/** What this module last wrote, so a write that changes nothing is skipped: observers watch
- * these attributes, and an unchanged write would wake them again. */
-const written = new WeakMap<HTMLElement, Map<string, string>>();
-
-/** Sets one inline style property, unless it already holds that value. */
+/**
+ * Sets one inline style property (camelCase, or a `--custom` property), unless it already holds
+ * that value: observers watch the style attribute, and a write that changes nothing would wake
+ * them again. Pixel values are rounded so they read back as written.
+ */
 function set(el: HTMLElement, prop: string, value: string): void {
-  let mine = written.get(el);
-  if (!mine) written.set(el, (mine = new Map()));
-  if (mine.get(prop) === value) return;
-  mine.set(prop, value);
-  (el.style as unknown as Record<string, string>)[prop] = value;
+  const v = value.replace(/-?\d+\.\d+px/g, (n) => `${Math.round(parseFloat(n))}px`);
+  if (prop.startsWith('--')) {
+    if (el.style.getPropertyValue(prop) !== v) el.style.setProperty(prop, v);
+    return;
+  }
+  const style = el.style as unknown as Record<string, string>;
+  if (style[prop] !== v) style[prop] = v;
 }
 
 /** Sets `hidden`, unless it already has that value. */

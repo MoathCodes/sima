@@ -32,7 +32,7 @@ export interface SearchHit {
 export interface SearchSource {
   /** Short name, for errors. */
   name: string;
-  /** Optional heading over this source's rows ("Well-known places"). */
+  /** Heading over this source's rows ("Well-known places"); "Places" when left out. */
   label?: string;
   /**
    * The suggestions for what the user typed, best first, at most 8. Called after each pause in
@@ -230,16 +230,15 @@ function render(list: HTMLElement, input: HTMLInputElement, groups: Group[], que
   }
   let i = 0;
   for (const g of groups) {
-    if (g.source.label) {
-      const head = document.createElement('p');
-      head.className = 'group-label search-group';
-      head.textContent = g.source.label;
-      list.append(head);
-    }
+    const head = document.createElement('p');
+    head.className = 'group-label search-group';
+    head.textContent = g.source.label ?? 'Places';
+    list.append(head);
     for (const hit of g.hits) {
       const index = i++;
-      const row = document.createElement('div');
+      const row = document.createElement('button');
       row.className = 'menu-item search-row';
+      row.tabIndex = -1; // the field keeps focus; ↓ and ↑ move through the rows
       row.id = `search-row-${index}`;
       row.setAttribute('role', 'option');
       row.innerHTML = `<span class="window search-tile">${icon(hit.icon ?? 'star')}</span><span class="search-words"><span class="search-name"></span><span class="line"></span></span>`;
