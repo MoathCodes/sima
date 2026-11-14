@@ -1,0 +1,173 @@
+/* Catalogue search (O-V5, shell/finds.ts) and the sandbox card (O-V7, shell/sandbox.ts).
+   Both sit in the left column where the places list sits (app.css places #finds and #sandbox).
+   Classes: fd- (catalogue search), sb- (sandbox). Tokens and shared components are in app.css. */
+
+.fd-panel,
+.sb-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px 12px 16px;
+  overflow: hidden;
+}
+.fd-panel[hidden],
+.sb-panel[hidden] {
+  display: none;
+}
+.fd-head,
+.sb-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-right: -6px;
+}
+.fd-title,
+.sb-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding-top: 4px;
+  font: var(--text-title);
+}
+.fd-lede,
+.sb-lede {
+  margin: 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.fd-seg {
+  display: flex;
+}
+.fd-cut {
+  display: grid;
+  gap: 4px;
+}
+.fd-cut-label {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-tight);
+  font: var(--text-control);
+}
+.fd-num {
+  width: 84px;
+}
+.fd-unit {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.fd-note,
+.fd-area,
+.fd-line {
+  margin: 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.fd-go {
+  align-self: flex-start;
+}
+.fd-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+.fd-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+.fd-count {
+  color: var(--ink);
+}
+.fd-wait {
+  font-variant-numeric: tabular-nums;
+}
+.fd-failed {
+  color: var(--ink);
+}
+.fd-tried {
+  overflow-wrap: anywhere;
+}
+.fd-retry,
+.fd-moved {
+  align-self: flex-start;
+}
+.fd-moved {
+  margin-left: -8px;
+}
+
+/* The list: numbered rows with the catalogue's values; it is the one part that scrolls. */
+.fd-list {
+  display: grid;
+  gap: var(--gap-group);
+  min-height: 0;
+  margin: 0 -8px 0 -10px;
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+.fd-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 6px;
+  padding: 5px 4px 5px 10px;
+  border-radius: var(--r-control);
+}
+.fd-row:hover {
+  background: var(--card-2);
+}
+.fd-row.chosen {
+  background: var(--action-soft);
+}
+.fd-name {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: var(--text-control);
+  text-align: left;
+}
+.fd-name:hover .fd-id {
+  text-decoration: underline;
+}
+.fd-n {
+  flex: none;
+  min-width: 18px;
+  color: var(--ink-2);
+  font: var(--text-label);
+  line-height: 20px;
+}
+.fd-id {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fd-vals {
+  grid-column: 1;
+  margin: 0 0 0 26px;
+  overflow-wrap: anywhere;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.fd-look {
+  grid-column: 2;
+}
+.fd-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-tight);
+  padding-top: 4px;
+}
+.fd-pages {
+  color: var(--ink-2);
+  font: var(--text-label);
+}

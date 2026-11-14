@@ -12,9 +12,11 @@ import './styles/frame.css';
 import './styles/tools.css';
 import './styles/places.css';
 import './styles/guide.css';
+import './styles/finds.css';
 
 import { startShell } from './shell/shell.ts';
 import { startPlaces } from './shell/places.ts';
+import { startFinds } from './shell/finds.ts';
 import { startSky } from './sky/sky.ts';
 import { startSearch } from './viewer/omnibox.ts';
 import { startFrame } from './viewer/frame.ts';
@@ -65,6 +67,7 @@ if (!link.embed) {
   const sky = document.getElementById('sky');
   if (sky) start('sky', () => startSky(sky));
   start('places', startPlaces);
+  start('finds', startFinds);
 }
 start('url', () => startUrl(link));
 document.documentElement.dataset.started = '';
