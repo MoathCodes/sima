@@ -3,6 +3,8 @@
  * positions, and the camera that ends on Barnard's Star with north up and east to the left.
  */
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import assert from 'node:assert/strict';
 import {
   allskyPixel,
@@ -12,6 +14,7 @@ import {
   slerp,
   toSky,
 } from '../src/intro/sphere.ts';
+import { introWanted } from '../src/intro/wanted.ts';
 
 // healpy 1.18: ang2pix(nside, ra, dec, lonlat=True, nest=True) at nside 512 and 8.
 const HEALPY: [number, number, number, number][] = [
@@ -66,4 +69,31 @@ test('turning the globe ends exactly on the target view', () => {
   const b = lookAt(100, -5);
   assert.deepEqual(slerp(a, b, 1).map((v) => +v.toFixed(9)), b.map((v) => +v.toFixed(9)));
   assert.deepEqual(slerp(a, b, 0).map((v) => +v.toFixed(9)), a.map((v) => +v.toFixed(9)));
+});
+
+test("index.html's early check and introWanted agree on when the intro plays", () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const script = /<script>\s*(\(function \(\) \{[\s\S]*?\}\)\(\);)\s*<\/script>/.exec(html)?.[1];
+  assert.ok(script, 'index.html has the inline intro check');
+  const cases: [string, string, boolean | null][] = [];
+  for (const search of ['', '?intro=1', '?intro=0', '?embed=1', '?embed=1&intro=1', '?ra=10&dec=5'])
+    for (const hash of ['', '#w=abc', '#x=1&w=abc', '#nothing'])
+      for (const seen of [true, false, null]) cases.push([search, hash, seen]);
+  for (const [search, hash, seen] of cases) {
+    const dataset: Record<string, string> = {};
+    runInNewContext(script!, {
+      URLSearchParams,
+      location: { search, hash },
+      localStorage: {
+        getItem: () => {
+          if (seen === null) throw new Error('blocked');
+          return seen ? '1' : null;
+        },
+      },
+      document: { documentElement: { dataset } },
+    });
+    assert.equal('intro' in dataset, introWanted(search, hash, seen), `${search} ${hash} ${seen}`);
+  }
+  assert.equal(introWanted('', '', false), true, 'a first visit plays it');
+  assert.equal(introWanted('?intro=1', '#w=abc', true), false, 'a workspace link never plays it');
 });

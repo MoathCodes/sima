@@ -99,6 +99,12 @@
   outline-offset: 2px;
 }
 
+/* Phones see only the sky and a note (app.css, O-W3), and the intro before them. */
+@media (max-width: 699px) {
+  html body > #intro {
+    display: block !important;
+  }
+}
 @media (max-width: 600px) {
   .intro-line {
     font: var(--text-body);
