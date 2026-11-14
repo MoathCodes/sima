@@ -2,8 +2,9 @@
    controls, date scale, wavelength scale, detector strip). Style only lane D's own classes here.
    Tokens and shared components are in app.css. */
 
-/* Phase 0: the frame stacks its rows 8px apart (padding 0 10px 10px under a 10px-tall header
-   row); a row with nothing in it takes no room. Lane D replaces this. */
+/* Phase 0: the frame stacks its rows 8px apart inside 10px of padding, and a row with nothing in
+   it (an empty #frame-load, #frame-legend, lane F's #frame-grip) takes no room. Lane D replaces
+   this; #frame-load must then keep its height (O-I5). */
 #frame {
   display: grid;
   grid-template-columns: minmax(0, 1fr); /* the picture keeps the frame's width */

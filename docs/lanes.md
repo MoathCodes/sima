@@ -17,8 +17,16 @@ npm run typecheck && npm test && npm run build && npm run smoke   # before every
 ```
 
 `npm run smoke` needs no setup: it uses the headless Chromium in `~/.cache/ms-playwright`
-(build 1243, which `playwright-core` 1.63.0 expects). `npm run test:py` runs the Python tests; it
-needs the Python setup below.
+(build 1243, which `playwright-core` 1.63.0 expects).
+
+`npm run test:py` runs the Python tests with whatever `python` is first on the path, so set up and
+activate the checkout's `.venv` first (system Python has no Astropy):
+
+```
+uv venv .venv
+uv pip install -r scripts/requirements.txt -r scripts/places_requirements.txt
+. .venv/bin/activate && npm run test:py          # 68 tests on 14 November 2026
+```
 
 ### Dev ports
 
@@ -44,7 +52,8 @@ starts one with `.venv/bin/python` and waits up to 10 s for it. The page gets
 the dev server log says why and the page gets `VITE_LIVE_API=''`: live fetching is off and the page
 must say so (FRM-11), not call a service that is not there.
 
-- Set up Python once per checkout: `uv venv .venv && uv pip install -r scripts/requirements.txt`.
+- Set up Python once per checkout, as above. The service itself needs only
+  `scripts/requirements.txt`.
 - `SIMA_LIVE=off npm run dev` keeps the service out entirely.
 - `VITE_LIVE_API=… npm run dev` (or `npm run build`) points the page at another service.
 - Only one service runs on the machine. Whichever dev server started it stops it when it stops;
