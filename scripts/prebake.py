@@ -224,6 +224,12 @@ def tan_deproject(xi, eta, ra0, dec0):
 
 _sem = threading.BoundedSemaphore(MAX_CONCURRENT)
 _local = threading.local()
+_last_retry = 0.0  # time.time() of the last retry wait, any request
+
+
+def retrying(within: float = 20.0) -> bool:
+    """True when some request waited to retry a busy or failed reply in the last `within` s."""
+    return time.time() - _last_retry < within
 
 
 class FetchError(Exception):
@@ -244,12 +250,14 @@ def fetch(url: str, *, params=None, data=None, headers=None, stop=None, what: st
     """GET (or POST when `data` is given). Busy replies and dropped connections are retried after
     each wait in `waits` (default RETRY_WAITS). `stop(buffer)` may end a download early once enough
     bytes have arrived. Returns (status, body). Raises FetchError for any other failure."""
+    global _last_retry
     waits = RETRY_WAITS if waits is None else waits
     last = ""
     for attempt in range(len(waits) + 1):
         if attempt:
             wait = waits[attempt - 1] * (1 + 0.25 * random.random())
             log(f"  retry {attempt} in {wait:.0f}s ({last}) {what or url[:100]}")
+            _last_retry = time.time()
             time.sleep(wait)
         with _sem:
             try:
@@ -888,10 +896,12 @@ def make_frame(exp: dict, body: bytes, cat: dict, cutout: str):
 # ---------------------------------------------------------------------------------------------
 
 def fetch_plan(p: dict, cat: dict, size: float, *, limit: int | None = None, groups=None,
-               on_progress=None, waits: list[float] | None = None):
+               on_progress=None, waits: list[float] | None = None, ahead=None, on_frame=None):
     """Download frames for the plan `p`. Returns (list of frame tuples, list of skip notes).
     `groups` limits which (win, det) groups are filled, `limit` overrides perDet and `waits` the
-    retry schedule of the cutout downloads."""
+    retry schedule of the cutout downloads. `ahead` lists groups whose first exposure is asked
+    before all others, in that order. `on_frame(got)` hears every kept frame, with the frames kept
+    so far by group."""
     want = limit if limit is not None else p["perDet"]
     todo = {g: list(c) for g, c in p["groups"].items() if groups is None or g in groups}
     got: dict[tuple, list] = {g: [] for g in todo}
@@ -919,6 +929,14 @@ def fetch_plan(p: dict, cat: dict, size: float, *, limit: int | None = None, gro
                     need -= 1
             if not batch:
                 break
+            if ahead:
+                lead, seen = [], set()
+                for g in ahead:
+                    item = next((x for x in batch if x[0] == g), None)
+                    if item is not None and g not in seen:
+                        seen.add(g)
+                        lead.append(item)
+                batch = lead + [x for x in batch if not any(x is y for y in lead)]
             futs = {pool.submit(one, e): g for g, e in batch}
             for f in as_completed(futs):
                 g = futs[f]
@@ -931,6 +949,8 @@ def fetch_plan(p: dict, cat: dict, size: float, *, limit: int | None = None, gro
                 done[0] += 1
                 if on_progress:
                     on_progress(done[0], total)
+                if on_frame:
+                    on_frame(got)
     frames = [r for g in got.values() for r in g]
     frames.sort(key=lambda r: (r[0]["mjd"], r[0]["det"]))
     return frames, skipped

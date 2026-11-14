@@ -242,6 +242,8 @@ export interface LiveStatus {
   fov: number;
   /** Collections the search asked (the service's release list). */
   searched: string[];
+  /** True while NASA's archive answers busy and the service waits to ask again. Optional. */
+  retrying?: boolean;
 }
 
 /** An error answer of the live service: `400 {error}`, `404`, or `503 {error: 'busy', state: 'busy'}`. */
