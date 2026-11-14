@@ -1,0 +1,138 @@
+/**
+ * Share (GEN-2): a link and an embed code for what is on screen. Owner: lane F.
+ *
+ * The link restores the patch, field size, detector, view, picture settings and, if "Start at"
+ * is ticked, the date of the picture on screen (url.ts `linkFor`). The embed code is an iframe
+ * of the same link with `embed=1`: only the frame, the bar and Measure (GEN-3).
+ */
+import { S } from './state.ts';
+import { dayOf, linkFor } from './url.ts';
+import { formatDate } from '../core/astro.ts';
+import { encodePic } from '../core/picture.ts';
+import { icon } from '../shell/icons.ts';
+
+/** Fills the Share dialog. Called once by shell.ts. */
+export function startShare(): void {
+  const dialog = document.getElementById('share');
+  if (!(dialog instanceof HTMLDialogElement)) return;
+  dialog.setAttribute('aria-labelledby', 'share-title');
+  dialog.innerHTML = `
+    <header class="dialog-head">
+      <h2 id="share-title">Share this view</h2>
+      <button class="icon-btn sm" data-dialog-close aria-label="Close Share" data-tip="Close">${icon('close')}</button>
+    </header>
+    <div class="tabs share-tabs" role="tablist" aria-label="Share as">
+      <button role="tab" id="share-tab-link" aria-selected="true" aria-controls="share-link" data-tab="link" data-guide="share-tab-link">Link</button>
+      <button role="tab" id="share-tab-embed" aria-selected="false" aria-controls="share-embed" data-tab="embed" tabindex="-1" data-guide="share-tab-embed">Embed</button>
+    </div>
+    <div id="share-link" role="tabpanel" aria-labelledby="share-tab-link" class="share-panel">
+      <div class="share-row">
+        <input class="share-code" readonly aria-label="Link to this view" data-guide="share-link" data-code>
+        <button class="btn primary" data-copy data-guide="share-copy">Copy</button>
+      </div>
+      <label class="share-check" data-date-row><input type="checkbox" checked data-date> Start at <span data-date-text></span></label>
+      <p class="share-note" data-note></p>
+    </div>
+    <div id="share-embed" role="tabpanel" aria-labelledby="share-tab-embed" class="share-panel" hidden>
+      <div class="share-row">
+        <textarea class="share-code" readonly rows="3" aria-label="Embed code" data-guide="share-embed-code" data-code></textarea>
+        <button class="btn primary" data-copy>Copy</button>
+      </div>
+      <p class="share-note">Paste it into a web page. It shows only the frame, the bar and Measure, on the same patch.</p>
+    </div>`;
+
+  dialog.querySelector('[data-dialog-close]')?.addEventListener('click', () => dialog.close());
+  dialog.querySelector('[data-date]')?.addEventListener('change', () => fill(dialog));
+  const tabs = [...dialog.querySelectorAll<HTMLElement>('[role="tab"]')];
+  const choose = (tab: HTMLElement) => {
+    for (const t of tabs) {
+      const on = t === tab;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      const panel = document.getElementById(t.getAttribute('aria-controls') ?? '');
+      if (panel) panel.hidden = !on;
+    }
+    tab.focus();
+  };
+  for (const t of tabs) {
+    t.addEventListener('click', () => choose(t));
+    t.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      const next =
+        tabs[(tabs.indexOf(t) + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      if (next) choose(next);
+    });
+  }
+  for (const btn of dialog.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
+    btn.addEventListener('click', () => void copy(btn));
+  }
+  for (const code of dialog.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+    '[data-code]',
+  )) {
+    code.addEventListener('focus', () => code.select());
+  }
+}
+
+/** Opens Share with the links for what is on screen now. */
+export function openShare(): void {
+  const dialog = document.getElementById('share');
+  if (!(dialog instanceof HTMLDialogElement)) return;
+  fill(dialog);
+  dialog.showModal();
+  dialog.querySelector<HTMLElement>('[data-copy]')?.focus();
+}
+
+function fill(dialog: HTMLElement): void {
+  const g = S.groups[S.epoch];
+  const day = dayOf(g);
+  const dateRow = dialog.querySelector<HTMLElement>('[data-date-row]');
+  const dateBox = dialog.querySelector<HTMLInputElement>('[data-date]');
+  const dateText = dialog.querySelector('[data-date-text]');
+  if (dateRow) dateRow.hidden = !day;
+  if (dateText && g && day) dateText.textContent = formatDate(g.mjd, 'day');
+  const withDate = !!day && dateBox?.checked !== false;
+
+  const link = linkFor({ date: withDate });
+  const embed = linkFor({ date: withDate, embed: true });
+  const [linkBox, embedBox] = dialog.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+    '[data-code]',
+  );
+  if (linkBox) linkBox.value = link;
+  if (embedBox) {
+    const title = `Sima: ${S.label || 'SPHEREx pictures'}`.replace(/"/g, '&quot;');
+    embedBox.value = `<iframe src="${embed.replace(/&/g, '&amp;')}" title="${title}" width="100%" height="960" style="border:0" loading="lazy"></iframe>`;
+  }
+
+  const kept = ['patch', 'field size', 'detector', 'view'];
+  if (encodePic(S.pic)) kept.push('picture settings');
+  if (withDate) kept.push('date');
+  const note = dialog.querySelector('[data-note]');
+  if (note) note.textContent = `The link opens this page on the same ${list(kept)}.`;
+  for (const btn of dialog.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
+    btn.textContent = 'Copy';
+  }
+}
+
+async function copy(btn: HTMLButtonElement): Promise<void> {
+  const code = btn.parentElement?.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+    '[data-code]',
+  );
+  if (!code) return;
+  code.select();
+  let done = false;
+  try {
+    await navigator.clipboard.writeText(code.value);
+    done = true;
+  } catch {
+    // The clipboard can be blocked (no permission, not a secure page): fall back below.
+  }
+  btn.textContent = done ? 'Copied' : 'Press Ctrl+C';
+  window.setTimeout(() => (btn.textContent = 'Copy'), 2000);
+}
+
+function list(words: string[]): string {
+  return words.length < 2
+    ? (words[0] ?? '')
+    : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`;
+}

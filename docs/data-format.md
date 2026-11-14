@@ -132,6 +132,21 @@ subtracted and its median is kept in `zodi`, so the viewer can say how much was 
 plane as well would double the size for no use in the viewer. What is left after the model (a few
 hundredths of MJy/sr) is removed in the browser as the median of the usable pixels of each cutout.
 
+**DR1 and QR3 mix without a correction.** IRSA calls them "a uniformly processed set" (DR1 overview
+page). Checked in the HISTORY of all 445 shipped exposures on 2026-11-14: each detector has one set
+of calibration files (gain, dark, ePSF, distortion, zodi scaling and the rest, by their IDs), shared
+by its DR1 and QR3 exposures, and the same pipeline modules. The only difference: all DR1 files and 59 of the 94
+QR3 files also list an earlier zodi step (SSDC-MS-022 v2.3) before the final one; every file ends
+with v2.4 and the same zodi scaling file. At the same wavelength, field stars near R Draconis agree within about 5%
+between June 2026 (QR3) and May 2026 (DR1), inside the spread between two DR1 months. So the script
+treats both releases the same way.
+
+**R Draconis changes the whole cutout.** It is a bright Mira variable, saturated in most exposures.
+Its glow covers much of the 12′ cutout and changes several times over between months and between
+wavelengths (in D3, 1.5 to 10 MJy/sr at 8 to 15 pixels out, faintest in June 2026). The median of a
+frame follows it. Anything that compares frames by their brightest pixels compares R Draconis, not
+the field. Compare the field through compact stars, each against its own local sky.
+
 **Bad flags.** A pixel is not used for measuring if it has any of: TRANSIENT, OVERFLOW, SUR_ERROR,
 NONFUNC, DICHROIC, MISSING_DATA, HOT, COLD, NONLINEAR, PERSIST, OUTLIER, CROSSTALK, GHOST, GHOST_FPA,
 GHOST_EXT, STREAK, BLOOM, SNOWBALL, HALO, SATELLITE_HALO. SOURCE only says a known star is there (it

@@ -914,9 +914,9 @@ samp {
   width: 280px;
 }
 
-/* Lane F places the frame; lane D fills it. It hangs from its top right corner. Phase 0 sizes
-   the picture to fit between the frame's top and the bar; lane F replaces this with the user's
-   remembered box (frame-box). */
+/* Lane F places the frame; lane D fills it. It hangs from its top right corner. These rules are
+   its place before the page starts; shell/layout.ts then sets left, top and width from the user's
+   remembered box (frame-box), keeps it above the bar, and glides it left when Measure opens. */
 :root {
   --frame-picture: min(var(--picture), calc(100vh - 440px));
   --frame-w: calc(var(--frame-picture) + 20px);
@@ -927,10 +927,53 @@ samp {
   right: var(--gutter);
   z-index: var(--z-card);
   width: var(--frame-w);
+  transition: translate var(--t-glide) var(--ease-out);
+}
+#frame[data-moving] {
+  transition: none;
+}
+#frame-head {
+  cursor: grab;
+  touch-action: none;
+}
+#frame-head:active {
+  cursor: grabbing;
+}
+/* The size corner, bottom left: the frame stays hung from its top right corner. */
+#frame-grip {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  color: var(--ink-3);
+  cursor: nesw-resize;
+  touch-action: none;
+}
+#frame-grip svg {
+  width: 10px;
+  height: 10px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+#frame-grip:hover {
+  color: var(--ink);
+}
+#frame-show {
+  position: fixed;
+  top: var(--frame-top);
+  right: var(--gutter);
+  z-index: var(--z-card);
+  padding: var(--pad-group);
 }
 
-/* Lane E: Measure beside the frame (the frame glides left of it), the picture tools left of
-   the frame. */
+/* Lane E: Measure beside the frame, at the right. When it opens, the frame glides left first
+   and Measure fades in after it: one movement at a time (GEN-5). When it closes, it fades out
+   first and the frame glides back (layout.ts delays the glide). */
 #measure {
   position: fixed;
   top: var(--frame-top);
@@ -938,21 +981,32 @@ samp {
   z-index: var(--z-card);
   width: var(--measure-w);
   max-height: calc(100vh - var(--frame-top) - var(--bar-bottom) - var(--bar-h) - 14px);
+  transition-property: opacity, display, overlay;
+  transition-duration: var(--t-fade), var(--t-fade), var(--t-fade);
+  transition-timing-function: linear;
+  transition-behavior: allow-discrete;
 }
-body:has(#measure:not([hidden])) #frame {
-  right: calc(var(--gutter) + var(--measure-w) + 10px);
+#measure:not([hidden]) {
+  transition-delay: calc(var(--t-glide) * 0.8);
 }
-/* The tools hang under the chips row (as in spec-img/06), so the chips keep their room. */
+#measure[hidden] {
+  opacity: 0;
+}
+@starting-style {
+  #measure:not([hidden]) {
+    opacity: 0;
+  }
+}
+/* The tools hang under the chips row (as in spec-img/06), left of the frame; layout.ts sets
+   left and width from the frame's place. */
 #tools {
   position: fixed;
   top: 112px;
-  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-h) - 14px);
+  left: var(--tools-left, auto);
   right: calc(var(--gutter) + var(--frame-w) + 10px);
   z-index: var(--z-card);
-  width: 320px;
-}
-body:has(#measure:not([hidden])) #tools {
-  right: calc(var(--gutter) + var(--measure-w) + 10px + var(--frame-w) + 10px);
+  width: var(--tools-width, 320px);
+  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-h) - 14px);
 }
 
 /* Lane D: the bar, 30px above the bottom, centred. */
@@ -972,10 +1026,10 @@ body:has(#measure:not([hidden])) #tools {
   top: 112px; /* under the chips row (68 to 98px) */
   left: calc(var(--gutter) + 58px);
   z-index: var(--z-card);
-  width: 360px;
+  width: 360px; /* lane G's places/room.ts narrows it to keep clear of the frame */
 }
 #places-list {
-  bottom: calc(var(--bar-bottom) + var(--bar-h) + 14px);
+  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-h) - 14px);
 }
 #place-card {
   max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-h) - 14px);
@@ -1036,28 +1090,115 @@ body:has(#measure:not([hidden])) #tools {
   pointer-events: auto;
 }
 
-/* Lane F: phones are not designed yet (O-W3). */
+/* Panel motion (GEN-5, DESIGN.md "Motion"): cards and popovers fade in 0.18s and settle into
+   place in 0.32s, and leave the same way, while `hidden` (or a closed popover) still decides
+   what is shown. Set on the mount points here so a lane that rewrites an element's class keeps
+   it. Measure has its own rule above (it waits for the frame's glide). */
+:is(
+  #tools,
+  #places-list,
+  #place-card,
+  #welcome,
+  #sky-click,
+  #sky-loading,
+  #frame-show,
+  #search-results,
+  #sky-layers,
+  #places-menu,
+  #guide-menu,
+  #toasts > *,
+  .dialog
+) {
+  transition-property: opacity, translate, display, overlay;
+  transition-duration: var(--t-fade), var(--t-settle), var(--t-settle), var(--t-settle);
+  transition-timing-function: linear, var(--ease-out), linear, linear;
+  transition-behavior: allow-discrete;
+}
+:is(#tools, #places-list, #place-card, #frame-show, #toasts > *)[hidden],
+:is(#search-results, #sky-layers, #places-menu, #guide-menu):not(:popover-open),
+.dialog:not([open]) {
+  opacity: 0;
+  translate: 0 var(--settle);
+}
+#welcome[hidden] {
+  opacity: 0;
+  translate: 0 calc(-50% + var(--settle-welcome));
+}
+:is(#sky-click, #sky-loading)[hidden] {
+  opacity: 0;
+}
+@starting-style {
+  :is(#tools, #places-list, #place-card, #frame-show, #toasts > *):not([hidden]),
+  :is(#search-results, #sky-layers, #places-menu, #guide-menu):popover-open,
+  .dialog[open] {
+    opacity: 0;
+    translate: 0 var(--settle);
+  }
+  #welcome:not([hidden]) {
+    opacity: 0;
+    translate: 0 calc(-50% + var(--settle-welcome));
+  }
+  :is(#sky-click, #sky-loading):not([hidden]) {
+    opacity: 0;
+  }
+}
+/* The sky's loading card waits 0.3s before it shows (shell.ts), and fades out keeping its words. */
+#sky-loading[hidden] {
+  transition-duration: var(--t-settle);
+}
+
+/* Reduced motion: whatever slides, grows or glides only fades (GEN-5). */
+@media (prefers-reduced-motion: reduce) {
+  #frame {
+    transition: none;
+  }
+  :is(
+    #tools,
+    #places-list,
+    #place-card,
+    #frame-show,
+    #toasts > *,
+    #search-results,
+    #sky-layers,
+    #places-menu,
+    #guide-menu,
+    .dialog
+  ) {
+    translate: none !important;
+  }
+  #welcome {
+    translate: 0 -50% !important;
+  }
+}
+
+/* Lane F: phones are not designed yet (O-W3). Under 700px only the sky and one note show. */
 #narrow-note {
   display: none;
 }
 @media (max-width: 699px) {
+  body > :not(#sky, #narrow-note, script) {
+    display: none !important;
+  }
   #narrow-note {
     position: fixed;
     inset: auto var(--gutter) var(--gutter);
     z-index: var(--z-toast);
     display: block;
+    padding: 14px 16px;
+    font: var(--text-body);
   }
 }
 
 /* Lane F: embed mode (embed=1). Only the frame, the bar and Measure, stacked in the page flow on
-   a card background, with no shadows and no rounded outer corners. */
+   a card background, with no shadows and no rounded outer corners (GEN-3). The page itself may
+   scroll here: it is the frame of another site's page. */
 html[data-embed],
 html[data-embed] body {
   height: auto;
   overflow: auto;
   background: var(--card);
 }
-html[data-embed] body > :not(#frame, #bar, #measure, #toasts, script) {
+html[data-embed] body > :not(#frame, #bar, #measure, #toasts, #tooltip, script) {
   display: none !important;
 }
 html[data-embed] :is(#frame, #bar, #measure) {
@@ -1068,4 +1209,22 @@ html[data-embed] :is(#frame, #bar, #measure) {
   translate: none;
   border-radius: 0;
   box-shadow: none;
+  transition: none;
+}
+html[data-embed] #frame {
+  max-width: 640px;
+  margin: 0 auto;
+}
+html[data-embed] #frame-head,
+html[data-embed] #frame-grip {
+  cursor: auto;
+}
+html[data-embed] #frame-grip {
+  display: none;
+}
+html[data-embed] #measure:not([hidden]) {
+  border-top: 1px solid var(--rule);
+}
+html[data-embed] #toasts {
+  position: fixed;
 }

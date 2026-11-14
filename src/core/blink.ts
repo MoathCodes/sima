@@ -16,31 +16,82 @@ const GAIN_MIN = 0.25;
 const GAIN_MAX = 4;
 
 /**
+ * Light of a compact source on a frame: the usable pixels within 2 pixels of (x, y) minus the
+ * median of a ring 4 to 6 pixels out, so a glow or slope under the star cancels. NaN if a pixel in
+ * the circle is flagged or missing, or the ring has fewer than 20 usable pixels.
+ */
+function starLight(f: Frame, n: number, x: number, y: number): number {
+  let sum = 0;
+  let k = 0;
+  const ring: number[] = [];
+  for (let dy = -6; dy <= 6; dy++) {
+    for (let dx = -6; dx <= 6; dx++) {
+      const xx = x + dx;
+      const yy = y + dy;
+      if (xx < 0 || yy < 0 || xx >= n || yy >= n) return Number.NaN;
+      const i = yy * n + xx;
+      const v = f.pix[i]!;
+      const r2 = dx * dx + dy * dy;
+      if (r2 <= 4) {
+        if (f.bad[i] || !Number.isFinite(v)) return Number.NaN;
+        sum += v;
+        k++;
+      } else if (r2 >= 16 && r2 <= 36 && !f.bad[i] && Number.isFinite(v)) ring.push(v);
+    }
+  }
+  if (ring.length < 20) return Number.NaN;
+  return sum - k * medianOfSorted(finiteSorted(ring));
+}
+
+/**
  * Brightness-match factors: scale each frame so typical stars match the reference frame of its
  * detector. Brightness is compared per detector, never across wavelengths (SPEC 7.1.2).
  *
- * The reference is the detector's first frame in time. The factor is the median, over pixels that
- * are usable in both and at least 10 times the noise above the sky in the reference, of
- * (reference − its sky) ÷ (frame − its sky): the ensemble of stars in the patch, not one star.
- * With fewer than 5 such pixels, or a factor outside 0.25 to 4, the factor is 1 (as recorded).
+ * The reference is the detector's first frame in time. The factor is the median, over the compact
+ * stars of the reference (local peaks at least 10 times the noise above its sky), of the ratio of
+ * their light (`starLight`: a 2-pixel circle minus a local ring) in the reference and in the frame:
+ * the ensemble of stars in the patch, not one star. Each star's own ring takes out the glow of a
+ * bright star, so a variable star's glow (R Draconis) does not set the factor.
+ * With fewer than 5 such stars, or a factor outside 0.25 to 4, the factor is 1 (as recorded).
  *
  * @param field The frames.
  * @returns One factor per frame of `field.frames` (1 = as recorded).
  */
 export function matchGains(field: Field): number[] {
+  const n = field.n;
   const gains = field.frames.map(() => 1);
-  const refs = new Map<Det, Frame>();
-  for (const f of field.frames) if (!refs.has(f.det) && f.sigma > 0) refs.set(f.det, f);
+  const refs = new Map<Det, { f: Frame; stars: { x: number; y: number; light: number }[] }>();
+  for (const f of field.frames) {
+    if (refs.has(f.det) || !(f.sigma > 0)) continue;
+    const stars: { x: number; y: number; light: number }[] = [];
+    for (let y = 1; y < n - 1; y++) {
+      for (let x = 1; x < n - 1; x++) {
+        const i = y * n + x;
+        const v = f.pix[i]!;
+        if (f.bad[i] || !(v - f.sky > 10 * f.sigma)) continue;
+        let top = true;
+        for (let dy = -1; dy <= 1 && top; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if ((dx || dy) && f.pix[i + dy * n + dx]! > v) {
+              top = false;
+              break;
+            }
+          }
+        }
+        if (!top) continue;
+        const light = starLight(f, n, x, y);
+        if (light > 10 * f.sigma) stars.push({ x, y, light });
+      }
+    }
+    refs.set(f.det, { f, stars });
+  }
   field.frames.forEach((f, k) => {
     const ref = refs.get(f.det);
-    if (!ref || ref === f || !(f.sigma > 0)) return;
+    if (!ref || ref.f === f || !(f.sigma > 0)) return;
     const ratios: number[] = [];
-    for (let i = 0; i < f.pix.length; i++) {
-      if (ref.bad[i] || f.bad[i]) continue;
-      const r = ref.pix[i]! - ref.sky;
-      const v = f.pix[i]! - f.sky;
-      if (!(r > 10 * ref.sigma) || !(v > 3 * f.sigma)) continue;
-      ratios.push(r / v);
+    for (const s of ref.stars) {
+      const v = starLight(f, n, s.x, s.y);
+      if (v > 0) ratios.push(s.light / v);
     }
     if (ratios.length < 5) return;
     const g = medianOfSorted(finiteSorted(ratios));
