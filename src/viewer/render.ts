@@ -26,6 +26,8 @@ import {
   flipImage,
   groupPicture,
   lookFor,
+  picturesReady,
+  refGroup,
   stackImage,
   stackPicture,
   trailImage,
@@ -105,7 +107,7 @@ export function draw(): void {
 /** Paints now, in this task (the tour and tests use it to read the picture at once). */
 export function drawNow(): void {
   queued = false;
-  paint();
+  paint(true);
 }
 
 /** The picture on screen as hooks see it; null before the first paint. */
@@ -399,9 +401,12 @@ function stackNow() {
   return stackCache;
 }
 
-function paint(): void {
+function paint(now = false): void {
   const p = ensure();
   if (!p) return;
+  // A new picture of the patch on screen waits for its pictures to be made off the page's thread
+  // (TLS-8); the one on screen stays until then. A new patch, or drawNow, paints at once.
+  if (!now && S.field && S.field === view?.field && !picturesReady(S.field, neededGroups(S.field), pic(), draw)) return;
   const { canvas, host } = p;
   const size = Math.round(host.clientWidth) || 1;
   const dpr = devicePixelRatio || 1;
@@ -492,6 +497,32 @@ function paint(): void {
   if (field && group) warmNext(field);
 }
 
+/** The dates whose pictures the view on screen draws (see `imageFor`), its look's reference first. */
+function neededGroups(field: Field): (Group | undefined)[] {
+  const groups = S.groups;
+  const ref = refGroup(groups, Math.min(S.ref, groups.length - 1));
+  const g = groups[S.epoch];
+  if (!g) return [];
+  if (S.color) {
+    const by = g.visit === null ? 'window' : 'visit';
+    return [1, 2, 3, 4, 5, 6].flatMap((d) => {
+      const gs = groupFrames(field, d, by);
+      return [refGroup(gs, 0), gs.find((x) => x.window === g.window && x.visit === g.visit)];
+    });
+  }
+  switch (S.mode) {
+    case 'two':
+    case 'swipe':
+      return [ref, ...pair()].map((x) => x ?? undefined);
+    case 'trail':
+      return [ref, ...groups.slice(0, S.epoch + 1)];
+    case 'stack':
+      return [ref, ...groups];
+    default:
+      return [ref, g];
+  }
+}
+
 let warmTimer = 0;
 /**
  * Prepares the next two pictures while the page is idle, so the next step is a cache hit and
@@ -503,9 +534,12 @@ function warmNext(field: Field): void {
   warmTimer = idle(() => {
     if (S.field !== field) return;
     const settings = pic();
+    const steps = [1, -1, 2].map((d) => (S.epoch + d + S.groups.length) % S.groups.length);
+    // Their pictures are made in the worker first; this runs again once they are.
+    const next = steps.map((i) => S.groups[i]);
+    if (S.mode !== 'diff' && !picturesReady(field, next, settings, () => warmNext(field))) return;
     const look = lookFor(field, S.groups, Math.min(S.ref, S.groups.length - 1), settings, S.det);
-    for (const d of [1, -1, 2]) {
-      const i = (S.epoch + d + S.groups.length) % S.groups.length;
+    for (const i of steps) {
       const g = S.groups[i];
       if (!g) continue;
       if (S.mode === 'diff') differenceImage(field, S.groups, i, look, settings);

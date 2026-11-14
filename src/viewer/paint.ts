@@ -3,19 +3,19 @@
  * table lookup per pixel at most (SPEC 11.2: a frame step under 50 ms). Owner: lane D.
  *
  * Everything here works on the field's grid (n × n, north up, east left, µJy per pixel) and goes
- * through the science core: `blend` and `difference` (core/blink.ts), `cleanUp` and `combine`
- * (core/filters.ts), `stack` (core/work.ts, off the page's thread), and `limits`, `makeLut`, `toRgba`
- * (core/display.ts). No page access except building ImageData.
+ * through the science core: `groupPicture` and `difference` (core/blink.ts), `combine`
+ * (core/filters.ts), `pictures` and `stack` (core/work.ts, off the page's thread), and `limits`,
+ * `makeLut`, `toRgba` (core/display.ts). No page access except building ImageData.
  *
  * Methods borrowed from other fields (SPEC 7.4): brightness matching (radiology), two dates in
  * one red and cyan picture (remote sensing), new/reference/difference (transient surveys),
  * a ghost trail (sports broadcasts).
  */
-import { blend, difference } from '../core/blink.ts';
-import { cleanUp, combine } from '../core/filters.ts';
+import { difference, groupPicture as makePicture } from '../core/blink.ts';
+import { combine } from '../core/filters.ts';
 import { limits, makeLut, toRgba, LUT_SIZE, type Range } from '../core/display.ts';
 import type { StackResult } from '../core/stack.ts';
-import { stack } from '../core/work.ts';
+import { pictures, stack } from '../core/work.ts';
 import type { PicSettings } from '../core/picture.ts';
 import type { CatalogueTrack, Det, Field, Group } from '../core/types.ts';
 
@@ -74,29 +74,71 @@ function groupKey(g: Group): string {
   return `${g.key}|d${g.det}|${g.frames.join(',')}`;
 }
 
-/** n × n: 1 where no frame of the group has a usable value. */
-export function badOf(field: Field, group: Group): Uint8Array {
-  const out = new Uint8Array(field.n * field.n).fill(1);
-  for (const i of group.frames) {
-    const f = field.frames[i];
-    if (!f) continue;
-    for (let p = 0; p < out.length; p++) if (!f.bad[p]) out[p] = 0;
-  }
-  return out;
-}
-
 /**
  * One date's picture: its exposures blended (brightness-matched when `match` is on), then the
- * clean-up steps that are on. A group with no exposure gives all NaN (H6: nothing filled in).
+ * clean-up steps that are on (core/blink.ts `groupPicture`). Kept per field, group and settings;
+ * `picturesReady` makes them off the page's thread first.
  */
 export function groupPicture(field: Field, group: Group, p: PicSettings): Float32Array {
   const c = cacheOf(field);
-  return remember(c.pix, `g|${groupKey(group)}|${cleanKey(p)}`, () => {
-    if (!group.frames.length) return new Float32Array(field.n * field.n).fill(Number.NaN);
-    const raw = blend(field, group, p.combineBy, p.match);
-    const steps = p.background || p.median || p.smooth > 0;
-    return steps ? cleanUp(raw, field.n, p, badOf(field, group)) : raw;
-  });
+  return remember(c.pix, pictureKey(group, p), () => makePicture(field, group, p));
+}
+
+const pictureKey = (group: Group, p: PicSettings): string => `g|${groupKey(group)}|${cleanKey(p)}`;
+
+/** Pictures being made in the worker, per field and picture key. */
+const making = new WeakMap<Field, Map<string, Promise<void>>>();
+
+/**
+ * True when every picture of these groups with these settings is ready, so drawing them takes no
+ * blending or clean-up on the page (TLS-8: the median filter alone held the page 140 ms). If
+ * not, it has them made in lane B's worker (core/work.ts `pictures`) and calls `ready` once they
+ * are kept; the caller keeps the previous picture on screen meanwhile. Where the worker cannot
+ * make them, they are made here, in a later task.
+ */
+export function picturesReady(
+  field: Field,
+  groups: readonly (Group | null | undefined)[],
+  p: PicSettings,
+  ready: () => void,
+): boolean {
+  const c = cacheOf(field);
+  let jobs = making.get(field);
+  if (!jobs) making.set(field, (jobs = new Map()));
+  const waits = new Set<Promise<void>>();
+  const missing = new Map<string, Group>();
+  for (const g of groups) {
+    if (!g?.frames.length) continue;
+    const key = pictureKey(g, p);
+    if (c.pix.has(key)) continue;
+    const job = jobs.get(key);
+    if (job) waits.add(job);
+    else missing.set(key, g);
+  }
+  if (missing.size) {
+    const keys = [...missing.keys()];
+    const list = [...missing.values()];
+    const keep = (pics: readonly Float32Array[]) =>
+      keys.forEach((k, i) => {
+        const pix = pics[i];
+        if (pix && !c.pix.has(k)) remember(c.pix, k, () => pix);
+      });
+    const job = pictures(field, list, p)
+      .then(keep, (err: unknown) => {
+        if ((err as DOMException)?.name === 'AbortError') return;
+        // No worker for this patch: make them here, one picture per task.
+        return list.reduce<Promise<void>>(
+          (prev, g) => prev.then(() => new Promise<void>((go) => setTimeout(() => (groupPicture(field, g, p), go()), 0))),
+          Promise.resolve(),
+        );
+      })
+      .finally(() => keys.forEach((k) => jobs.delete(k)));
+    for (const k of keys) jobs.set(k, job);
+    waits.add(job);
+  }
+  if (!waits.size) return true;
+  void Promise.all(waits).then(ready);
+  return false;
 }
 
 /** Median of the finite values of an array; NaN when there are none. */
@@ -131,6 +173,11 @@ export function noiseOf(
   };
 }
 
+/** The group a flip-book's look is based on: the reference, or the first with exposures. */
+export function refGroup(groups: readonly Group[], refIndex: number): Group | undefined {
+  return groups[refIndex]?.frames.length ? groups[refIndex] : groups.find((g) => g.frames.length);
+}
+
 /**
  * The look of a flip-book: black and white points from the reference date's picture, used for
  * every date, so brightness is compared fairly (SPEC 7.4, "brightness matching").
@@ -145,9 +192,7 @@ export function lookFor(
   det: Det,
 ): Look {
   const c = cacheOf(field);
-  const ref = groups[refIndex]?.frames.length
-    ? groups[refIndex]
-    : groups.find((g) => g.frames.length);
+  const ref = refGroup(groups, refIndex);
   const key = `look|${ref ? groupKey(ref) : 'none'}|${cleanKey(p)}|${lookKey(p)}|${det}`;
   return remember(c.other as Map<string, Look>, key, () => {
     const noise = noiseOf(field, det, groups);
