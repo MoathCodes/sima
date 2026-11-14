@@ -7,8 +7,8 @@
  * Settings go in `S.pic` (read the ones in force with `pic()`) and are kept in `sima.tools`
  * (tools/settings.ts). Anything drawn on the picture goes through render.ts `drawHooks`.
  *
- * For lane F's url.ts (TLS-7): `picParam()` gives the `pic=` value for a link, and
- * `applyPicParam(text)` puts a link's value in force and returns what was not understood.
+ * Links (TLS-7) carry `S.pic` as `pic=`: lane F's url.ts reads and writes it, and names what a
+ * link had that was not understood.
  */
 import { S, pic, watch, type ToolsTab } from './state.ts';
 import { draw, type PictureView } from './render.ts';
@@ -21,7 +21,6 @@ import {
   onSettings,
   resetAll,
   startSettings,
-  unknownFromLink,
 } from './tools/settings.ts';
 import { lastView, noiseOf, onPaint, startView } from './tools/view.ts';
 import { startCatalogue, onCatalogue } from './tools/catalogue.ts';
@@ -32,8 +31,6 @@ import { buildClean, updateClean } from './tools/tab-clean.ts';
 import { buildFind, updateFind } from './tools/tab-find.ts';
 import { buildLayers, updateLayers } from './tools/tab-layers.ts';
 import { esc, num, sig } from './tools/dom.ts';
-
-export { picParam, applyPicParam } from './tools/settings.ts';
 
 const TABS: readonly [ToolsTab, string][] = [
   ['picture', 'Picture'],
@@ -142,12 +139,7 @@ function update(): void {
   const reset = panel.querySelector<HTMLButtonElement>('[data-reset]');
   if (reset) reset.disabled = !anyChanged();
   const foot = panel.querySelector('[data-foot]');
-  const unknown = unknownFromLink();
-  if (foot) {
-    foot.textContent = unknown.length
-      ? `The link had settings that were not understood and were left at their defaults: ${unknown.join(', ')}`
-      : 'Kept in this browser and in shared links';
-  }
+  if (foot) foot.textContent = 'Kept in this browser and in shared links';
 }
 
 // ----- Over the picture: Original, Processed, the value under the pointer -------------------

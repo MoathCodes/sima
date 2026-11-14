@@ -102,6 +102,10 @@
 .ms-all .ms-main > .ms-chart {
   flex: 1 1 200px;
 }
+/* Cutouts need room for two rows (with the stacks); they shrink only when space is short. */
+.ms-main > .ms-chart:has(> [data-cuts]:not([hidden])) {
+  flex-basis: 280px;
+}
 .ms-chart > canvas {
   position: absolute;
   inset: 0;

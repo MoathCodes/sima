@@ -693,7 +693,11 @@ function drawCuts(host: HTMLElement): void {
   const field = S.field!;
   const sel = S.selected!;
   const g = S.groups[S.epoch];
-  const stack = sel.kind === 'target' ? res.stacks?.find((s) => s.det === S.det) : null;
+  // Calm, the one chart backs the headline: the stack of its detector. With all the numbers, the
+  // stack of the detector on screen. Either way the captions name the detector.
+  const measured = (res.stacks ?? []).filter((s) => Number.isFinite(s.along.snr));
+  const lead = !S.allNumbers && measured.length ? measured.reduce((a, b) => (b.along.snr > a.along.snr ? b : a)) : null;
+  const stack = sel.kind === 'target' ? (lead ?? res.stacks?.find((s) => s.det === S.det)) : null;
   let pos: { ra: number; dec: number } | null = sel.kind === 'target' ? null : { ra: sel.ra, dec: sel.dec };
   const t = field.target;
   if (sel.kind === 'target' && t && g) pos = atDate({ cat: 'gaia', id: t.name, ra: t.ra, dec: t.dec, ep: t.ep, pmra: t.pmra, pmdec: t.pmdec, mag: 0 }, g.mjd);
@@ -701,7 +705,7 @@ function drawCuts(host: HTMLElement): void {
   const fig = (k: string, cap: string) => `<figure><canvas data-cut="${k}"></canvas><figcaption>${cap}</figcaption></figure>`;
   host.innerHTML = `
     <div class="ms-cutrow">${fig('ref', 'Reference')}${fig('now', 'This date')}${fig('diff', 'Difference')}</div>
-    ${stack ? `<div class="ms-cutrow">${fig('along', `${esc(stack.along.label)} · ${Number.isFinite(stack.along.snr) ? `${num(stack.along.snr, 1)}σ` : 'not measured'}`)}${fig('c0', `${esc(stack.controls[0].label)} · ${Number.isFinite(stack.controls[0].snr) ? `${num(stack.controls[0].snr, 1)}σ` : '—'}`)}${fig('c1', `${esc(stack.controls[1].label)} · ${Number.isFinite(stack.controls[1].snr) ? `${num(stack.controls[1].snr, 1)}σ` : '—'}`)}</div>` : ''}
+    ${stack ? `<div class="ms-cutrow">${fig('along', `D${stack.det} ${esc(stack.along.label.toLowerCase())} · ${Number.isFinite(stack.along.snr) ? `${num(stack.along.snr, 1)}σ` : 'not measured'}`)}${fig('c0', `${esc(stack.controls[0].label)} · ${Number.isFinite(stack.controls[0].snr) ? `${num(stack.controls[0].snr, 1)}σ` : '—'}`)}${fig('c1', `${esc(stack.controls[1].label)} · ${Number.isFinite(stack.controls[1].snr) ? `${num(stack.controls[1].snr, 1)}σ` : '—'}`)}</div>` : ''}
     ${!tri ? `<p class="ms-cutnote">${esc(g ? 'No other date in this detector to compare with.' : 'No picture on screen.')}</p>` : ''}`;
   if (pos && tri) {
     const sigma = field.noise[S.det - 1];
@@ -715,7 +719,7 @@ function drawCuts(host: HTMLElement): void {
     const pics = { along: stack.along.pix, c0: stack.controls[0].pix, c1: stack.controls[1].pix };
     for (const [k, pix] of Object.entries(pics)) {
       const cv = host.querySelector<HTMLCanvasElement>(`[data-cut="${k}"]`);
-      if (cv) paintCutout(cv, field, pix, pos?.ra ?? centre.ra, pos?.dec ?? centre.dec, S.det, { half: 9 });
+      if (cv) paintCutout(cv, field, pix, pos?.ra ?? centre.ra, pos?.dec ?? centre.dec, stack.det, { half: 9 });
     }
   }
 }

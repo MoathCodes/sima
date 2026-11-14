@@ -11,7 +11,7 @@
  *
  * The storage functions take a `Storage`-like object, so the tests run them in Node.
  */
-import { DEFAULT_PIC, decodePic, encodePic, type PicSettings } from '../../core/picture.ts';
+import { DEFAULT_PIC, encodePic, type PicSettings } from '../../core/picture.ts';
 import { S } from '../state.ts';
 
 /** The storage key (docs/lanes.md). */
@@ -294,38 +294,4 @@ export function anyChanged(): boolean {
     saved.marks !== d.marks ||
     JSON.stringify(saved.layers) !== JSON.stringify(d.layers)
   );
-}
-
-// ----- Links (TLS-7): for lane F's url.ts ----------------------------------------------------
-
-/**
- * The value of the `pic=` link parameter for the settings in force, or '' when they are the
- * default. Lane F's `linkFor` calls this.
- */
-export function picParam(): string {
-  return encodePic(S.pic);
-}
-
-/**
- * Puts a link's `pic=` value in force. A link's settings win over saved ones and are not saved
- * over them; they also show in Explore (`S.picLinked`), with "Original" offered there.
- *
- * @param text The parameter's value, without `pic=`.
- * @returns The settings that were not understood, in words ("stretch, white point"), for the
- *   page's note; empty when all were read.
- */
-export function applyPicParam(text: string): string[] {
-  const { pic, unknown } = decodePic(text);
-  S.pic = sane(pic);
-  S.picLinked = true;
-  linkUnknown = unknown;
-  for (const fn of listeners) fn();
-  return unknown;
-}
-
-let linkUnknown: string[] = [];
-
-/** Settings a link carried that were not understood, for the panel's footer. */
-export function unknownFromLink(): readonly string[] {
-  return linkUnknown;
 }
