@@ -379,10 +379,11 @@
 @media (max-width: 1420px) {
   .frame-views.six {
     flex-wrap: wrap;
+    margin-top: 2px;
   }
   .frame-views.six > button {
     flex: 1 0 30%;
-    height: 28px;
+    height: 26px;
   }
   .frame-views.six > button > .icon {
     display: none;

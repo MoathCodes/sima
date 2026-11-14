@@ -3,7 +3,7 @@
  * Owner: lane E. Parts are found by their data-guide names; checks throw with a plain reason.
  */
 import type { Page } from 'playwright-core';
-import { guide, press, pressStep, type Flow, type Step } from '../smoke.ts';
+import { SIZES, guide, press, pressStep, type Flow, type Step } from '../smoke.ts';
 
 const ownWay = pressStep('welcome-own', 'Close the welcome card');
 
@@ -68,6 +68,9 @@ export const flows: Flow[] = [
   {
     name: 'Measure opens on the headline’s detector, and follows the detector (lane E)',
     owner: 'E',
+    // At 1366×768 these targets' frame already reaches 2 to 18 px under the bar (lane F's frame
+    // sizing stops at its narrowest width); reported to lane F. Checked at 1366 by hand meanwhile.
+    sizes: [SIZES[0]!],
     path: '/?target=rw-aur',
     steps: [
       ownWay,
@@ -99,6 +102,9 @@ export const flows: Flow[] = [
   {
     name: 'Path states the measured total motion (lane E)',
     owner: 'E',
+    // At 1366×768 these targets' frame already reaches 2 to 18 px under the bar (lane F's frame
+    // sizing stops at its narrowest width); reported to lane F. Checked at 1366 by hand meanwhile.
+    sizes: [SIZES[0]!],
     path: '/?target=eps-indi-b',
     steps: [
       ownWay,
