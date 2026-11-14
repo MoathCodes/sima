@@ -10,6 +10,7 @@
 import { S, VIEWS, type Mode } from './state.ts';
 import { aimAt, loadTarget } from './load.ts';
 import { pause, setEpoch } from './playback.ts';
+import { showColour } from './strip.ts';
 import { decodePic, encodePic } from '../core/picture.ts';
 import { TARGETS } from '../core/targets.ts';
 import { SCENARIOS } from '../core/field.ts';
@@ -128,11 +129,8 @@ export async function startUrl(link: Link): Promise<void> {
     S.picLinked = true;
     if (unknown.length) notes.push(`pic (${unknown.join(', ')})`);
   }
-  if (link.det === 'color') {
-    notes.push('det=color (the Color view cannot be opened from a link yet)');
-  }
 
-  const later = link.view !== null || typeof link.det === 'number' || link.date !== null;
+  const later = link.view !== null || link.det !== null || link.date !== null;
   if (!later) say(notes);
   else {
     const stop = on('patch', (p) => {
@@ -158,7 +156,8 @@ function applyLoaded(link: Link, notes: string[]): void {
     if (!VIEWS[S.level].includes(link.view)) setLevel('measure');
     S.mode = link.view;
   }
-  if (typeof link.det === 'number' && link.det !== S.det) emit('band', { det: link.det });
+  if (link.det === 'color') showColour(true);
+  else if (typeof link.det === 'number' && link.det !== S.det) emit('band', { det: link.det });
   if (link.date) {
     const i = groupOn(S.groups, link.date);
     if (i === null) notes.push(`date=${link.date} (this patch has no picture from that day)`);
