@@ -311,7 +311,8 @@
   margin: 0;
   padding: 8px 10px 2px;
 }
-.pl-menu-label:first-child {
+.pl-menu-label:first-child,
+.pl-yours[hidden] + .pl-menu-label {
   padding-top: 4px;
 }
 .pl-rule {

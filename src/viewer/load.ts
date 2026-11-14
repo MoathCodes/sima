@@ -258,7 +258,7 @@ async function pollLive(id: number, signal: AbortSignal): Promise<void> {
       case 'searching':
         if (!shown)
           setLoad({
-            what: 'Searching NASA’s archive for SPHEREx exposures of this spot…',
+            what: `Searching NASA’s archive for SPHEREx exposures of this spot…${busyNote(status, ' ', '.')}`,
             step: 'searching',
           });
         break;
@@ -266,7 +266,7 @@ async function pollLive(id: number, signal: AbortSignal): Promise<void> {
         if (!shown) {
           setLoad({
             what: status.total
-              ? `Fetching ${status.done} of ${status.total} real exposures for a first look…`
+              ? `Fetching ${status.done} of ${status.total} real exposures. The picture shows as soon as two dates are in…${busyNote(status, ' ', '.')}`
               : `Found ${status.found} exposures. Choosing a first look…`,
             done: status.total ? status.done : null,
             total: status.total || null,
@@ -275,14 +275,15 @@ async function pollLive(id: number, signal: AbortSignal): Promise<void> {
         }
         break;
       case 'rest':
-        stepNote = status.total
-          ? `First look. Fetching the rest: ${status.done} of ${status.total}`
-          : 'First look. Fetching the rest';
+        stepNote =
+          (status.total
+            ? `First look. Fetching the rest: ${status.done} of ${status.total}`
+            : 'First look. Fetching the rest') + busyNote(status, ' · ');
         setLoad(
           shown
             ? null
             : {
-                what: `Fetching ${status.done} of ${status.total} real exposures…`,
+                what: `Fetching ${status.done} of ${status.total} real exposures…${busyNote(status, ' ', '.')}`,
                 done: status.done,
                 total: status.total,
                 step: 'rest',
@@ -316,6 +317,13 @@ async function pollLive(id: number, signal: AbortSignal): Promise<void> {
     }
     await wait(POLL_MS, signal);
   }
+}
+
+/** Says that NASA's archive is answering busy and the service asks again (the wait is theirs). */
+function busyNote(status: LiveStatus, sep: string, end = ''): string {
+  return status.retrying
+    ? `${sep}NASA’s archive is busy, so the service is asking again${end}`
+    : '';
 }
 
 async function showLive(

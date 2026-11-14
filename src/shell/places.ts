@@ -247,6 +247,8 @@ function fillMenu(): void {
   );
   const form = el('form.pl-save', {}, input, save);
   const list = el('div.pl-saved');
+  // Saved places come first in the menu, under their own heading, once there are any.
+  const yours = el('div.pl-yours', { hidden: '' }, label('Your saved places'), list);
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const name = input.value.trim();
@@ -260,6 +262,7 @@ function fillMenu(): void {
     showSaved(list, menu);
   });
   menu.replaceChildren(
+    yours,
     label('Start here'),
     ...starters,
     label('Test targets'),
@@ -269,7 +272,6 @@ function fillMenu(): void {
     el('hr.pl-rule'),
     label('Save where the sky is now'),
     form,
-    list,
   );
   showSaved(list, menu);
   menu.addEventListener('toggle', () => showSaved(list, menu));
@@ -282,6 +284,7 @@ function fillMenu(): void {
 
 function showSaved(box: HTMLElement, menu: HTMLElement): void {
   const all = saved();
+  if (box.parentElement) box.parentElement.hidden = !all.length;
   // Saved places show on the sky as pins, their index in the list as their id.
   setPins(all.map((s, i) => ({ id: String(i), name: s.name, ra: s.ra, dec: s.dec })));
   box.replaceChildren(

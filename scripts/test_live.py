@@ -65,10 +65,26 @@ class TestKeys(unittest.TestCase):
 
     def test_first_look_groups(self):
         p = {"windows": [0, 2, 5], "groups": {(0, 1): [], (0, 4): [], (2, 1): [], (5, 1): [], (5, 6): []}}
-        self.assertEqual(sorted(live.first_look_groups(p)), [(0, 1), (0, 4), (5, 1), (5, 6)])
+        # Oldest and newest of one detector side by side, detector 3's neighbours first.
+        self.assertEqual(live.first_look_groups(p), [(0, 4), (0, 1), (5, 1), (5, 6)])
+        p["groups"][(0, 3)] = p["groups"][(5, 3)] = []
+        self.assertEqual(live.first_look_groups(p)[:2], [(0, 3), (5, 3)])
         self.assertEqual(live.first_look_groups({"windows": [], "groups": {}}), [])
         one = {"windows": [3], "groups": {(3, 2): [], (3, 5): []}}
         self.assertEqual(sorted(live.first_look_groups(one)), [(3, 2), (3, 5)])
+
+    def test_first_look_waits_for_one_detector_at_both_ends(self):
+        p = {"windows": [0, 2, 5]}
+
+        def fr(mjd, det):
+            return ({"mjd": mjd, "det": det},)
+
+        got = {(0, 1): [fr(10, 1)], (0, 3): [], (2, 3): [fr(50, 3)], (5, 3): [fr(90, 3)]}
+        self.assertEqual(live.first_look(got, p), [])
+        got[(0, 3)].append(fr(11, 3))
+        self.assertEqual(live.first_look(got, p), [fr(10, 1), fr(11, 3), fr(90, 3)])
+        self.assertEqual(live.first_look({(4, 2): [fr(1, 2)]}, {"windows": [4]}), [fr(1, 2)])
+        self.assertEqual(live.first_look({}, {"windows": []}), [])
 
     def test_origin(self):
         allowed = ["http://localhost:5173", "https://sima.example"]

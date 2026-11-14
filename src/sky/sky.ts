@@ -1263,30 +1263,40 @@ function placeClickCard(): void {
   const others = [...document.querySelectorAll('[data-card]')]
     .filter((el) => el !== card && el.checkVisibility())
     .map((el) => el.getBoundingClientRect());
-  const spots = [
-    { x: p.x - w / 2, y: p.y - h - 14 },
-    { x: p.x - w / 2, y: p.y + 14 },
-    { x: p.x + 16, y: p.y - h / 2 },
-    { x: p.x - w - 16, y: p.y - h / 2 },
-    { x: p.x + 12, y: p.y + 12 },
-    { x: p.x - w - 12, y: p.y - h - 12 },
+  // Beside the spot first; then against the edges of every other card (above the bar, left of
+  // the frame), so a free place is found whenever the window has one (O-I9).
+  const xs = [
+    p.x - w / 2,
+    p.x + 16,
+    p.x - w - 16,
+    ...others.flatMap((r) => [r.left - w - 8, r.right + 8]),
   ];
-  let best = spots[0] ?? { x: 0, y: 0 };
+  const ys = [
+    p.y - h - 14,
+    p.y + 14,
+    p.y - h / 2,
+    ...others.flatMap((r) => [r.top - h - 8, r.bottom + 8]),
+  ];
+  let best = { x: 0, y: 0 };
   let bestCost = Infinity;
-  for (const s of spots) {
-    const x = Math.max(8, Math.min(cam.width - w - 8, s.x));
-    const y = Math.max(8, Math.min(cam.height - h - 8, s.y));
-    let cost = Math.hypot(x - s.x, y - s.y);
-    for (const r of others) {
-      const ox = Math.min(x + w, r.right) - Math.max(x, r.left);
-      const oy = Math.min(y + h, r.bottom) - Math.max(y, r.top);
-      if (ox > -4 && oy > -4) cost += 10000 + Math.max(0, ox) * Math.max(0, oy);
+  for (const sy of ys)
+    for (const sx of xs) {
+      const x = Math.max(8, Math.min(cam.width - w - 8, sx));
+      const y = Math.max(8, Math.min(cam.height - h - 8, sy));
+      // How far the card sits from the spot; covering the spot itself is poor.
+      const dx = Math.max(x - p.x, 0, p.x - x - w);
+      const dy = Math.max(y - p.y, 0, p.y - y - h);
+      let cost = Math.hypot(dx, dy) + (dx === 0 && dy === 0 ? 400 : 0);
+      for (const r of others) {
+        const ox = Math.min(x + w, r.right) - Math.max(x, r.left);
+        const oy = Math.min(y + h, r.bottom) - Math.max(y, r.top);
+        if (ox > -4 && oy > -4) cost += 10000 + Math.max(0, ox) * Math.max(0, oy);
+      }
+      if (cost < bestCost) {
+        bestCost = cost;
+        best = { x, y };
+      }
     }
-    if (cost < bestCost) {
-      bestCost = cost;
-      best = { x, y };
-    }
-  }
   card.style.left = `${Math.round(best.x)}px`;
   card.style.top = `${Math.round(best.y)}px`;
 }
