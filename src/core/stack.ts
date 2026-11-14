@@ -27,7 +27,6 @@
 import type { CatalogueTrack, Det, Field, Frame, Neighbour, RealSet } from './types.ts';
 import type { CombineHow } from './picture.ts';
 import { combine } from './filters.ts';
-import { robustSigma } from './stats.ts';
 import { mjdToYear, propagate, separation } from './astro.ts';
 import { frameUjy, invertMatrix, localSky, wcsSky2Pix } from './real.ts';
 import { atDate } from './catalog.ts';
