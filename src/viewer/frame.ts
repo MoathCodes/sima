@@ -149,6 +149,9 @@ function header(): void {
   const measure = S.level === 'measure';
   const src = SOURCE[S.source] ?? SOURCE.none;
   const i = FOVS.indexOf(S.fov);
+  // An embedded page shows only the frame, the bar and Measure: hiding the frame would empty it.
+  // (main.ts marks <html> before the frame starts; S.embed is set later, by url.ts.)
+  const embedded = document.documentElement.hasAttribute('data-embed');
   head.className = 'frame-head';
   head.dataset.drag = '';
   head.innerHTML = `
@@ -162,7 +165,7 @@ function header(): void {
       <button class="icon-btn sm" data-fov="1" aria-label="Larger field" data-tip="Larger field (${FOVS[Math.min(FOVS.length - 1, i + 1)]}′)" data-guide="fov-larger" ${i >= FOVS.length - 1 ? 'disabled' : ''}>${icon('plus')}</button>
       ${measure ? `<button class="icon-btn sm" data-tools aria-pressed="${S.tools}" aria-label="Picture tools" data-tip="Picture tools" data-guide="tools-button">${icon('sliders')}</button>` : ''}
       <button class="btn text frame-measure" data-measure aria-pressed="${measure}" data-guide="measure" data-tip="${measure ? 'Back to the simple view' : 'Measure: numbers, charts and all six views'}">${icon('chart')}<span>Measure</span></button>
-      <button class="icon-btn sm" data-hide aria-label="Hide the frame" data-tip="Hide the frame" data-guide="frame-hide">${icon('close')}</button>
+      ${embedded ? '' : `<button class="icon-btn sm" data-hide aria-label="Hide the frame" data-tip="Hide the frame" data-guide="frame-hide">${icon('close')}</button>`}
     </div>`;
   const title = head.querySelector<HTMLElement>('.frame-title');
   if (title) {
