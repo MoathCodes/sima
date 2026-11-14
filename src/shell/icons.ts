@@ -43,6 +43,13 @@ const PATHS = {
   'chevron-down': '<path d="m6 8 4 4 4-4"/>',
   bookmark: '<path d="M6 3.5h8v13l-4-3-4 3z"/>',
   download: '<path d="M10 3.5v9M6.5 9 10 12.5 13.5 9M4.5 16h11"/>',
+  galaxy:
+    '<ellipse cx="10" cy="10" rx="7.6" ry="3.1" transform="rotate(-30 10 10)"/><circle cx="10" cy="10" r="1.7"/>',
+  cluster:
+    '<circle cx="10" cy="4.4" r="1.4"/><circle cx="4.6" cy="9.4" r="1.4"/><circle cx="15.4" cy="9.4" r="1.4"/><circle cx="7" cy="15.4" r="1.4"/><circle cx="13" cy="15.4" r="1.4"/><circle cx="10" cy="10.2" r="1"/>',
+  nebula: '<path d="M5.6 15a3.1 3.1 0 0 1 .3-6.2 4.3 4.3 0 0 1 8.3 1.2A2.5 2.5 0 0 1 14.5 15z"/>',
+  path: '<circle cx="4.6" cy="15.4" r="1.8"/><circle cx="15.4" cy="4.6" r="1.8"/><path d="M6.4 14.2c3.2-1.6.6-5.6 3.8-6.6 1.7-.5 2.6-1.3 3.5-1.8" stroke-dasharray="1.6 2.4"/>',
+  dice: '<rect x="3.5" y="3.5" width="13" height="13" rx="2.6"/><circle cx="7.2" cy="7.2" r="1" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="12.8" cy="12.8" r="1" fill="currentColor" stroke="none"/>',
 } as const;
 
 /** The name of an icon. */

@@ -1,15 +1,18 @@
 /**
- * The search field and its suggestions (PLC-4, GEN-1's `/`). Owner: lane F.
+ * The search field and its suggestions (SPEC 4.5, PLC-4, GEN-1's `/`). Owner: lane F.
  *
  * Search knows nothing about places itself. Lane G plugs the catalogue in with
- * `addSearchSource`; coordinates are the one built-in source. Suggestions from every source are
- * merged by score.
+ * `addSearchSource`. Two sources are built in: the five test targets, and coordinates (in the
+ * formats core/astro.ts `parseCoords` reads). Suggestions are grouped by source, the group with
+ * the best match first, at most 8 rows in all.
  *
- * PHASE 0 STUB: the coordinates source finds nothing yet (core/astro.ts `parseCoords` is a stub).
+ * Keys: ↓ and ↑ move through the rows, Enter opens the chosen row (the first by default),
+ * Escape closes the suggestions, then leaves the field.
  */
 import { icon, type IconName } from '../shell/icons.ts';
 import { openPlace } from '../shell/shell.ts';
 import { formatCoords, parseCoords } from '../core/astro.ts';
+import { TARGETS } from '../core/targets.ts';
 
 /** One suggestion. */
 export interface SearchHit {
@@ -29,6 +32,8 @@ export interface SearchHit {
 export interface SearchSource {
   /** Short name, for errors. */
   name: string;
+  /** Heading over this source's rows ("Well-known places"); "Places" when left out. */
+  label?: string;
   /**
    * The suggestions for what the user typed, best first, at most 8. Called after each pause in
    * typing; `signal` aborts when the text changes again.
@@ -36,8 +41,12 @@ export interface SearchSource {
   search(query: string, signal: AbortSignal): SearchHit[] | Promise<SearchHit[]>;
 }
 
+const MAX_ROWS = 8;
 const sources = new Set<SearchSource>();
-let hits: SearchHit[] = [];
+let rows: SearchHit[] = [];
+/** The text `rows` were found for. */
+let rowsFor = '';
+let active = 0;
 let asking: AbortController | null = null;
 
 /**
@@ -54,37 +63,94 @@ export function startSearch(): void {
   const box = document.getElementById('search');
   const list = document.getElementById('search-results');
   if (!box || !list) return;
-  box.style.cssText = 'display:flex;align-items:center;gap:10px;padding:0 12px;color:var(--ink-3)';
   box.innerHTML = `${icon('search')}
-    <input type="search" aria-label="Search" placeholder="Search a star or galaxy, or paste coordinates"
-      autocomplete="off" spellcheck="false"
-      style="flex:1;min-width:0;height:100%;border:0;outline:0;background:none;color:var(--ink);font:var(--text-body)">
+    <input type="search" class="search-input" aria-label="Search a star or galaxy, or paste coordinates"
+      placeholder="Search a star or galaxy, or paste coordinates"
+      autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false"
+      aria-controls="search-results" aria-autocomplete="list">
     <kbd class="kbd" aria-hidden="true">/</kbd>`;
+  list.setAttribute('role', 'listbox');
+  list.setAttribute('aria-label', 'Suggestions');
   const input = box.querySelector('input');
   if (!input) return;
   let timer = 0;
   input.addEventListener('input', () => {
     clearTimeout(timer);
-    timer = window.setTimeout(() => void ask(input.value.trim(), list), 120);
+    const text = input.value.trim();
+    // Rows for an older text must not be chosen by a quick Enter: drop them now.
+    if (text !== rowsFor) {
+      rows = [];
+      rowsFor = text;
+      close(list, input);
+      list.replaceChildren(); // not even during the fade-out
+    }
+    timer = window.setTimeout(() => void ask(text, list, input), text ? 120 : 0);
+  });
+  input.addEventListener('focus', () => {
+    if (input.value.trim() && rows.length) open(list, input);
   });
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && hits[0]) {
+    const shown = list.matches(':popover-open');
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
-      choose(hits[0], list, input);
+      if (!shown) {
+        if (input.value.trim() && rows.length) open(list, input);
+        return;
+      }
+      if (rows.length)
+        setActive(
+          list,
+          input,
+          (active + (e.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length,
+        );
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const hit = rows[active];
+      if (shown && hit) choose(hit, list, input);
+      else if (input.value.trim()) void ask(input.value.trim(), list, input, true);
     } else if (e.key === 'Escape') {
       e.preventDefault(); // handled here: the page's Escape order must not also close a card
-      if (list.matches(':popover-open')) list.hidePopover();
+      if (shown) close(list, input);
       else input.blur();
     }
   });
   document.addEventListener('pointerdown', (e) => {
     const t = e.target instanceof Node ? e.target : null;
-    if (list.matches(':popover-open') && !box.contains(t) && !list.contains(t)) list.hidePopover();
+    if (list.matches(':popover-open') && !box.contains(t) && !list.contains(t)) close(list, input);
+  });
+  list.addEventListener('toggle', (e) => {
+    input.setAttribute('aria-expanded', String((e as ToggleEvent).newState === 'open'));
   });
 }
 
+/** The five test targets, by name or key. */
+const targets: SearchSource = {
+  name: 'targets',
+  label: 'Test targets, real pictures included',
+  search(query) {
+    const q = fold(query);
+    return TARGETS.flatMap((t) => {
+      const name = fold(t.name);
+      const at = name.indexOf(q);
+      const score = name === q ? 1 : at === 0 ? 0.95 : at > 0 ? 0.8 : t.key === q ? 0.95 : 0;
+      if (q.length < 2 || !score) return [];
+      return [
+        {
+          name: t.name,
+          line: [t.kind, t.line].filter(Boolean).join(' · '),
+          icon: 'star' as IconName,
+          score,
+          choose: () => openPlace({ name: t.name, ra: t.ra, dec: t.dec, target: t.key }),
+        },
+      ];
+    });
+  },
+};
+
+/** Coordinates in any format `parseCoords` reads. */
 const coordinates: SearchSource = {
   name: 'coordinates',
+  label: 'Coordinates',
   search(query) {
     const at = parseCoords(query);
     if (!at) return [];
@@ -92,7 +158,7 @@ const coordinates: SearchSource = {
     return [
       {
         name,
-        line: 'Coordinates',
+        line: `RA ${at.ra.toFixed(4)}°, Dec ${at.dec.toFixed(4).replace('-', '−')}° · move the frame here`,
         icon: 'pin',
         score: 1,
         choose: () => openPlace({ name, ...at }),
@@ -101,47 +167,116 @@ const coordinates: SearchSource = {
   },
 };
 
-async function ask(query: string, list: HTMLElement): Promise<void> {
+/** Lower case, no accents, one space: "Barnard’s  Star" → "barnard's star". */
+function fold(text: string): string {
+  return text
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[’‘`]/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+interface Group {
+  source: SearchSource;
+  hits: SearchHit[];
+}
+
+async function ask(
+  query: string,
+  list: HTMLElement,
+  input: HTMLInputElement,
+  chooseFirst = false,
+): Promise<void> {
   asking?.abort();
   if (!query) {
-    if (list.matches(':popover-open')) list.hidePopover();
+    rows = [];
+    close(list, input);
     return;
   }
   const ctl = new AbortController();
   asking = ctl;
-  const all = await Promise.all(
-    [coordinates, ...sources].map(async (s) => {
+  const all: Group[] = await Promise.all(
+    [coordinates, targets, ...sources].map(async (source) => {
       try {
-        return await s.search(query, ctl.signal);
+        const hits = await source.search(query, ctl.signal);
+        return { source, hits: [...hits] }; // each source gives its best first
       } catch (err) {
-        if (!ctl.signal.aborted) console.error(`search: the "${s.name}" source failed`, err);
-        return [];
+        if (!ctl.signal.aborted) console.error(`search: the "${source.name}" source failed`, err);
+        return { source, hits: [] };
       }
     }),
   );
   if (ctl.signal.aborted) return;
-  hits = all
-    .flat()
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 8);
-  show(list);
+  // Groups with the best match first; a name already shown by an earlier group is left out.
+  const groups = all
+    .filter((g) => g.hits.length)
+    .sort((a, b) => (b.hits[0]?.score ?? 0) - (a.hits[0]?.score ?? 0));
+  const seen = new Set<string>();
+  const shown: Group[] = [];
+  let room = MAX_ROWS;
+  for (const g of groups) {
+    const hits = g.hits.filter((h) => !seen.has(fold(h.name))).slice(0, room);
+    hits.forEach((h) => seen.add(fold(h.name)));
+    room -= hits.length;
+    if (hits.length) shown.push({ source: g.source, hits });
+  }
+  rows = shown.flatMap((g) => g.hits);
+  rowsFor = query;
+  active = 0;
+  render(list, input, shown, query);
+  const first = rows[0];
+  if (chooseFirst && first) choose(first, list, input);
 }
 
-function show(list: HTMLElement): void {
-  const input = document.querySelector<HTMLInputElement>('#search input');
-  list.innerHTML = hits.length
-    ? ''
-    : '<p style="margin:0;padding:8px 10px;color:var(--ink-2)">No matches.</p>';
-  hits.forEach((hit) => {
-    const row = document.createElement('button');
-    row.className = 'menu-item';
-    row.innerHTML = `<span class="window" style="display:grid;place-items:center;width:30px;height:30px">${icon(hit.icon ?? 'star')}</span><span><span data-name></span><span class="line"></span></span>`;
-    const [name, line] = row.querySelectorAll('[data-name], .line');
-    if (name) name.textContent = hit.name;
-    if (line) line.textContent = hit.line;
-    row.addEventListener('click', () => input && choose(hit, list, input));
-    list.append(row);
+function render(list: HTMLElement, input: HTMLInputElement, groups: Group[], query: string): void {
+  list.replaceChildren();
+  if (!rows.length) {
+    const none = document.createElement('p');
+    none.className = 'search-none';
+    none.textContent = `Nothing found for “${query}”. Try a name (Vega, سهيل), a catalogue number (M104, NGC 6572) or coordinates (17 57 48.5 +04 41 36).`;
+    list.append(none);
+  }
+  let i = 0;
+  for (const g of groups) {
+    const head = document.createElement('p');
+    head.className = 'group-label search-group';
+    head.textContent = g.source.label ?? 'Places';
+    list.append(head);
+    for (const hit of g.hits) {
+      const index = i++;
+      const row = document.createElement('button');
+      row.className = 'menu-item search-row';
+      row.tabIndex = -1; // the field keeps focus; ↓ and ↑ move through the rows
+      row.id = `search-row-${index}`;
+      row.setAttribute('role', 'option');
+      row.innerHTML = `<span class="window search-tile">${icon(hit.icon ?? 'star')}</span><span class="search-words"><span class="search-name"></span><span class="line"></span></span>`;
+      row.querySelector('.search-name')!.textContent = hit.name;
+      row.querySelector('.line')!.textContent = hit.line;
+      row.addEventListener('pointerdown', (e) => e.preventDefault()); // keep focus in the field
+      row.addEventListener('click', () => choose(hit, list, input));
+      row.addEventListener('pointermove', () => {
+        if (active !== index) setActive(list, input, index);
+      });
+      list.append(row);
+    }
+  }
+  open(list, input);
+  setActive(list, input, 0);
+}
+
+function setActive(list: HTMLElement, input: HTMLInputElement, i: number): void {
+  active = i;
+  list.querySelectorAll('[role="option"]').forEach((row, j) => {
+    row.setAttribute('aria-selected', String(j === i));
   });
+  const row = rows.length ? list.querySelector(`#search-row-${i}`) : null;
+  if (row) input.setAttribute('aria-activedescendant', row.id);
+  else input.removeAttribute('aria-activedescendant');
+}
+
+function open(list: HTMLElement, input: HTMLInputElement): void {
   const r = document.getElementById('search')?.getBoundingClientRect();
   if (r) {
     list.style.left = `${r.left}px`;
@@ -149,10 +284,17 @@ function show(list: HTMLElement): void {
     list.style.width = `${r.width}px`;
   }
   if (!list.matches(':popover-open')) list.showPopover();
+  input.setAttribute('aria-expanded', 'true');
+}
+
+function close(list: HTMLElement, input: HTMLInputElement): void {
+  if (list.matches(':popover-open')) list.hidePopover();
+  input.setAttribute('aria-expanded', 'false');
+  input.removeAttribute('aria-activedescendant');
 }
 
 function choose(hit: SearchHit, list: HTMLElement, input: HTMLInputElement): void {
-  if (list.matches(':popover-open')) list.hidePopover();
+  close(list, input);
   input.blur();
   hit.choose();
 }
