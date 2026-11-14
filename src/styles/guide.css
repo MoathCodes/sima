@@ -1,2 +1,520 @@
 /* Lane H: the welcome card, the task line, the guide menu, the tour, tips and explanations.
    Style only lane H's own classes here. Tokens and shared components are in app.css. */
+
+/* ----- Welcome card (SPEC 4.1, DESIGN "Welcome card and tip card") ------------------------- */
+
+.welcome {
+  display: grid;
+  gap: 10px;
+  padding: var(--pad-dialog);
+}
+.welcome-head {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+}
+.welcome-title {
+  flex: 1;
+  margin: 0;
+  font: var(--text-headline);
+  letter-spacing: var(--tracking-headline);
+}
+.welcome-line {
+  margin: 0 0 4px;
+  color: var(--ink-2);
+}
+.welcome-starters {
+  display: grid;
+  gap: var(--gap-tight);
+}
+.welcome .starter {
+  justify-content: space-between;
+  gap: 10px;
+  height: auto;
+  min-height: 52px;
+  padding: 9px 12px;
+  text-align: left;
+  white-space: normal;
+}
+.starter-text {
+  display: grid;
+  gap: 2px;
+}
+.starter-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.starter-line {
+  font: var(--text-label);
+  color: var(--ink-2);
+}
+.starter.primary .starter-line {
+  color: var(--on-action);
+}
+.welcome-pill {
+  padding: 1px 7px;
+  border-radius: var(--r-pill);
+  background: var(--action-soft);
+  color: var(--action);
+  font: var(--text-label);
+}
+.welcome-own {
+  justify-self: start;
+  margin-top: 2px;
+  font: var(--text-control);
+}
+.welcome-resume {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-control);
+  background: var(--card-2);
+}
+.welcome-resume p {
+  margin: 0;
+  color: var(--ink-2);
+}
+.welcome-resume b {
+  color: var(--ink);
+}
+.welcome-resume-row {
+  display: flex;
+  gap: var(--gap-tight);
+}
+
+/* ----- The task line in the frame (SPEC 4.2, GDE-4, GDE-5) --------------------------------- */
+
+.task {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
+}
+.task.sim {
+  /* Simulated says so in words and with a dashed line (H3). */
+  padding: 6px 8px;
+  border: 1px dashed var(--warn);
+  border-radius: var(--r-control);
+}
+.task-text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.task p {
+  margin: 0;
+}
+.task-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font: var(--text-control);
+  font-weight: 600;
+}
+.task-line {
+  color: var(--ink-2);
+}
+.task-help {
+  color: var(--ink);
+}
+.task-hint {
+  flex: none;
+}
+.task-result {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+}
+.task-number {
+  display: grid;
+  gap: 2px;
+}
+.task-big {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--text-title);
+}
+.task-wait {
+  color: var(--ink-2);
+}
+.task-note {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+
+/* ----- The Guide menu (SPEC 4.9) ----------------------------------------------------------- */
+
+#guide-menu.guide-menu {
+  padding: 0;
+}
+.guide-scroll {
+  display: grid;
+  gap: var(--gap-group);
+  max-height: calc(100vh - var(--top) - var(--h-top) - 6px - var(--gutter));
+  padding: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.guide-head {
+  margin: 2px 4px 6px;
+  font: var(--text-title);
+}
+.guide-item {
+  align-items: center;
+}
+.guide-item .icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+.guide-item:not(.primary) {
+  background: var(--card-2);
+}
+.guide-item:not(.primary):hover {
+  background: var(--card-3);
+}
+.guide-item.primary {
+  background: var(--action);
+  color: var(--on-action);
+}
+.guide-item.primary:hover {
+  background: var(--action-hi);
+}
+.guide-changes > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.guide-changes > summary::-webkit-details-marker {
+  display: none;
+}
+.guide-changes > summary::before {
+  content: '▸';
+  width: 18px;
+  color: var(--ink-2);
+}
+.guide-changes[open] > summary::before {
+  content: '▾';
+}
+.guide-change-list {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 4px;
+  padding: 0 10px;
+  list-style: none;
+}
+.guide-change-list p {
+  margin: 0;
+}
+.guide-change-name {
+  font: var(--text-control);
+  font-weight: 600;
+}
+.guide-change-text {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.guide-change-list .link {
+  font: var(--text-label);
+  font-weight: 500;
+}
+.guide-try-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 10px 4px 2px;
+}
+.guide-try-head p {
+  margin: 0;
+}
+.guide-count {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.guide-try {
+  margin: 0;
+  padding: 0 4px;
+  list-style: none;
+}
+.guide-try li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  border-top: 1px solid var(--rule);
+}
+.guide-try li:first-child {
+  border-top: 0;
+}
+.guide-try-text {
+  flex: 1;
+}
+.guide-try li.done .guide-try-text {
+  color: var(--ink-2);
+}
+.guide-tick {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--ink-3);
+  border-radius: 50%;
+}
+.guide-try li.done .guide-tick {
+  border-color: var(--good);
+  background: var(--good);
+  color: var(--on-action);
+}
+.guide-tick .icon {
+  width: 14px;
+  height: 14px;
+}
+.guide-try .link {
+  font: var(--text-label);
+  font-weight: 500;
+}
+
+/* ----- The tour: dimmer, ring and step card (GDE-1 to GDE-3) ------------------------------ */
+
+.tour-dim {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  fill: color-mix(in srgb, var(--sky) 52%, transparent);
+}
+.tour-dim[hidden] {
+  display: none;
+}
+.tour-ring {
+  position: fixed;
+  border-radius: var(--r-control);
+  box-shadow: var(--ring-mark);
+  pointer-events: none;
+}
+.tour-ring.round {
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--mark);
+}
+.tour-ring-label {
+  position: fixed;
+  padding: 1px 6px;
+  border-radius: var(--r-tip);
+  background: var(--mark);
+  color: var(--sky);
+  font: var(--text-label);
+  pointer-events: none;
+}
+.tour-card {
+  position: fixed;
+  display: grid;
+  gap: 6px;
+  width: 300px;
+  padding: 12px 14px;
+  pointer-events: auto;
+  outline: none;
+}
+.tour-card:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+.tour-card[hidden] {
+  display: none;
+}
+.tour-progress {
+  display: flex;
+  gap: 3px;
+}
+.tour-progress > span {
+  width: 14px;
+  height: 3px;
+  border-radius: var(--r-pill);
+  background: var(--card-3);
+}
+.tour-progress > span.past {
+  background: var(--ink-2);
+}
+.tour-progress > span.now {
+  background: var(--mark-ink);
+}
+.tour-card p,
+.tour-card h2 {
+  margin: 0;
+}
+.tour-count {
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.tour-title {
+  font: var(--text-title);
+}
+.tour-body {
+  color: var(--ink-2);
+}
+.tour-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r-control);
+  background: var(--action-soft);
+  color: var(--action);
+  font: var(--text-control);
+}
+.tour-action.done {
+  background: var(--good-soft);
+  color: var(--good);
+}
+.tour-check {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+.tour-check .icon {
+  width: 14px;
+  height: 14px;
+}
+.tour-hint {
+  color: var(--ink);
+}
+.tour-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-group);
+  margin-top: 2px;
+}
+.tour-gap {
+  flex: 1;
+}
+.tour-foot .btn:not(.text) {
+  height: var(--h-text-btn);
+  padding: 0 10px;
+}
+
+/* ----- One-time tips (GDE-8): an ink card with a pointer --------------------------------- */
+
+#tip.tip-card {
+  display: grid;
+  gap: 6px;
+  width: 270px;
+  padding: 12px 14px;
+  border-radius: var(--r-panel);
+  background: var(--ink);
+  color: var(--card);
+  box-shadow: var(--lift);
+}
+#tip.tip-card[hidden] {
+  display: none;
+}
+.tip-card p {
+  margin: 0;
+}
+.tip-title {
+  font: var(--text-control);
+  font-weight: 600;
+}
+.tip-text {
+  font: var(--text-label);
+}
+.tip-foot {
+  display: flex;
+  justify-content: end;
+}
+.tip-card .btn {
+  height: var(--h-text-btn);
+  padding: 0 10px;
+}
+.tip-pointer {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--ink);
+  rotate: 45deg;
+  translate: -50% -50%;
+}
+#tip[data-side='below'] .tip-pointer {
+  top: 0;
+}
+#tip[data-side='above'] .tip-pointer {
+  top: 100%;
+}
+#tip[data-side='right'] .tip-pointer {
+  left: 0;
+}
+#tip[data-side='left'] .tip-pointer {
+  left: 100%;
+}
+
+/* ----- Explain the screen (GDE-6) ---------------------------------------------------------- */
+
+.explain-bar {
+  position: fixed;
+  top: var(--top);
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 6px 6px 14px;
+}
+.explain-bar p {
+  margin: 0;
+}
+#explain > .explain-tag,
+#explain > .explain-outline,
+#explain > .explain-card {
+  pointer-events: none;
+}
+.explain-tag {
+  position: fixed;
+  padding: 1px 7px;
+  border-radius: var(--r-tip);
+  background: var(--ink);
+  color: var(--card);
+  font: var(--text-label);
+  white-space: nowrap;
+}
+.explain-outline {
+  position: fixed;
+  border-radius: var(--r-control);
+  box-shadow: 0 0 0 2px var(--action);
+}
+.explain-outline[hidden],
+.explain-card[hidden] {
+  display: none;
+}
+.explain-card {
+  position: fixed;
+  display: grid;
+  gap: 2px;
+  width: 260px;
+  padding: 10px 12px;
+}
+.explain-card p {
+  margin: 0;
+}
+.explain-name {
+  font: var(--text-control);
+  font-weight: 600;
+}
+.explain-text {
+  color: var(--ink-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-card,
+  #tip.tip-card {
+    transition: none;
+  }
+}
