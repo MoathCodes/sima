@@ -1,0 +1,111 @@
+/* The opening intro (src/intro/intro.ts; DESIGN.md "Intro"). Owner: the intro.
+   It covers the whole page while it plays, then fades over the sky map as the map glides in. */
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-tooltip) + 1);
+  overflow: hidden;
+  background: var(--sky);
+  color: var(--st-ink);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.intro-sky {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The name, inside the dark disc. --r0 is the disc's radius (set by intro.ts). */
+.intro-name {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: calc(var(--r0, 240px) * 1.55);
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+.intro-name > * {
+  will-change: opacity, transform;
+}
+.intro-ar {
+  font: 600 clamp(40px, calc(var(--r0, 240px) * 0.3), 84px) / 1.2 var(--font-wordmark);
+}
+.intro-la {
+  margin-top: calc(var(--r0, 240px) * 0.01);
+  font: 600 clamp(19px, calc(var(--r0, 240px) * 0.105), 30px) / 1 var(--font-wordmark);
+  letter-spacing: 0.02em;
+}
+.intro-line {
+  margin: clamp(14px, calc(var(--r0, 240px) * 0.075), 22px) 0 0;
+  color: var(--st-ink-2);
+  font: var(--text-reading);
+  text-wrap: balance;
+}
+
+/* The flare's name, beside the bright point on the edge. */
+.intro-star {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: var(--st-ink-2);
+  font: var(--text-label);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* What the light is (H2): source, release, date and wavelength. */
+.intro-source {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--gutter));
+  margin: 0;
+  transform: translateX(-50%);
+  color: var(--st-ink-3);
+  font: var(--text-label);
+  text-align: center;
+  pointer-events: none;
+}
+
+.intro-skip {
+  position: absolute;
+  top: var(--top);
+  right: var(--gutter);
+  height: var(--h-text-btn);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-tip);
+  background: transparent;
+  color: var(--st-ink-2);
+  font: var(--text-label);
+  cursor: pointer;
+}
+.intro-skip:hover {
+  background: var(--st-raise);
+  color: var(--st-ink);
+}
+.intro-skip:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .intro-line {
+    font: var(--text-body);
+  }
+}
+
+/* While the sky map glides in at the intro's end, the page's cards wait; then they fade in. */
+html[data-intro='land'] body > :not(#sky, #intro) {
+  opacity: 0;
+}

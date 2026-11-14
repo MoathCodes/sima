@@ -488,6 +488,31 @@ export function registerDots(hooks: DotHooks): void {
   dotHooks = hooks;
 }
 
+// ----- For the intro (src/intro/intro.ts) -----------------------------------------------------
+
+/**
+ * The intro's landing: the map jumps to `from` degrees wide and glides to `to` in `ms`, keeping
+ * its centre (the same glide as `flyTo`). It is not a user move: the sky still follows the first
+ * patch. `ms` 0 jumps straight to `to`.
+ */
+export function introZoom(from: number, to: number, ms: number): void {
+  if (!al) return;
+  zoomTo = null;
+  if (ms <= 0) {
+    glide = null;
+    al.setFoV(clampFov(to));
+    requestDraw();
+    return;
+  }
+  al.setFoV(clampFov(from));
+  glide = {
+    from: { ...cam, fov: clampFov(from) },
+    to: { ra: cam.ra, dec: cam.dec, fov: clampFov(to) },
+    start: performance.now(),
+    ms,
+  };
+}
+
 // ----- The map's layers and channels ------------------------------------------------------------
 
 interface Shown {

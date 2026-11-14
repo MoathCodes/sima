@@ -1,0 +1,69 @@
+/**
+ * The intro's sphere maths (src/intro/sphere.ts): HEALPix pixels against healpy, Allsky
+ * positions, and the camera that ends on Barnard's Star with north up and east to the left.
+ */
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  allskyPixel,
+  lookAt,
+  nestPixel,
+  radec,
+  slerp,
+  toSky,
+} from '../src/intro/sphere.ts';
+
+// healpy 1.18: ang2pix(nside, ra, dec, lonlat=True, nest=True) at nside 512 and 8.
+const HEALPY: [number, number, number, number][] = [
+  [269.452, 4.693, 2034008, 496],
+  [0, 0, 1245184, 304],
+  [45, 89, 262092, 63],
+  [300, -60, 2930384, 715],
+  [120, 30, 398950, 97],
+  [200, -89.5, 2621473, 640],
+  [10, 41.8, 173418, 42],
+  [359.9, -41.9, 2970964, 725],
+  [90, 0.1, 1507328, 368],
+  [180, 70, 765630, 186],
+];
+
+test('nested HEALPix pixels match healpy', () => {
+  for (const [ra, dec, p512, p8] of HEALPY) {
+    assert.equal(nestPixel(512, ra, dec), p512, `nside 512 at ${ra}, ${dec}`);
+    assert.equal(nestPixel(8, ra, dec), p8, `nside 8 at ${ra}, ${dec}`);
+  }
+});
+
+test('an Allsky position lands in its order-3 tile, on the pixel healpy names', () => {
+  for (const [ra, dec, p512, p8] of HEALPY) {
+    const at = allskyPixel(ra, dec);
+    assert.equal(at.tile, p8);
+    // The order-9 pixel inside the 64×64 tile: rows carry the x bits, columns the y bits.
+    const sub = p512 - p8 * 4096;
+    let row = 0;
+    let col = 0;
+    for (let bit = 0; bit < 6; bit++) {
+      row |= ((sub >> (2 * bit)) & 1) << bit;
+      col |= ((sub >> (2 * bit + 1)) & 1) << bit;
+    }
+    assert.equal(Math.floor(at.x) - (p8 % 27) * 64, col, `column at ${ra}, ${dec}`);
+    assert.equal(Math.floor(at.y) - Math.floor(p8 / 27) * 64, row, `row at ${ra}, ${dec}`);
+  }
+});
+
+test('the camera looks at its target with north up and east to the left', () => {
+  const q = lookAt(269.452, 4.693);
+  const centre = radec(toSky(q, [0, 0, 1]));
+  assert.ok(Math.abs(centre.ra - 269.452) < 1e-5 && Math.abs(centre.dec - 4.693) < 1e-5);
+  const up = radec(toSky(q, [0, 0.01, 1]));
+  assert.ok(up.dec > 4.693, 'up is north');
+  const left = radec(toSky(q, [0.01, 0, 1])); // +x is east, drawn on the left
+  assert.ok(left.ra > 269.452, 'left is east');
+});
+
+test('turning the globe ends exactly on the target view', () => {
+  const a = lookAt(10, 20);
+  const b = lookAt(100, -5);
+  assert.deepEqual(slerp(a, b, 1).map((v) => +v.toFixed(9)), b.map((v) => +v.toFixed(9)));
+  assert.deepEqual(slerp(a, b, 0).map((v) => +v.toFixed(9)), a.map((v) => +v.toFixed(9)));
+});
