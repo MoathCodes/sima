@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en" data-theme="night">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sima v2: a mission in progress</title>
+<link rel="stylesheet" href="glass.css"><link rel="stylesheet" href="discover.css">
+<style>
+  :root { --pic: min(560px, calc(100vh - 330px)); }
+  .tether-x { left: calc(50% + 52 * var(--k)); top: calc(50% - 30 * var(--k)); width: calc(50% - 52 * var(--k) - 16px - var(--pic) - 24px); }
+  @media (max-width: 699px) {
+    :root { --pic: calc(100vw - 40px); }
+    .ctl { flex-wrap: wrap; justify-content: center; gap: 12px; padding-top: 10px; }
+    .dates { order: 2; flex-basis: 100%; margin: 0; }
+    .datechip { justify-content: center; }
+    .datechip span.sm { display: none; }
+    .mission .steps { display: none; }
+    .mission .nowm { display: block; }
+    .mission h1 { display: none; }
+    .mission .tools .btn { flex: 1; height: 48px; }
+  }
+  .nowm { display: none; }
+</style>
+</head>
+<body>
+<!-- Background: the real app's sky map around Barnard's Star at its default zoom (captured 15 Nov 2026). -->
+<div class="sky" style="background-image:url(img/sky-barnard-1900.jpg)"></div>
+<div class="at patch d-only" style="--x:902;--y:435;width:calc(100 * var(--k));height:calc(100 * var(--k))"><span class="patch-label">The runaway</span></div>
+<div class="tether tether-x d-only"></div>
+
+<header class="top">
+  <div class="glass brand"><span class="wordmark"><span class="ar">سيما</span><span class="la">Sima</span></span></div>
+  <div class="glass-thin find d-only"><svg class="icon"><use href="icons.svg#search"/></svg>Find a star, galaxy or nebula<span class="kbd">/</span></div>
+  <div class="spacer"></div>
+  <nav class="glass cluster d-only">
+    <span class="btn"><svg class="icon"><use href="icons.svg#book"/></svg>Field guide</span>
+    <span class="btn icon-only"><svg class="icon"><use href="icons.svg#gear"/></svg></span>
+    <span class="btn icon-only"><svg class="icon"><use href="icons.svg#info"/></svg></span>
+  </nav>
+  <nav class="glass cluster m-only"><span class="btn icon-only"><svg class="icon"><use href="icons.svg#close"/></svg></span></nav>
+  <div class="glass switch2"><span class="on"><svg class="icon d-only"><use href="icons.svg#sun"/></svg>Discover</span><span><svg class="icon d-only"><use href="icons.svg#chart"/></svg>Expert</span></div>
+</header>
+
+<section class="mission glass-raised" aria-labelledby="m-h">
+  <div class="grabber m-only"></div>
+  <div class="hd"><span class="eyebrow d-only">Mission 1 of 6 · Skill: Blink</span><span class="eyebrow m-only">The runaway · step 2 of 3</span><span class="icon-btn d-only" title="Leave the mission"><svg class="icon"><use href="icons.svg#close"/></svg></span></div>
+  <h1 id="m-h">The runaway</h1>
+  <div class="obj d-only">Barnard's Star · a small red star, 6 light-years away</div>
+  <ol class="steps">
+    <li class="step done"><span class="n"><svg class="icon"><use href="icons.svg#check"/></svg></span><div><div class="st">Play the pictures</div></div></li>
+    <li class="step now" aria-current="step"><span class="n">2</span><div><div class="st">One dot jumps. Tap it.</div>
+      <div class="sd">These pictures were taken months apart. Stars stay put. Look for the one that doesn't.</div>
+      <div class="hint"><svg class="icon"><use href="icons.svg#bulb"/></svg><span>Look near the middle. Step from A to C with the arrow keys and watch closely.</span></div></div></li>
+    <li class="step"><span class="n">3</span><div><div class="st">See how far it went</div></div></li>
+  </ol>
+  <div class="nowm">
+    <div class="st" style="font:600 17px/1.3 var(--font);margin-top:10px">One dot jumps. Tap it.</div>
+    <div class="sd" style="font-size:14px;color:var(--on-glass-2);margin-top:4px">Stars stay put between these pictures. Look for the one that doesn't.</div>
+  </div>
+  <div class="tools"><span class="btn"><svg class="icon"><use href="icons.svg#bulb"/></svg>Another hint</span><span class="btn quiet"><svg class="icon"><use href="icons.svg#eye"/></svg>Show me</span></div>
+  <div class="progress d-only"><i style="width:40%"></i></div>
+  <div class="keys d-only"><span class="kbd">Space</span> play <span class="kbd">←</span><span class="kbd">→</span> step <span class="kbd">Tab</span> then arrows to pick a dot</div>
+</section>
+
+<section class="dframe glass" aria-label="Barnard's Star, real pictures">
+  <div class="fh">
+    <div><div class="name">Barnard's Star</div><div class="src"><span class="dot"></span>Real data · NASA SPHEREx<span class="m-only">· D3 1.7 µm</span></div></div>
+    <span class="icon-btn d-only" title="Hide the frame"><svg class="icon"><use href="icons.svg#minus"/></svg></span>
+  </div>
+  <div class="well pic">
+    <img class="px" src="img/pic-barnard-1.png" alt="Picture B of Barnard's Star, March 2026">
+    <div class="badge date"><span class="letter" style="background:var(--p2)">B</span>Mar 2026<span style="font-weight:500;color:var(--st-ink-2);font-size:12px">· picture 2 of 3</span></div>
+    <div class="scale">1 arcmin<i></i></div><div class="ne">N ↑ E ←</div>
+    <div class="edge"></div>
+  </div>
+  <div class="ctl">
+    <span class="step-btn"><svg class="icon"><use href="icons.svg#prev"/></svg></span>
+    <span class="round" title="Pause"><svg class="icon"><use href="icons.svg#pause"/></svg></span>
+    <span class="step-btn"><svg class="icon"><use href="icons.svg#next"/></svg></span>
+    <div class="dates">
+      <span class="datechip"><span class="letter" style="background:var(--p1)">A</span><span><b>Aug 2025</b><span class="sm d-only">Pass 1</span></span></span>
+      <span class="datechip on"><span class="letter" style="background:var(--p2)">B</span><span><b>Mar 2026</b><span class="sm d-only">Pass 2</span></span></span>
+      <span class="datechip"><span class="letter" style="background:var(--p3)">C</span><span><b>Aug 2026</b><span class="sm d-only">Pass 3</span></span></span>
+    </div>
+  </div>
+  <div class="dataline d-only">Real SPHEREx data, DR1 and QR3 · 16 Aug 2025 to 17 Aug 2026 · D3, 1.67–1.79 µm</div>
+</section>
+
+<div class="sky-note glass-thin d-only"><b>Average of all dates:</b> moving things blur here · SPHEREx 2.00 µm</div>
+</body>
+</html>

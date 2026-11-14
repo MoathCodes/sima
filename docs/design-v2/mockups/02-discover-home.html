@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en" data-theme="night">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sima v2: Discover home</title>
+<link rel="stylesheet" href="glass.css"><link rel="stylesheet" href="discover.css">
+<style>
+  .path .mlist .m:nth-child(n+5) { } 
+  @media (max-width: 699px) {
+    body { --dy: -150px; }
+    .msheet { height: 54vh; }
+    .offscreen { top: 102px !important; left: auto !important; right: 12px; }
+    .nextcard { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; padding: 12px; border-radius: 18px; background: var(--fill-1); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .08); }
+    .nextcard .thumb { width: 64px; height: 64px; border-radius: 12px; }
+    .nextcard .name { font: 600 17px/1.2 var(--font); margin: 4px 0 2px; }
+    .nextcard .line { font-size: 13px; color: var(--on-glass-2); }
+    .nextcard .btn { grid-column: 1 / -1; height: 48px; width: 100%; }
+    .shelf-m { display: flex; gap: 4px; overflow: hidden; margin: 2px -4px 0; }
+    .shelf-m .skill { width: 58px; }
+  }
+</style>
+</head>
+<body style="--dy-m:-150px">
+<div class="sky" style="background-image:url(img/sky-milkyway-1900.jpg)"></div>
+
+<div class="at sky-label d-only" style="--x:880;--y:222">Vega</div>
+<div class="at sky-label d-only" style="--x:713;--y:473">Altair</div>
+<div class="at sky-label d-only" style="--x:674;--y:118">Deneb</div>
+<div class="at sky-label d-only" style="--x:1128;--y:786">Antares</div>
+
+<!-- Mission beacons: done ones keep a quiet ring; others point off screen in their real direction. -->
+<div class="at beacon done" style="--x:948;--y:515">
+  <div class="ring" style="border-color:var(--skill);box-shadow:0 0 0 6px rgb(255 217 138 / .12),0 0 22px rgb(255 217 138 / .35)"></div>
+  <div class="tag glass-thin">Barnard's Star <small>Done · Blink</small></div>
+</div>
+<div class="offscreen glass-thin" style="left:calc(50% + 300 * var(--k));top:76px"><svg class="icon" style="transform:rotate(-80deg)"><use href="icons.svg#arrow"/></svg>R Draconis · The breather</div>
+<div class="offscreen glass-thin d-only" style="right:16px;top:calc(50% - 16px)">WISE 0855 · The ghost<svg class="icon"><use href="icons.svg#arrow"/></svg></div>
+<div class="offscreen glass-thin d-only" style="left:410px;bottom:150px"><svg class="icon" style="transform:rotate(150deg)"><use href="icons.svg#arrow"/></svg>Epsilon Indi B · The recipe</div>
+
+<header class="top">
+  <div class="glass brand"><span class="wordmark"><span class="ar">سيما</span><span class="la">Sima</span></span></div>
+  <div class="glass-thin find d-only"><svg class="icon"><use href="icons.svg#search"/></svg>Find a star, galaxy or nebula<span class="kbd">/</span></div>
+  <div class="spacer"></div>
+  <nav class="glass cluster d-only">
+    <span class="btn"><svg class="icon"><use href="icons.svg#book"/></svg>Field guide</span>
+    <span class="btn icon-only"><svg class="icon"><use href="icons.svg#gear"/></svg></span>
+    <span class="btn icon-only"><svg class="icon"><use href="icons.svg#info"/></svg></span>
+  </nav>
+  <nav class="glass cluster m-only"><span class="btn icon-only"><svg class="icon"><use href="icons.svg#search"/></svg></span></nav>
+  <div class="glass switch2"><span class="on"><svg class="icon d-only"><use href="icons.svg#sun"/></svg>Discover</span><span><svg class="icon d-only"><use href="icons.svg#chart"/></svg>Expert</span></div>
+</header>
+
+<aside class="path glass d-only" aria-label="Missions">
+  <h2>Missions <span class="faint">1 of 6 done</span></h2>
+  <p class="sub">Learn to spot change in the real sky. Each mission teaches one skill.</p>
+  <ol class="mlist">
+    <li class="m done"><span class="node"><svg class="icon"><use href="icons.svg#blink"/></svg></span>
+      <div><div class="t">The runaway</div><div class="d">A star that won't sit still</div></div>
+      <span class="state"><svg class="icon" style="width:16px;height:16px"><use href="icons.svg#check"/></svg>Done</span></li>
+    <li class="m next"><span class="node"><svg class="icon"><use href="icons.svg#breathe"/></svg></span>
+      <div><div class="t">The breather</div><div class="d">A giant star that swells and fades</div><div class="k">Skill: Brightness · 3 min</div></div>
+      <span class="go"><svg class="icon"><use href="icons.svg#play"/></svg></span></li>
+    <li class="m"><span class="node"><svg class="icon"><use href="icons.svg#stack"/></svg></span>
+      <div><div class="t">The ghost</div><div class="d">Too faint to see, until you add up the pictures</div><div class="k">Skill: Stack · 3 min</div></div>
+      <span class="go"><svg class="icon"><use href="icons.svg#play"/></svg></span></li>
+    <li class="m"><span class="node"><svg class="icon"><use href="icons.svg#spectrum"/></svg></span>
+      <div><div class="t">The recipe</div><div class="d">Missing colours show what it is made of</div><div class="k">Skill: Colour sweep · 4 min</div></div>
+      <span class="go"><svg class="icon"><use href="icons.svg#play"/></svg></span></li>
+    <li class="m"><span class="node" style="box-shadow:inset 0 0 0 1.5px var(--path);color:var(--path)"><svg class="icon"><use href="icons.svg#planet"/></svg></span>
+      <div><div class="t">Planet X</div><div class="d">Build a pretend planet. Could SPHEREx see it?</div><div class="k"><span class="pill warn" style="height:20px">Simulated</span>Skill: What-if · 3 min</div></div>
+      <span class="go"><svg class="icon"><use href="icons.svg#play"/></svg></span></li>
+    <li class="m locked"><span class="node"><svg class="icon"><use href="icons.svg#hunt"/></svg></span>
+      <div><div class="t">The real hunt</div><div class="d">Candidates nobody has checked yet</div><div class="k"><svg class="icon" style="width:14px;height:14px"><use href="icons.svg#lock"/></svg>Opens after 2 more missions</div></div>
+      <span></span></li>
+  </ol>
+  <div class="foot"><svg class="icon" style="width:18px;height:18px"><use href="icons.svg#chart"/></svg>Want every number now? <a>Expert view</a></div>
+</aside>
+
+<section class="dock glass d-only" aria-label="Up next and your skills">
+  <div class="next-up">
+    <div class="well thumb"><img class="px" src="img/pic-r-dra-1.png" alt="R Draconis, real SPHEREx picture"></div>
+    <div><div class="eyebrow">Up next · Mission 2</div><div class="name">The breather</div><div class="line">R Draconis swells and fades over 8 months. Catch it at its brightest.</div></div>
+    <button class="btn primary lg">Start<svg class="icon"><use href="icons.svg#arrow"/></svg></button>
+  </div>
+  <div class="vr"></div>
+  <div class="shelf">
+    <span class="lbl">Your skills</span>
+    <div class="skill on"><span class="g"><svg class="icon"><use href="icons.svg#blink"/></svg></span>Blink</div>
+    <div class="skill"><span class="g"><svg class="icon"><use href="icons.svg#breathe"/></svg></span>Brightness</div>
+    <div class="skill"><span class="g"><svg class="icon"><use href="icons.svg#stack"/></svg></span>Stack</div>
+    <div class="skill"><span class="g"><svg class="icon"><use href="icons.svg#spectrum"/></svg></span>Colour</div>
+    <div class="skill"><span class="g"><svg class="icon"><use href="icons.svg#planet"/></svg></span>What-if</div>
+    <div class="skill"><span class="g"><svg class="icon"><use href="icons.svg#hunt"/></svg></span>Check</div>
+  </div>
+</section>
+
+<section class="msheet glass-raised m-only" aria-label="Missions">
+  <div class="grabber"></div>
+  <div class="sec" style="margin-top:8px"><span>Your skills</span><span>1 of 6</span></div>
+  <div class="shelf-m">
+    <div class="skill on"><span class="g"><svg class="icon"><use href="icons.svg#blink"/></svg></span>Blink</div>
+    <div class="skill"><span class="g"><svg class="icon"><use href="icons.svg#breathe"/></svg></span>Brightness</div>
+    <div class="skill"><span class="g"><svg class="icon"><use href="icons.svg#stack"/></svg></span>Stack</div>
+    <div class="skill"><span class="g"><svg class="icon"><use href="icons.svg#spectrum"/></svg></span>Colour</div>
+    <div class="skill"><span class="g"><svg class="icon"><use href="icons.svg#planet"/></svg></span>What-if</div>
+    <div class="skill"><span class="g"><svg class="icon"><use href="icons.svg#hunt"/></svg></span>Check</div>
+  </div>
+  <div class="sec"><span>Up next</span></div>
+  <div class="nextcard">
+    <div class="well thumb"><img class="px" src="img/pic-r-dra-1.png" alt=""></div>
+    <div><div class="eyebrow">Mission 2 · 3 min</div><div class="name">The breather</div><div class="line">A giant star that swells and fades</div></div>
+    <button class="btn primary lg">Start mission<svg class="icon"><use href="icons.svg#arrow"/></svg></button>
+  </div>
+  <div class="sec"><span>All missions</span></div>
+  <ol class="mlist">
+    <li class="m"><span class="node"><svg class="icon"><use href="icons.svg#stack"/></svg></span><div><div class="t">The ghost</div><div class="d">Too faint to see, until you add up the pictures</div></div><span class="go"><svg class="icon"><use href="icons.svg#play"/></svg></span></li>
+  </ol>
+</section>
+
+<div class="sky-note glass-thin"><b>Average of all dates:</b> moving things blur here · SPHEREx 2.00 µm</div>
+</body>
+</html>
