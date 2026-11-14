@@ -150,11 +150,43 @@ function framePicture(f: Frame, match: boolean, usableOnly: boolean): Float32Arr
  * Flagged pixels are left out of the combination; where every frame is flagged, the recorded
  * values are combined instead, so the picture still shows something there (the frames' `bad`
  * masks say which pixels those are, H6). NaN where no frame has data. An empty group gives an
- * all-NaN picture.
+ * all-NaN picture. Made once per field and group, then copied out (a new array every call).
  *
  * @returns n × n µJy per pixel, screen order.
  */
 export function blend(field: Field, group: Group, how: CombineHow, match: boolean): Float32Array {
+  const key = `b|${group.frames.join(',')}|${how}|${match}|${gainsKey(field, group)}`;
+  return cached(field, key, () => blendNow(field, group, how, match)).slice();
+}
+
+/**
+ * Pictures already made for a field, by what they were made from. A field's frames do not change
+ * once built, so a picture made once (a blend, the typical sky) is kept and copied out: the
+ * Difference view and the flip-book redraw without combining every date again. Kept per field
+ * object and dropped with it; at most 64 pictures per field.
+ */
+const CACHE = new WeakMap<Field, Map<string, Float32Array>>();
+
+function cached(field: Field, key: string, make: () => Float32Array): Float32Array {
+  let m = CACHE.get(field);
+  if (!m) {
+    m = new Map();
+    CACHE.set(field, m);
+  }
+  let v = m.get(key);
+  if (!v) {
+    v = make();
+    if (m.size >= 64) m.delete(m.keys().next().value!);
+    m.set(key, v);
+  }
+  return v;
+}
+
+/** The gains of a group's frames, so a changed gain makes a new picture. */
+const gainsKey = (field: Field, group: Group): string =>
+  group.frames.map((i) => field.frames[i]?.gain ?? 1).join(',');
+
+function blendNow(field: Field, group: Group, how: CombineHow, match: boolean): Float32Array {
   const size = field.n * field.n;
   const fs = group.frames.map((i) => field.frames[i]!);
   if (!fs.length) return new Float32Array(size).fill(Number.NaN);
@@ -188,8 +220,14 @@ export function difference(
   const size = field.n * field.n;
   const g = groups[i];
   if (!g || !g.frames.length) return new Float32Array(size).fill(Number.NaN);
-  const pics = groups.filter((x) => x.frames.length).map((x) => blend(field, x, how, match));
-  const typical = combine(pics, 'median');
+  const used = groups.filter((x) => x.frames.length);
+  const tkey = `t|${used.map((x) => `${x.frames.join(',')}:${gainsKey(field, x)}`).join(';')}|${how}|${match}`;
+  const typical = cached(field, tkey, () =>
+    combine(
+      used.map((x) => blend(field, x, how, match)),
+      'median',
+    ),
+  );
   const now = blend(field, g, how, match);
   const out = new Float32Array(size);
   for (let k = 0; k < size; k++) out[k] = now[k]! - typical[k]!;
