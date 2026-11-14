@@ -226,16 +226,18 @@
 .wf-ctl {
   display: flex;
   flex: none;
+  flex-wrap: wrap; /* a narrow frame puts "Show all at once" on its own line, not over the date */
   align-items: center;
-  gap: var(--gap-group);
-  height: 34px;
+  gap: 0 var(--gap-group);
+  min-height: 34px;
   margin-top: 4px;
 }
 .wf-date {
   display: flex;
+  flex: none;
   align-items: center;
   gap: var(--gap-tight);
-  min-width: 0;
+  min-height: 34px;
   margin-left: 4px;
   overflow: hidden;
   font: var(--text-label);

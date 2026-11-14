@@ -1052,13 +1052,18 @@ function drawRings(ctx: CanvasRenderingContext2D): void {
 function tag(ctx: CanvasRenderingContext2D, box: DOMRect, text: string, fill: string): void {
   ctx.font = colours.font ?? '';
   const w = ctx.measureText(text).width + 10;
-  const y = box.top - 20 < 4 ? box.bottom + 3 : box.top - 19;
+  const y = tagTop(box);
   ctx.fillStyle = fill;
   roundRect(ctx, box.left - 1, y, w, 17, 4);
   ctx.fill();
   ctx.fillStyle = colours.sky ?? '';
   ctx.textBaseline = 'middle';
   ctx.fillText(text, box.left + 4, y + 9);
+}
+
+/** Where a square's tag starts: above its top left corner, or under it near the window's top. */
+function tagTop(box: DOMRect): number {
+  return box.top - 20 < 4 ? box.bottom + 3 : box.top - 19;
 }
 
 /** A dotted line from a square to the nearest point of a window (DESIGN.md "Tether"). */
@@ -1111,12 +1116,17 @@ function grabBox(): DOMRect | null {
   return new DOMRect(box.x - grow, box.y - grow, box.width + 2 * grow, box.height + 2 * grow);
 }
 
-/** The workspace ring under a screen point (at least 28 px to grab), if any. */
-function ringAt(x: number, y: number): { r: Ring; box: DOMRect } | null {
+/**
+ * The workspace ring under a screen point (at least 28 px to grab), if any. With `tagOnly`, only
+ * its number tag counts: the handle that still works when the ring sits on the main patch.
+ */
+function ringAt(x: number, y: number, tagOnly = false): { r: Ring; box: DOMRect } | null {
   for (let i = rings.length - 1; i >= 0; i--) {
     const r = rings[i]!;
     const box = boxAt(r);
     if (!box) continue;
+    if (inBox(new DOMRect(box.left - 1, tagTop(box) - 4, 28, 25), x, y)) return { r, box };
+    if (tagOnly) continue;
     const grow = Math.max(0, (28 - box.width) / 2);
     const big = new DOMRect(box.x - grow, box.y - grow, box.width + 2 * grow, box.height + 2 * grow);
     if (inBox(big, x, y)) return { r, box };
@@ -1148,7 +1158,9 @@ function watchPointer(el: HTMLElement): void {
     (e) => {
       if (e.button !== 0) return;
       glide = null;
-      if (flags.grab && patch && inBox(grabBox(), e.clientX, e.clientY)) {
+      // A ring's number tag first: it is drawn over the main patch.
+      const tagged = flags.grab ? ringAt(e.clientX, e.clientY, true) : null;
+      if (!tagged && flags.grab && patch && inBox(grabBox(), e.clientX, e.clientY)) {
         // FRM-2: the patch is picked up anywhere inside it; the sky stays still.
         stop(e);
         const box = outline();
@@ -1165,7 +1177,7 @@ function watchPointer(el: HTMLElement): void {
         requestDraw();
         return;
       }
-      const ring = flags.grab ? ringAt(e.clientX, e.clientY) : null;
+      const ring = tagged ?? (flags.grab ? ringAt(e.clientX, e.clientY) : null);
       if (ring) {
         stop(e);
         dragging = { ra: ring.r.ra, dec: ring.r.dec, dx: e.clientX - (ring.box.x + ring.box.width / 2), dy: e.clientY - (ring.box.y + ring.box.height / 2), ring: ring.r.id };
