@@ -616,6 +616,9 @@ interface Track {
 }
 const tracks = new Map<string, Track>();
 let firstDone = false;
+/** The current round of loading has been reported as finished. */
+let roundDone = false;
+let doneTimer = 0;
 let reportTimer = 0;
 
 function onTile(e: TileEvent): void {
@@ -628,7 +631,7 @@ function onTile(e: TileEvent): void {
   const id = `${e.k}/${e.n}`;
   if (e.state === 'start') {
     // A fresh round of loading: the count starts again once the last round finished.
-    if (t.started.size && t.started.size === t.done.size + t.failed.size) {
+    if (roundDone && t.started.size === t.done.size + t.failed.size) {
       t.started = new Set(t.failed);
       t.done.clear();
     }
@@ -647,6 +650,7 @@ function report(): void {
   if (!shown) return;
   if (!shown.key.startsWith('spherex/')) {
     firstDone = true;
+    roundDone = true;
     skyReady({ layer: LAYER_NAMES[layer], loaded: 1, total: 1, failed: 0, first: false });
     return;
   }
@@ -655,14 +659,31 @@ function report(): void {
   const loaded = (t?.done.size ?? 0) + (t?.failed.size ?? 0);
   const failed = t?.failed.size ?? 0;
   const done = total > 0 && loaded >= total;
-  skyReady({
+  const load = {
     layer: LAYER_NAMES.spherex,
     loaded: total ? loaded : 0,
     total: total || 1,
     failed,
     first: !firstDone,
-  });
-  if (done) firstDone = true;
+  };
+  if (!done) {
+    clearTimeout(doneTimer);
+    doneTimer = 0;
+    roundDone = false;
+    skyReady(load);
+    return;
+  }
+  // Done only once loading has been quiet for a moment: tiles arrive in bursts while the view
+  // moves, and the loading card should not flicker between them.
+  if (roundDone || doneTimer) return;
+  doneTimer = window.setTimeout(() => {
+    doneTimer = 0;
+    const now = tracks.get(shown.key);
+    if (current !== shown || !now || now.done.size + now.failed.size < now.started.size) return;
+    roundDone = true;
+    firstDone = true;
+    skyReady({ ...load, loaded: now.started.size, total: now.started.size, failed: now.failed.size });
+  }, 500);
 }
 
 // ----- The sky note (SKY-6, H1, O-I6) and the context-loss message (SKY-9) ------------------------
