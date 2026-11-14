@@ -91,8 +91,10 @@ export function hipsPixel(ra: number, dec: number): { tile: number; col: number;
   const tile = face * 4 ** ORDER + interleave(x >> TILE_BITS, y >> TILE_BITS);
   const px = x & (TILE - 1);
   const py = y & (TILE - 1);
-  // HiPS tiles store the nested x along the image rows and y down from the top (HiPS 1.0, 4.2).
-  return { tile, col: py, row: TILE - 1 - px };
+  // In the tile image the nested y runs along the columns and x down the rows. Checked on
+  // 14 November 2026 against Vega, Achernar and Barnard's Star in IRSA's tiles: each is the
+  // brightest pixel there, and Betelgeuse falls on the map's blank (filled) centre.
+  return { tile, col: py, row: px };
 }
 
 function tileUrl(tile: number, frame: number): string {
