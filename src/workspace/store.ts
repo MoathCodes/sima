@@ -85,14 +85,18 @@ export async function startStore(plain: boolean): Promise<void> {
   onChange((what) => {
     if (what !== 'state' || restoring) return;
     clearTimeout(timer);
-    timer = window.setTimeout(() => write(CURRENT, now()), 400);
+    timer = window.setTimeout(save, 400);
   });
-  // The main frame's date and detector are part of the autosave too.
+  // The main frame's date and detector are part of the autosave too. A new picture every 600 ms
+  // during playback must not keep postponing a save that is already waiting.
   on('shown', () => {
-    if (!frames().length || restoring) return;
-    clearTimeout(timer);
-    timer = window.setTimeout(() => write(CURRENT, now()), 1500);
+    if (!frames().length || restoring || timer) return;
+    timer = window.setTimeout(save, 1500);
   });
+  function save(): void {
+    timer = 0;
+    write(CURRENT, now());
+  }
 
   const hash = workspaceInHash(location.hash);
   if (hash !== null) {
