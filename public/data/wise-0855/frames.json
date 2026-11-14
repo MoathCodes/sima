@@ -6,7 +6,7 @@
   "pmra": -8118.0,
   "pmdec": 680.0,
   "parallax": 449.0,
-  "from": "SPEC 7.1 rule 6 (too cold for Gaia); checked against CatWISE2020, which lists it three times near this track"
+  "from": "Luhman & Esplin 2016, AJ 152, 78, Table 4 (https://doi.org/10.3847/0004-6256/152/3/78) for the motion and parallax (too cold for Gaia); the 2014.0 position is the challenge spec’s, source not verified, within 0.1″ of their Spitzer position of 20 Jan 2014 (Luhman & Esplin 2014, ApJ 796, 6)"
  },
  "fov": 6,
  "size": 0.11,

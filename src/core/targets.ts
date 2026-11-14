@@ -3,7 +3,8 @@
  *
  * The catalogue numbers (ra, dec, ep, pmra, pmdec, plx, values) are copied exactly from the
  * `catalogue` block of each target's public/data/<key>/frames.json, which lane A's prebake.py
- * wrote from the ESA Gaia archive (WISE 0855−0714: SPEC 7.1 rule 6, checked against CatWISE2020).
+ * wrote from the ESA Gaia archive (WISE 0855−0714, too cold for Gaia: Luhman & Esplin 2016 for the
+ * motion and parallax; its 2014.0 position is the challenge spec's, source not verified).
  * docs/data-format.md requires the two to stay equal; tests/data-contract.test.ts checks it.
  *
  * Names, lines and the Measure lead come from the spec and its screenshots.
@@ -71,7 +72,7 @@ export const TARGETS: readonly Target[] = Object.freeze([
     plx: 449,
     period: null,
     values:
-      'SPEC 7.1 rule 6 (too cold for Gaia); checked against CatWISE2020, which lists it three times near this track',
+      'Luhman & Esplin 2016, AJ 152, 78, Table 4 (https://doi.org/10.3847/0004-6256/152/3/78) for the motion and parallax (too cold for Gaia); the 2014.0 position is the challenge spec’s, source not verified, within 0.1″ of their Spitzer position of 20 Jan 2014 (Luhman & Esplin 2014, ApJ 796, 6)',
     lead: 'stack',
     kindFrom: 'SIMBAD, fetched 14 Nov 2026: main id “WISEA J085510.74-071442.5”, type BD* (brown dwarf), spectral type Y2',
     periodFrom: 'No period: VSX (VizieR B/vsx/vsx) lists no variable star within 1′ of it (searched 14 Nov 2026)',
