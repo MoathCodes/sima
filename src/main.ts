@@ -57,11 +57,14 @@ start('bar', startBar);
 start('measure', startMeasure);
 start('tools', startTools);
 start('game', startGame);
+if (!link.embed) start('guide', startGuide);
+// The sky, places and the link start in the next task: starting every part in one task blocked
+// the page for over 100 ms (TLS-8).
+await new Promise((go) => setTimeout(go, 0));
 if (!link.embed) {
   const sky = document.getElementById('sky');
   if (sky) start('sky', () => startSky(sky));
   start('places', startPlaces);
-  start('guide', startGuide);
 }
 start('url', () => startUrl(link));
 document.documentElement.dataset.started = '';

@@ -117,13 +117,20 @@ if (typeof MutationObserver !== 'undefined') {
  */
 export function setDots(next: readonly Dot[]): void {
   dots = [...next].sort((a, b) => a.tier - b.tier);
-  inputs = dots.map((d) => ({
-    ra: d.ra,
-    dec: d.dec,
-    tier: d.tier,
-    always: false,
-    width: textWidth(label(d)),
-  }));
+  // Label widths are measured when a label is first placed: measuring all 2,289 at once blocks
+  // the page for over 100 ms (TLS-8), and most never show.
+  inputs = dots.map((d) => {
+    let width = 0;
+    return {
+      ra: d.ra,
+      dec: d.dec,
+      tier: d.tier,
+      always: false,
+      get width() {
+        return (width ||= textWidth(label(d)));
+      },
+    };
+  });
   refreshAlways();
   soon();
 }
