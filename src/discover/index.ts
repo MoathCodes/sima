@@ -242,6 +242,9 @@ function sync(): void {
   if (want === 'welcome') {
     // On a phone the welcome sits in the sheet at half, under the globe (11.6).
     welcome.hidden = false;
+    // In the sheet, the sheet is the card (its content scrolls inside it).
+    if (phone()) delete welcome.dataset.card;
+    else welcome.dataset.card = 'dsc-welcome';
     if (phone()) present(stub, welcome, { height: 'half', label: 'Welcome' });
     else {
       dismiss(stub, welcome);

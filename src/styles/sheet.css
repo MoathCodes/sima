@@ -323,6 +323,15 @@ html[data-layout^='phone'][data-view='discover'] #frame-views > button > span {
   display: none;
 }
 
+/* Discover's welcome lives only in the sheet on a phone (it never floats on the page). */
+html[data-layout^='phone'] body > #dsc-welcome {
+  display: none;
+}
+/* The top row at 360 px: the wordmark keeps clear of the menu button. */
+html[data-layout^='phone'] #wordmark {
+  padding: 0 8px;
+}
+
 /* ----- Phone scroll: one column that scrolls (rotation, short screens, 400% zoom, Expert) -------- */
 
 html[data-layout='phone-scroll'] body {
