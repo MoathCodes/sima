@@ -661,10 +661,11 @@ class Service:
         p.cat_started = True
         self.cat_queue.put(p)
 
-    def status(self, pid: str) -> dict | None:
-        """Status by id. A page reading it keeps the patch watched, and wakes it if it paused."""
+    def status(self, pid: str, watch: bool = True) -> dict | None:
+        """Status by id. A page reading it (`watch`) keeps the patch watched, and wakes it if it
+        paused; the seed job reads with watch=False."""
         with self.lock:
-            return self._known(pid, True)
+            return self._known(pid, watch)
 
     def file(self, pid: str, *parts: str) -> Path | None:
         path = self.root.joinpath(pid, *parts)

@@ -67,7 +67,12 @@ class TestSeedAndExport(unittest.TestCase):
             patch.finish()
 
         live.Patch._run = fake_run
-        live.Patch.run_catalog = lambda patch: None
+
+        def fake_catalog(patch):
+            patch.dir.mkdir(parents=True, exist_ok=True)
+            (patch.dir / "catalog.json").write_text("{}")
+            patch.set(catalog=f"/api/patch/{patch.id}/catalog.json")
+        live.Patch.run_catalog = fake_catalog
 
     def tearDown(self):
         live.Patch._run, live.Patch.run_catalog = self.saved
@@ -98,6 +103,7 @@ class TestSeedAndExport(unittest.TestCase):
         self.assertEqual((vega["fov"], vega["size"]), (12, live.cutout_size(12)))
         for f in seed_live.FILES:
             self.assertTrue((out / vega["id"] / "full" / f).exists())
+        self.assertTrue((out / vega["id"] / "catalog.json").exists())
         doc = json.loads((out / vega["id"] / "full" / "frames.json").read_text())
         self.assertTrue(doc["live"]["ahead"])
         self.assertIn("chosen ahead of time", doc["catalogue"]["from"])

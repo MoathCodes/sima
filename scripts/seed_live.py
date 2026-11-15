@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import sys
@@ -45,6 +46,7 @@ EXPORT_DIR = ROOT / "seed-out"
 SEED_FOV = 12          # arcmin: a 12' patch also serves 3' and 6' fields near its centre
 MAX_TIER = 1
 SPOT_TIMEOUT = 15 * 60  # seconds one spot may take before the script moves on
+CATALOG_WAIT = 120      # seconds a finished spot waits for its catalog.json (Gaia, CatWISE)
 POLL = 2.0
 FILES = ("frames.json", "frames.bin.gz")
 
@@ -93,18 +95,23 @@ def seed(svc: live.Service, todo: list[dict], timeout: float = SPOT_TIMEOUT, pol
     tally: dict[str, int] = {}
     for n, s in enumerate(todo, 1):
         t0 = time.time()
-        while True:
-            try:
-                st = svc.request(s["ra"], s["dec"], s["fov"], klass="seed")
-            except live.Busy:
-                st = {"state": "queued"}
-            if st["state"] in ("ready", "empty", "failed"):
-                break
+        st = svc.request(s["ra"], s["dec"], s["fov"], klass="seed")
+        reused = bool(st.get("reused"))
+        pid = st["id"]
+        while st["state"] not in ("ready", "empty", "failed"):
             if time.time() - t0 > timeout:
                 st = dict(st, state="timeout")
                 break
             time.sleep(poll)
-        how = "held" if st.get("reused") else st["state"]
+            # Read without watching: a page's read would lift it to watched priority.
+            st = svc.status(pid, watch=False) or dict(st, state="failed")
+        # The catalogue goes into the export too: give it a little longer.
+        t1 = time.time()
+        while (st["state"] == "ready" and not st.get("catalog") and not st.get("catalogError")
+               and time.time() - t1 < CATALOG_WAIT):
+            time.sleep(poll)
+            st = svc.status(pid, watch=False) or st
+        how = "held" if reused else st["state"]
         tally[how] = tally.get(how, 0) + 1
         say(f"[{n}/{len(todo)}] {s['id']} ({s['name']}) {s['fov']}': {how} in {time.time() - t0:.0f}s"
             + (f" ({st.get('error')})" if st.get("error") else ""))
@@ -179,7 +186,11 @@ def main(argv=None) -> int:
     pb.log(f"seeding {len(todo)} spots into {svc.root}")
     tally = seed(svc, todo, timeout=args.timeout)
     pb.log(f"seed done: {tally} | {svc.counts_line()}")
-    return 0
+    # A request NASA never answers can keep a worker thread for many minutes, and Python waits for
+    # pool threads at exit. Every finished patch is already on disk, so leave at once.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":
