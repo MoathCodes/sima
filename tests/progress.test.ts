@@ -103,3 +103,10 @@ test('damaged saved progress is ignored, not trusted', () => {
   assert.equal(p.current, null);
   assert.deepEqual(p.steps.runaway, { tap: 'done' });
 });
+
+test('only real mission steps count; all steps including unavailable teach the skill', () => {
+  stepDone('planet-x', 'invented', 'done');
+  assert.deepEqual(progress().steps['planet-x'], {});
+  for (const step of ['check', 'closer', 'bigger']) stepDone('planet-x', step, 'unavailable');
+  assert.deepEqual(progress().learned, ['planet-x']);
+});
