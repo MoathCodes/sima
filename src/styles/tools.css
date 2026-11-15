@@ -134,8 +134,15 @@
   color: var(--ink);
   font: var(--text-label);
 }
+.ms-about {
+  display: grid;
+  gap: 8px;
+}
 .ms-about p {
   margin: 0;
+}
+.ms-about .ms-note {
+  color: var(--ink-2);
 }
 .ms-chart-head {
   flex: 1;

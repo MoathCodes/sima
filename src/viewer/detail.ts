@@ -421,15 +421,21 @@ function render(): void {
   p.querySelectorAll<HTMLElement>('[data-tab]').forEach((b) =>
     b.setAttribute('aria-selected', String(b.dataset.tab === tab)),
   );
-  under.innerHTML = underText(tab, h);
+  // How to read the chart: one tap away, not paragraphs on screen (redesign item 1). The calm view
+  // keeps only the notes that offer a next step (`ms-keep`) under the chart; all the numbers keep
+  // every note there, beside the tabs they explain.
+  const notes = document.createElement('template');
+  notes.innerHTML = underText(tab, h);
+  const keep = all ? [...notes.content.children] : [...notes.content.querySelectorAll('.ms-keep')];
+  under.replaceChildren(...keep);
+  const rest = [...notes.content.children].map((n) => n.outerHTML).join('');
   q('[data-chart-head]').innerHTML = chartHead(tab);
-  // How to read the headline's chart: one tap away, not a paragraph on screen (redesign item 1).
   const about = q('#ms-about');
-  const para = tab === h.chart ? h.para : '';
+  const para = [tab === h.chart && h.para ? `<p>${h.para}</p>` : '', all ? '' : rest].join('');
   q('.ms-info').hidden = !para;
   if (about.dataset.html !== para) {
     about.dataset.html = para;
-    about.innerHTML = para ? `<p>${para}</p>` : '';
+    about.innerHTML = para;
     if (!para && about.matches(':popover-open')) about.hidePopover();
   }
 
@@ -620,7 +626,7 @@ function underText(tab: MeasureTab, h: Headline): string {
       // headline already offers it when it leads with brightness.
       const other = curveDets().filter((d) => d !== S.det);
       if (res.target && (!curve || curve.shown === false) && other.length && h.chart !== 'brightness')
-        parts.push(`<p class="ms-note">Measured in ${other.map((d) => `D${d}`).join(', ')}. ${showDet(other[0]!)}</p>`);
+        parts.push(`<p class="ms-note ms-keep">Measured in ${other.map((d) => `D${d}`).join(', ')}. ${showDet(other[0]!)}</p>`);
     } else {
       const pts = (res.spot?.points ?? []).filter((p) => p.det === S.det && !p.flagged && Number.isFinite(p.flux));
       if (res.spot && pts.length) parts.push(`<p class="ms-note">${plainP(chi2Test(pts.map((p) => p.flux), pts.map((p) => p.err)))}</p>`);
@@ -634,7 +640,7 @@ function underText(tab: MeasureTab, h: Headline): string {
     const t = field.target;
     const other = curveDets().filter((d) => d !== S.det);
     if (t?.period && res.target && !curve?.shown && other.length)
-      parts.push(`<p class="ms-note">Not measured in D${S.det}; measured in ${other.map((d) => `D${d}`).join(', ')}. ${showDet(other[0]!)}</p>`);
+      parts.push(`<p class="ms-note ms-keep">Not measured in D${S.det}; measured in ${other.map((d) => `D${d}`).join(', ')}. ${showDet(other[0]!)}</p>`);
     parts.push(
       t?.period
         ? `<p class="ms-note">Folded on the catalogue period of ${esc(num(t.period, 1))} days${t.periodFrom ? ` (${esc(t.periodFrom)})` : ''}. Each cycle is drawn twice, so it reads across the join.</p>`
@@ -657,10 +663,10 @@ function underText(tab: MeasureTab, h: Headline): string {
   // An empty chart other than the headline's points back to the one that has the measurement.
   if (tab !== h.chart && !h.pending && h.value !== 'Not measured' && emptyTab(tab)) {
     const name = TABS.find(([k]) => k === h.chart)?.[1] ?? '';
-    parts.push(`<p class="ms-note">The measurement is under <button type="button" class="link" data-do="tab" data-to="${h.chart}">${esc(name)}</button>.</p>`);
+    parts.push(`<p class="ms-note ms-keep">The measurement is under <button type="button" class="link" data-do="tab" data-to="${h.chart}">${esc(name)}</button>.</p>`);
   }
   if (sel.kind !== 'target' && field.target) {
-    parts.push(`<p class="ms-note"><button type="button" class="link" data-do="target">Back to ${esc(field.target.name)}</button> · <button type="button" class="link" data-do="picture">The picture on screen</button></p>`);
+    parts.push(`<p class="ms-note ms-keep"><button type="button" class="link" data-do="target">Back to ${esc(field.target.name)}</button> · <button type="button" class="link" data-do="picture">The picture on screen</button></p>`);
   }
   return parts.join('');
 }

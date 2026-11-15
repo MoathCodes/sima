@@ -250,7 +250,10 @@ export function hud(): Hud | null {
     return {
       letter: '',
       title: `Red ${a ? formatDate(a.mjd, 'month') : '–'} · Cyan ${b ? formatDate(b.mjd, 'month') : '–'}`,
-      lines: measure ? [] : ['White did not change'],
+      // Measure names the detector and wavelengths, as the badge does for one date (H2).
+      lines: measure
+        ? [`D${S.det} ${lamRange(framesOf(field, [a, b].filter((x): x is Group => !!x)).map((x) => x.lam))}`]
+        : ['White did not change'],
       warn: sim,
     };
   }
@@ -319,7 +322,7 @@ export function hud(): Hud | null {
     title: formatDate(g.mjd, 'time'),
     lines,
     warn: sim,
-    note: differs && refFrame ? `Other colour than the reference (${refFrame.lam.toFixed(2)} µm)` : undefined,
+    note: differs && refFrame ? `Reference was ${refFrame.lam.toFixed(2)} µm` : undefined,
   };
 }
 
@@ -763,9 +766,9 @@ function labels(p: Parts, size: number, k: number, field: Field | null, map: boo
   const g = S.groups[S.epoch];
   p.badge.hidden = !h;
   if (h) {
-    const tile = h.letter
-      ? `<span class="pic-letter" style="--tint:var(--p${((g?.window ?? 0) % 4) + 1})">${h.letter}</span>`
-      : '';
+    // No lettered tile: the date says which picture this is (redesign, "Date chips"); the pass
+    // tint stays on the picture's edge.
+    const tile = '';
     const warn = h.warn ? `<span class="pic-warn">${esc(h.warn)}</span>` : '';
     // Around the real exposures, the sky map: said on the badge that says what the picture is (H1).
     const around = map

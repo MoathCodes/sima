@@ -192,7 +192,7 @@ function startPopovers(): void {
     if ((e as ToggleEvent).newState !== 'open') return;
     fovs.innerHTML = FOVS.map(
       (f) =>
-        `<button type="button" class="menu-item" role="menuitemradio" aria-checked="${f === S.fov}" data-fov="${f}" data-guide="fov-${f}">${f}′<span class="fovs-what">${f <= 6 ? 'close up' : f >= 24 ? 'wide' : ''}</span></button>`,
+        `<button type="button" class="menu-item" role="menuitemradio" aria-checked="${f === S.fov}" data-fov="${f}" data-guide="fov-${f}">${f}′</button>`,
     ).join('');
   });
   fovs.addEventListener('click', (e) => {
@@ -328,6 +328,7 @@ function lines(): void {
   if (rel) {
     const r = S.field && !S.field.simulated ? releaseWords(S.field.releases) : '';
     rel.textContent = r ? ` · ${r}` : '';
+    rel.dataset.tip = r ? `Data release: ${r}` : '';
   }
   if (document.getElementById('frame-more')?.matches(':popover-open')) fillMore();
   const ex = document.getElementById('frame-exif');
