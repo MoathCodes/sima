@@ -227,7 +227,6 @@ async function sendToComputer(p: HTMLElement): Promise<void> {
 function skeleton(p: HTMLElement): void {
   if (p.querySelector('[data-wrap]')) return;
   p.classList.add('ms-panel', 'appear', 'slate');
-  p.dataset.i18n = '';
   p.innerHTML = `
     <div class="ms-wrap" data-wrap>
       <div class="ms-main">
@@ -662,7 +661,7 @@ function underText(tab: MeasureTab, h: Headline): string {
   }
   if (tab === 'exposure') parts.push('<p class="ms-note">The exposures behind the picture on screen, as NASA’s archive gives them.</p>');
   // An empty chart other than the headline's points back to the one that has the measurement.
-  if (tab !== h.chart && !h.pending && h.value !== 'Not measured' && emptyTab(tab)) {
+  if (tab !== h.chart && !h.pending && h.value !== tr('honest.notMeasured') && emptyTab(tab)) {
     const name = TABS.find(([k]) => k === h.chart)?.[1] ?? '';
     parts.push(`<p class="ms-note ms-keep">The measurement is under <button type="button" class="link" data-do="tab" data-to="${h.chart}">${esc(name)}</button>.</p>`);
   }

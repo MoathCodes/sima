@@ -16,6 +16,7 @@ import type { StackResult } from '../../core/stack.ts';
 import type { Candidate } from '../../core/detect.ts';
 import { esc, num, sig, term } from '../tools/dom.ts';
 import { chance, verdictOf } from './words.ts';
+import { t as tr } from '../../shell/i18n.ts';
 
 export type Tone = '' | 'good' | 'warn' | 'bad';
 
@@ -65,7 +66,7 @@ export interface TargetInput {
   det?: number;
 }
 
-const NM = 'Not measured';
+const NM = tr('honest.notMeasured');
 
 /** The headline for the patch's own target, by what it leads with (Target.lead). */
 export function targetHeadline(t: TargetInput): Headline {
@@ -84,8 +85,8 @@ export function targetHeadline(t: TargetInput): Headline {
 function notMeasured(chart: MeasureTab, why: string, para = '', det: number | null = null, best: number | null = null, subHtml = ''): Headline {
   return {
     value: NM,
-    valueTip: 'Sima could not measure this from the pixels. It never shows a catalogue or model value in its place.',
-    pill: { text: 'not measured', tone: '' },
+    valueTip: tr('hl.nmTip'),
+    pill: { text: tr('ms.nm'), tone: '' },
     sub: esc(why) + subHtml,
     chart,
     para,
@@ -97,8 +98,8 @@ function notMeasured(chart: MeasureTab, why: string, para = '', det: number | nu
 /** Still working: "Measuring…", never "Not measured" before an attempt has finished. */
 function measuring(chart: MeasureTab, what: string): Headline {
   return {
-    value: 'Measuring…',
-    valueTip: 'Sima is working this out from the pixels now, in the background.',
+    value: tr('hl.measuring'),
+    valueTip: tr('hl.measuringTip'),
     pill: { text: '', tone: '' },
     sub: esc(what),
     chart,
@@ -110,40 +111,40 @@ function measuring(chart: MeasureTab, what: string): Headline {
 }
 
 /** A one-click move to the detector a headline is strongest in (HTML). */
-export function showDet(det: number, words = `Show D${det}`): string {
+export function showDet(det: number, words = tr('hl.showDet', { det: `D${det}` })): string {
   return `<button type="button" class="link" data-do="det" data-det="${det}">${esc(words)}</button>`;
 }
 
 function motionHeadline(t: TargetInput): Headline {
   const f = t.fit;
   if (t.error) return notMeasured('path', t.error);
-  if (!f) return measuring('path', 'Measuring the positions on every exposure…');
-  if (!f.ok) return notMeasured('path', f.reason ?? 'The positions could not be fitted.');
+  if (!f) return measuring('path', tr('hl.measuringPositions'));
+  if (!f.ok) return notMeasured('path', f.reason ?? tr('hl.noFit'));
   const cat = f.catalogue;
   const pill: Headline['pill'] =
     f.matches === true
-      ? { text: 'matches catalogue', tone: 'good' }
+      ? { text: tr('hl.matches'), tone: 'good' }
       : f.matches === false
-        ? { text: 'differs from catalogue', tone: 'warn' }
-        : { text: 'measured', tone: '' };
-  const pa = Number.isFinite(f.pa) ? `toward ${term(`position angle ${Math.round(f.pa)}°`, 'The direction of motion on the sky, counted from north through east (0° is north, 90° east).')} ` : '';
+        ? { text: tr('hl.differs'), tone: 'warn' }
+        : { text: tr('hl.measured'), tone: '' };
+  const pa = Number.isFinite(f.pa) ? `${tr('hl.toward')} ${term(tr('hl.pa', { deg: `${Math.round(f.pa)}°` }), tr('hl.paTip'))} ` : '';
   const stab = Number.isFinite(f.stability)
-    ? ` It is ${f.stability > f.totalErr ? 'not ' : ''}stable: ${term(`leaving out one of the ${f.visits} visits moves it by ±${num(f.stability, 2)}″`, 'Each visit is left out in turn and the motion fitted again. A large change means one visit decides the answer.')}.`
+    ? ` ${f.stability > f.totalErr ? tr('hl.unstable') : tr('hl.stable')}: ${term(tr('hl.leaveOut', { visits: f.visits, by: `±${num(f.stability, 2)}″` }), tr('hl.leaveOutTip'))}.`
     : '';
-  const plx = f.parallax ? (f.parallax.shown ? ` Parallax measured ${num(f.parallax.value, 0)} ± ${num(f.parallax.err, 0)} mas.` : ` Parallax is not shown: ${esc(f.parallax.why.replace(/\.+$/, ''))}.`) : '';
+  const plx = f.parallax ? (f.parallax.shown ? ` ${tr('hl.plx', { v: `${num(f.parallax.value, 0)} ± ${num(f.parallax.err, 0)} mas` })}` : ` ${tr('hl.plxHidden', { why: esc(f.parallax.why.replace(/\.+$/, '')) })}`) : '';
   return {
     value: `${num(f.total, 2)}″/yr`,
-    valueTip: `How far the star moves across the sky in a year, measured from the pixels: ${num(f.total, 2)} ± ${num(f.totalErr, 2)} arcseconds a year. An arcsecond is 1/3600 of a degree; one SPHEREx pixel is 6.15″.`,
+    valueTip: tr('hl.motionTip', { v: `${num(f.total, 2)} ± ${num(f.totalErr, 2)}` }),
     pill,
-    sub: `${term(`±${num(f.totalErr, 2)}″`, 'Measured from the pixels. The 1σ error: the true value is within this about two times in three.')} · ${f.used} of ${f.of} real exposures${cat ? ` · catalogue ${num(cat.total, 2)}″/yr` : ''}`,
+    sub: `${term(`±${num(f.totalErr, 2)}″`, tr('hl.errTip'))} · ${tr('hl.usedOf', { used: f.used, of: f.of })}${cat ? ` · ${tr('hl.catalogueV', { v: `${num(cat.total, 2)}″/yr` })}` : ''}`,
     chart: 'path',
     para:
       // The line above already gives the value, its error and the exposures used; say only what it does not.
-      `Moving ${pa || 'across the sky '}(each dot is one exposure; colours are survey passes).` +
-      (cat ? ` The catalogue value is from ${esc(cat.source)}.` : ' There is no catalogue motion to compare with.') +
+      `${tr('hl.moving')} ${pa || tr('hl.acrossSky') + ' '}${tr('hl.dots')}` +
+      (cat ? ` ${tr('hl.catFrom', { source: esc(cat.source) })}` : ` ${tr('hl.noCat')}`) +
       plx +
       stab +
-      ` The motion is from a ${term('straight-line fit', 'A weighted straight line through the positions against time, east and north. Points that scatter more than their errors widen the error.')}.`,
+      ` ${tr('hl.fitFrom')} ${term(tr('hl.fit'), tr('hl.fitTip'))}.`,
     det: null,
     best: null,
   };
