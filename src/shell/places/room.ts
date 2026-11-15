@@ -42,7 +42,8 @@ export function makeRoom(panel: HTMLElement): void {
 
 /** Narrows the panel so it ends before any card that stays. */
 function fit(panel: HTMLElement): void {
-  if (panel.hidden) return;
+  // A card hung under another element (sandbox.ts `openSandbox({ under })`) keeps that one's width.
+  if (panel.hidden || panel.dataset.under) return;
   panel.style.width = '';
   const mine = panel.getBoundingClientRect();
   let right = mine.right;
