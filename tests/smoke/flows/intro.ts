@@ -58,7 +58,7 @@ const firstVisit: Step = {
           welcome:
             !!welcome && !welcome.hidden && welcome.checkVisibility({ opacityProperty: true }),
           globe: document.getElementById('sky')?.dataset.globe === '1',
-          seen: localStorage.getItem('sima-intro'),
+          seen: sessionStorage.getItem('sima-intro'),
         };
       });
     // The globe may still be turning when the intro is skipped early: allow it 10 s.

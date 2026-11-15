@@ -2,13 +2,13 @@
  * When the opening intro plays. Pure: no page. Owner: the intro (src/intro/).
  */
 
-/** Storage key: set once the intro has played in this browser. */
+/** Session storage key: set once the intro has played in this tab, so it plays on every new visit. */
 export const INTRO_KEY = 'sima-intro';
 
 /**
  * Whether the intro should play on this page: `?intro=1` forces it; `?intro=0`, `embed=1` and a
  * shared workspace link (`#w=`, which opens straight onto its frames) stop it; otherwise it plays
- * until the browser remembers it. index.html repeats this rule inline (it must decide before the
+ * once per visit (until this tab's session storage remembers it). index.html repeats this rule inline (it must decide before the
  * first paint); tests/intro.test.ts checks the two agree.
  *
  * @param seen Whether storage remembers the intro; null when storage is blocked (no intro then).

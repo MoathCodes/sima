@@ -151,13 +151,13 @@ async function runFlow(
 ): Promise<{ failed: number; lines: string[] }> {
   const lines: string[] = [];
   const context = await browser.newContext({ viewport: size, deviceScaleFactor: 1 });
-  // The opening intro plays once per browser: every flow starts as a return visit, except flows
+  // The opening intro plays once per visit (tab session): every flow starts as a return visit, except flows
   // that ask for it with ?intro=1 (flows/intro.ts). Flows test Expert (VIEW-3) as a visitor who
   // chose it before and has seen Measure's one-time tip (it would take the first Escape), unless
   // they are a first visit. Preset only while no view is remembered, so a switch survives a reload.
   await context.addInitScript((firstVisit) => {
     try {
-      localStorage.setItem('sima-intro', '1');
+      sessionStorage.setItem('sima-intro', '1');
       if (!firstVisit && !localStorage.getItem('sima-view')) {
         localStorage.setItem('sima-view', 'expert');
         localStorage.setItem('sima-guide', JSON.stringify({ tips: ['measure-words'] }));
