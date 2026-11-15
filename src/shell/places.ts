@@ -145,9 +145,10 @@ function search(query: string): SearchHit[] {
   return find(data.index, query).map(({ place: p, score, matched }) => {
     const parts = [rowLine(data.cat, p)];
     if (matched === 'meaning' && p.names.meaning) parts.unshift(`“${tidy(p.names.meaning)}”`);
-    if (p.names.arabic) parts.unshift(p.names.arabic);
     return {
       name: nameOf(p),
+      // The Arabic name goes beside the name in its own <bdi> (omnibox.ts), never in the line.
+      arabic: p.names.arabic || undefined,
       line: parts.join(' · '),
       icon: kindIcon(p.kind),
       score,

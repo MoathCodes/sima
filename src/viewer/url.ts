@@ -17,8 +17,10 @@ import { decodePic, encodePic } from '../core/picture.ts';
 import { emit, on } from '../shell/bus.ts';
 import { toast } from '../shell/toast.ts';
 import { setLevel } from '../explore/game.ts';
+import { progress } from '../explore/progress.ts';
+import { getView } from '../shell/view.ts';
 import type { Group } from '../core/types.ts';
-import { MJD_UNIX, dayToMjd, type Link } from './link.ts';
+import { MJD_UNIX, dayToMjd, viewParams, type Link } from './link.ts';
 
 // Reading a link is pure and lives in link.ts (so it is tested in Node); callers import it here.
 export { readLink, viewFor, type Link } from './link.ts';
@@ -88,6 +90,7 @@ function say(notes: string[]): void {
 
 /**
  * The link to what is on screen now (Share).
+ * Carries the view (`ui=`) and, in Discover, the open mission (`mission=`); never progress.
  * @param opts `embed`: the embed version. `date` (default true): start at the picture on screen.
  * @returns An absolute URL.
  */
@@ -106,6 +109,11 @@ export function linkFor(opts: { embed?: boolean; date?: boolean } = {}): string 
   const pic = encodePic(S.pic);
   if (pic) q.set('pic', pic);
   if (opts.embed) q.set('embed', '1');
+  else {
+    // v2.0: the view, so the link opens the way it was made (`ui` wins, link.ts viewFor), and in
+    // Discover the mission that is open. Never the progress itself (B-10).
+    for (const [k, v] of viewParams(getView(), progress().current)) q.set(k, v);
+  }
   return `${location.origin}${location.pathname}?${q}`;
 }
 

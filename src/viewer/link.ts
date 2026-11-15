@@ -142,6 +142,16 @@ export function viewFor(link: Link, hash: string, fallback: View): View {
   return fallback;
 }
 
+/**
+ * The view part of a shared link (VIEW-4): `ui=` always, and `mission=` only in Discover with a
+ * mission open. Never progress (B-10). Pure; `url.ts` `linkFor` adds these.
+ */
+export function viewParams(view: View, mission: MissionId | null): [string, string][] {
+  const out: [string, string][] = [['ui', view]];
+  if (view === 'discover' && mission) out.push(['mission', mission]);
+  return out;
+}
+
 /** YYYY-MM-DD → MJD at 0h UTC, or null when it is not a real date. */
 export function dayToMjd(day: string): number | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;

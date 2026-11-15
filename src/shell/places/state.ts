@@ -89,7 +89,10 @@ export function iconNode(markup: string): Node {
   return t.content;
 }
 
-/** Arabic text in its own span, right to left. */
-export function arabicSpan(text: string, cls = 'pl-ar'): HTMLSpanElement {
-  return el(`span.${cls}`, { lang: 'ar', dir: 'rtl' }, text);
+/**
+ * Arabic text in its own `<bdi>`, right to left, so a Latin line around it keeps its separators
+ * in place (BEGINNER-AND-MOBILE.md section 9). Set in the Arabic text face, never under 14 px.
+ */
+export function arabicSpan(text: string, cls = 'pl-ar'): HTMLElement {
+  return el(`bdi.${cls}`, { lang: 'ar', dir: 'rtl' }, text);
 }

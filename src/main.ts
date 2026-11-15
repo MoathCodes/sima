@@ -7,6 +7,7 @@
  */
 import './styles/app.css';
 import './styles/shell.css';
+import './styles/settings.css';
 import './styles/sky.css';
 import './styles/frame.css';
 import './styles/tools.css';

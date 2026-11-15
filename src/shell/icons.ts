@@ -58,6 +58,11 @@ const PATHS = {
   'add-frame': '<rect x="3" y="5.5" width="10" height="10" rx="1.6"/><path d="M15.5 2.5v5.5M12.75 5.25h5.5"/>',
   compare: '<rect x="2.5" y="4.5" width="6.8" height="11" rx="1.3"/><rect x="10.7" y="4.5" width="6.8" height="11" rx="1.3"/>',
   wave: '<path d="M2.5 12.5c1.8-6 3.2-6 4.6 0s2.9 6 4.6 0 3.2-6 5.8-1"/>',
+  settings:
+    '<circle cx="10" cy="10" r="2.6"/><path d="M10 2.8v2M10 15.2v2M2.8 10h2M15.2 10h2M4.9 4.9l1.4 1.4M13.7 13.7l1.4 1.4M4.9 15.1l1.4-1.4M13.7 6.3l1.4-1.4"/>',
+  discover: '<path d="M10 3.2 11.6 8.4 16.8 10l-5.2 1.6L10 16.8l-1.6-5.2L3.2 10l5.2-1.6z"/>',
+  menu: '<path d="M4 6h12M4 10h12M4 14h12"/>',
+  back: '<path d="M12.5 4.5 7 10l5.5 5.5"/>',
 } as const;
 
 /** The name of an icon. */

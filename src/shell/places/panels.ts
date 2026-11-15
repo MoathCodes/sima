@@ -34,6 +34,7 @@ import { CUTOUT_SOURCE, drawCutout } from './cutout.ts';
 import type { KindChip } from './kinds.ts';
 import { makeRoom, watchRoom } from './room.ts';
 import { arabicSpan, catalogue, el, iconNode, kindIcon, type Loaded } from './state.ts';
+import { getView } from '../view.ts';
 
 /** How many rows a list shows before "Show more". */
 const PAGE = 60;
@@ -532,7 +533,13 @@ export function openCard(
     );
   }
 
-  const look = el('button.btn.primary', { 'data-guide': 'card-look' }, 'Look with the frame');
+  // Discover's words (BEGINNER-AND-MOBILE.md 5.8): "Look at its pictures" and "Zoom to it".
+  const discover = getView() === 'discover';
+  const look = el(
+    'button.btn.primary',
+    { 'data-guide': 'card-look' },
+    discover ? 'Look at its pictures' : 'Look with the frame',
+  );
   look.addEventListener('click', () => lookWithFrame(p));
   const zoom = el('button.btn', { 'data-guide': 'card-zoom' }, 'Zoom to it');
   zoom.addEventListener('click', () => flyFree(p.ra, p.dec, zoomFov(p)));
@@ -561,8 +568,12 @@ export function openCard(
   const rows = facts(cat, p);
   if (rows.length) {
     const dl = el('dl.pl-facts');
-    for (const f of rows) {
-      dl.append(
+    // Discover shows Brightness first in plain words, the rest under "More facts" (5.8).
+    const first = discover ? rows.filter((f) => f.label === 'Brightness') : rows;
+    const more = discover ? rows.filter((f) => f.label !== 'Brightness') : [];
+    const moreDl = el('dl.pl-facts.pl-more-facts');
+    for (const f of [...first, ...more]) {
+      (first.includes(f) ? dl : moreDl).append(
         el('dt', {}, f.label),
         el(
           'dd',
@@ -572,7 +583,10 @@ export function openCard(
         ),
       );
     }
-    body.append(dl);
+    if (first.length) body.append(dl);
+    if (more.length) {
+      body.append(el('details.pl-more', {}, el('summary.pl-more-summary', {}, 'More facts'), moreDl));
+    }
   }
 
   const note = spherexNote(cat, p);

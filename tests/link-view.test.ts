@@ -35,3 +35,16 @@ test('otherwise the remembered view (or the first-visit default)', () => {
   assert.equal(viewFor(readLink('?mission=runaway'), '', 'expert'), 'expert');
   assert.equal(viewFor(readLink(''), '#nothing', 'discover'), 'discover');
 });
+
+test('a shared link keeps the view and, in Discover, the open mission; never progress', async () => {
+  const { viewParams } = await import('../src/viewer/link.ts');
+  const q = (pairs: [string, string][]) => new URLSearchParams(pairs).toString();
+  assert.equal(q(viewParams('discover', 'ghost')), 'ui=discover&mission=ghost');
+  assert.equal(q(viewParams('discover', null)), 'ui=discover');
+  assert.equal(q(viewParams('expert', 'ghost')), 'ui=expert');
+  // Round trip: the link opens the same view and mission, whatever was remembered.
+  const back = readLink(`?target=barnard&view=flip&det=D3&${q(viewParams('discover', 'runaway'))}`);
+  assert.equal(viewFor(back, '', 'expert'), 'discover');
+  assert.equal(back.mission, 'runaway');
+  assert.equal(viewFor(readLink(`?${q(viewParams('expert', null))}`), '', 'discover'), 'expert');
+});

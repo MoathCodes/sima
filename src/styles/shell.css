@@ -14,6 +14,7 @@
 }
 .wordmark-latin {
   font: var(--text-wordmark-latin);
+  letter-spacing: var(--tracking-wordmark);
 }
 
 /* ----- Search ------------------------------------------------------------------------------- */
@@ -79,6 +80,13 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The Arabic name beside the name: Arabic text face, 14 px or more, in a <bdi> (A11Y-4). */
+.search-ar {
+  margin-inline-start: 4px;
+  color: var(--ink-2);
+  font-size: max(14px, 1em);
+  font-weight: 400;
+}
 .search-row .line {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -122,8 +130,8 @@
   border-radius: 50%;
 }
 .layer-item[aria-checked='true'] .layer-ring {
-  border-color: var(--action);
-  background: radial-gradient(circle, var(--action) 0 4px, transparent 4.5px);
+  border-color: var(--ink);
+  background: radial-gradient(circle, var(--ink) 0 4px, transparent 4.5px);
 }
 
 /* ----- The sky's loading card, top centre (GEN-4) ------------------------------------------- */
@@ -134,23 +142,19 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 8px;
-  max-width: min(320px, calc(100vw - 2 * 560px));
+  width: 320px;
   padding: 7px 14px 9px;
   overflow: hidden;
 }
+/* The words wrap rather than being cut when the gap is narrow (UX audit #9). */
 .sky-loading-head {
   font: var(--text-label);
   font-weight: 600;
-  white-space: nowrap;
 }
 .sky-loading-line {
   grid-column: 1;
   color: var(--ink-2);
   font: var(--text-label);
-  white-space: nowrap;
-}
-#sky-loading:has([data-retry]) :is(.sky-loading-head, .sky-loading-line) {
-  white-space: normal;
 }
 #sky-loading [data-retry] {
   grid-column: 2;
@@ -181,16 +185,8 @@
   max-width: min(640px, calc(100vw - 2 * var(--gutter)));
   padding: 8px 12px;
   border-radius: var(--r-panel);
-  background: var(--ink);
-  color: var(--card);
+  color: var(--ink);
   font: var(--text-label);
-  box-shadow: var(--lift);
-}
-.toast .icon-btn {
-  color: var(--card);
-}
-.toast .icon-btn:hover {
-  background: var(--ink-2);
 }
 
 /* ----- Dialogs: Share and About ------------------------------------------------------------- */
@@ -326,4 +322,56 @@
 .about-table th {
   color: var(--ink-3);
   font: var(--text-group);
+}
+
+/* ----- The view switch: Discover | Expert (DESIGN-v2 section 9) ----------------------------- */
+/* A Regular pill, 46px tall; the chosen segment is a white 18% tile with on-glass text. */
+#view-switch {
+  display: flex;
+  gap: var(--gap-group);
+  padding: 5px;
+}
+.vs-seg {
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 13px; /* 18px card − 5px padding: concentric */
+  background: transparent;
+  color: var(--ink-2);
+  font: var(--text-control);
+  white-space: nowrap;
+}
+.vs-seg:hover {
+  background: var(--card-2);
+  color: var(--ink);
+}
+.vs-seg[aria-checked='true'] {
+  background: var(--card-4);
+  color: var(--ink);
+  box-shadow: var(--shadow-chosen);
+}
+.vs-seg > .icon {
+  width: 18px;
+  height: 18px;
+}
+html[data-layout^='phone'] #view-switch {
+  padding: 4px;
+}
+/* Two 48px segments on the phone top row. */
+html[data-layout^='phone'] .vs-seg {
+  min-height: var(--v2-hit-phone);
+  padding: 0 8px;
+}
+html[data-layout^='phone'] .vs-seg > .icon {
+  display: none;
+}
+@media (max-width: 339px) {
+  .vs-seg {
+    font: 600 12px/1 var(--font);
+  }
 }
