@@ -1338,12 +1338,14 @@ samp {
   inset: 0;
   z-index: var(--z-sky);
   background: var(--sky);
+  touch-action: none; /* a pinch zooms the sky, not the page */
 }
 #sky-marks {
   position: fixed;
   inset: 0;
   z-index: var(--z-marks);
   pointer-events: none;
+  touch-action: none;
 }
 #sky-note,
 #sky-coords {

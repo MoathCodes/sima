@@ -12,7 +12,7 @@ import { icon } from './icons.ts';
 import { t } from './i18n.ts';
 import { closeTop, nativeOpen, startEscape } from './escape.ts';
 import { phonePage } from './pages.ts';
-import { onView } from './view.ts';
+import { getView, onView, setView } from './view.ts';
 import { startLayout } from './layout.ts';
 import { camera, flyTo, grid, retry, setLayer, type SkyLayer } from '../sky/sky.ts';
 import { openShare, startShare } from '../viewer/share.ts';
@@ -107,6 +107,7 @@ export function startShell(): void {
     <button class="menu-item" data-open="about" data-guide="phone-about">${icon('info')}About</button>`,
   );
   startFind();
+  startBack();
 
   fill(
     'frame-show',
@@ -307,6 +308,37 @@ function startFind(): void {
       document.getElementById('search-results')?.hidePopover();
     });
     search.querySelector<HTMLInputElement>('input')?.focus();
+  });
+}
+
+// ----- The phone's Back ------------------------------------------------------------------------
+
+/**
+ * On a phone, the browser's Back (button or edge swipe) steps back inside Sima before it leaves
+ * the site: it closes the topmost open thing as Escape does (a card, the picture back to the
+ * globe, a mission asks first), else leaves Expert for Discover. Sima only ever replaces its
+ * address (url.ts), so without this Back left the site at once.
+ *
+ * One extra history entry sits on top of the visit's own. It is added on a tap (browsers skip
+ * entries added without one) and used up by each Back.
+ */
+function startBack(): void {
+  const root = document.documentElement;
+  if (root.hasAttribute('data-embed')) return;
+  const guarded = (): boolean => (history.state as { simaBack?: boolean } | null)?.simaBack === true;
+  // pointerup: a touch's down does not count as a tap for the browser, its up does.
+  document.addEventListener(
+    'pointerup',
+    () => {
+      if (root.dataset.phone && !guarded()) history.pushState({ simaBack: true }, '', location.href);
+    },
+    { capture: true },
+  );
+  addEventListener('popstate', () => {
+    if (guarded()) return;
+    if (closeTop()) return;
+    if (root.dataset.phone && getView() === 'expert') return setView('discover');
+    history.back(); // nothing left to step back from: leave as the browser would have
   });
 }
 

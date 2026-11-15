@@ -281,18 +281,9 @@ html[data-layout^='phone'][data-view='discover'] .frame-prov::before {
 html[data-layout^='phone'][data-view='discover'] .frame-actions {
   display: none;
 }
-/* The loading line floats over the top of the picture instead of taking a row. */
+/* No loading line on a phone: it ran over the picture's date. The picture's own label already
+   says what is sky map past the dashes. */
 html[data-layout^='phone'][data-view='discover'] #frame-load {
-  position: absolute;
-  z-index: 3;
-  top: calc(var(--pic-top, 64px) + 8px);
-  right: 20px;
-  height: auto;
-  min-height: 0;
-  margin: 0;
-  pointer-events: none;
-}
-html[data-layout^='phone'][data-view='discover'] #frame-load:not(:has(.load-text:not(:empty))) {
   display: none;
 }
 html[data-layout^='phone'][data-view='discover'] #frame-pic {
