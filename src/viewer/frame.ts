@@ -18,6 +18,7 @@ import {
   panTo,
   previewPatch,
   regroup,
+  retryWider,
   setFov,
   showDetector,
   stepNote,
@@ -31,6 +32,7 @@ import { BAND_EDGES } from '../core/instrument.ts';
 import { TARGETS } from '../core/targets.ts';
 import { SCENARIOS } from '../core/field.ts';
 import { startStrip } from './strip.ts';
+import { onSurround, widening } from './surround.ts';
 
 const VIEW_NAMES: Record<Mode, [string, IconName, string]> = {
   flip: ['Flip', 'flip', 'Show the dates one after another'],
@@ -83,6 +85,8 @@ const SOURCE: Record<string, { cls: string; text: string; tip: string }> = {
 /** Fills the frame and answers `aim` and `band`. Called once by main.ts. */
 export function startFrame(): void {
   on('aim', (m) => {
+    // A new spot loads: the frame shows, so its progress is always in view.
+    hideFrame(false);
     if (m.target) void loadTarget(m.target, { fov: m.fov });
     else void aimAt(m.ra, m.dec, m.fov);
   });
@@ -95,7 +99,7 @@ export function startFrame(): void {
     preview: (ra, dec) => previewPatch(ra, dec),
     wheel: (steps) => void setFov(nextFov(steps)),
   });
-  watch(['label', 'source', 'fov', 'level', 'tools', 'target'], header);
+  watch(['label', 'source', 'set', 'fov', 'level', 'tools', 'target'], header);
   watch(['level', 'mode', 'groups', 'source', 'field'], views);
   watch(['level', 'sameColour'], () => regroup());
   let combined = S.pic.combinePass;
@@ -134,6 +138,15 @@ export function startFrame(): void {
   );
   watch(['fov', 'ra', 'dec', 'label', 'source'], () => announce());
   onPreview(showPreview);
+  onSurround(() => {
+    lines();
+    draw();
+  });
+  document
+    .getElementById('frame-load')
+    ?.addEventListener('click', (e) => {
+      if ((e.target as Element | null)?.closest('[data-widen-retry]')) retryWider();
+    });
   header();
   views();
   lines();
@@ -147,14 +160,15 @@ function header(): void {
   const head = document.getElementById('frame-head');
   if (!head) return;
   const measure = S.level === 'measure';
-  const src = SOURCE[S.source] ?? SOURCE.none;
+  // A test target's wider field comes from the live service: say so (H2).
+  const src = SOURCE[S.source === 'real' && S.set?.origin === 'live' ? 'live' : S.source] ?? SOURCE.none;
   const i = FOVS.indexOf(S.fov);
   // An embedded page shows only the frame, the bar and Measure: hiding the frame would empty it.
   // (main.ts marks <html> before the frame starts; S.embed is set later, by url.ts.)
   const embedded = document.documentElement.hasAttribute('data-embed');
   head.className = 'frame-head';
   head.dataset.drag = '';
-  head.innerHTML = `
+  const html = `
     <div class="frame-name">
       <h2 class="frame-title"></h2>
       <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span></p>
@@ -167,6 +181,10 @@ function header(): void {
       <button class="btn text frame-measure" data-measure aria-pressed="${measure}" data-guide="measure" data-tip="${measure ? 'Back to the simple view' : 'Measure: numbers, charts and all six views'}">${icon('chart')}<span>Measure</span></button>
       ${embedded ? '' : `<button class="icon-btn sm" data-hide aria-label="Hide the frame" data-tip="Hide the frame" data-guide="frame-hide">${icon('close')}</button>`}
     </div>`;
+  // Redrawn only when it changes: a redraw while the user presses − or + would lose the press.
+  if (head.dataset.html === html + S.label) return;
+  head.dataset.html = html + S.label;
+  head.innerHTML = html;
   const title = head.querySelector<HTMLElement>('.frame-title');
   if (title) {
     title.textContent = S.label;
@@ -224,13 +242,33 @@ function lines(): void {
     // The line keeps its height whether or not it has words, so the frame never grows (O-I5).
     load.className = 'frame-load';
     const busy = S.source === 'loading' && S.load;
-    const note = [stepNote, liveNote].filter(Boolean).join(' · ');
-    load.textContent = busy
+    // While wider real pictures are fetched, or cannot be, the line says so (FRM-6), with the
+    // fetch's progress bar first and, after a failure, Ask again.
+    const w = busy ? null : widening;
+    const note = [w?.what ?? stepNote, liveNote].filter(Boolean).join(' · ');
+    const text = busy
       ? 'Loading this spot. The sky keeps working meanwhile.'
       : note
-        ? `${note}.`
+        ? `${note.replace(/[.…]$/, '')}${note.endsWith('…') ? '…' : '.'}`
         : '';
-    load.dataset.tip = load.textContent;
+    const known = !!w && w.total !== null && w.done !== null && w.total > 0;
+    const pct = known && w ? Math.round((100 * (w.done ?? 0)) / (w.total ?? 1)) : 0;
+    const key = `${text}|${w?.state ?? ''}|${pct}`;
+    if (load.dataset.key !== key) {
+      load.dataset.key = key;
+      load.innerHTML = `${
+        w?.state === 'busy'
+          ? `<span class="load-bar${known ? ' known' : ''}" style="--done:${pct}%" role="progressbar" aria-label="Real exposures of the wider field" ${known ? `aria-valuenow="${pct}"` : ''}><span></span></span>`
+          : ''
+      }${
+        w?.state === 'failed'
+          ? '<button type="button" class="link load-retry" data-widen-retry>Ask again</button>'
+          : ''
+      }<span class="load-text"></span>`;
+      const t = load.querySelector('.load-text');
+      if (t) t.textContent = text;
+    }
+    load.dataset.tip = text;
   }
 }
 
@@ -305,9 +343,10 @@ function cover(): void {
       : { why: 'There are no pictures of this spot in the frame.', more: null });
   el.hidden = false;
   el.innerHTML = `<div class="cover-none">
-      <p class="cover-head">No real pictures here</p>
+      <p class="cover-head">${why.retry ? 'No real pictures yet' : 'No real pictures here'}</p>
       <p class="cover-why"></p>
       <p class="cover-why more" ${why.more ? '' : 'hidden'}></p>
+      <button class="btn primary cover-retry" data-retry ${why.retry ? '' : 'hidden'}>Ask again</button>
       <p class="cover-label">Real SPHEREx pictures you can open now</p>
       <ul class="cover-targets">${TARGETS.map(
         (t) => `<li><button class="link" data-target="${t.key}">${t.name}</button></li>`,
@@ -321,4 +360,5 @@ function cover(): void {
     b.addEventListener('click', () => void loadTarget(b.dataset.target ?? '')),
   );
   el.querySelector('[data-practice]')?.addEventListener('click', () => void loadTarget('warm-up'));
+  el.querySelector('[data-retry]')?.addEventListener('click', () => void aimAt(S.ra, S.dec, S.fov));
 }

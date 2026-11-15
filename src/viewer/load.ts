@@ -8,6 +8,11 @@
  *
  * Every load has a number; a newer load (another aim, another target) silently replaces an
  * older one, whose late answers are dropped.
+ *
+ * A field wider than the exposures on hand (a larger field size, a pan, a dragged patch) keeps
+ * the pictures on screen and asks the live service for real exposures of the wider field in the
+ * background (surround.ts `widerPatch`); they replace the narrower ones when they arrive. Until
+ * then, or without the service, the frame shows the sky map around them, dimmed and labelled.
  */
 import { S, nearestFov, pic, type Fov, type LoadState } from './state.ts';
 import { draw } from './render.ts';
@@ -21,6 +26,16 @@ import { TARGETS, targetByKey } from '../core/targets.ts';
 import { SCENARIOS } from '../core/field.ts';
 import { simulate } from '../core/frames.ts';
 import { formatCoords, separation } from '../core/astro.ts';
+import {
+  centreOf,
+  covers,
+  liveFov,
+  nominal,
+  overlaps,
+  pinCentre,
+  setWidening,
+  widerPatch,
+} from './surround.ts';
 import type {
   Det,
   Field,
@@ -36,8 +51,6 @@ import type {
 export const LIVE_API: string = (import.meta.env.VITE_LIVE_API ?? '').replace(/\/$/, '');
 /** How often the live service is asked how far it got (docs/live-service.md). */
 export const POLL_MS = 1500;
-/** Field sizes the live service fetches, arcminutes. */
-const LIVE_FOVS = [3, 6, 12] as const;
 /** A spot this close to a shipped target's track opens the target's own pictures, degrees. */
 export const TARGET_RADIUS = 1.5 / 60;
 
@@ -47,6 +60,8 @@ export interface NoPictures {
   why: string;
   /** A second sentence: what the user can do, or null. */
   more: string | null;
+  /** True when asking again may help (the live service or NASA's archive failed): a Retry button. */
+  retry?: boolean;
 }
 
 /** Why the frame shows nothing, while `S.source` is `none`; null otherwise. */
@@ -70,6 +85,20 @@ export function onPreview(fn: (c: OffscreenCanvas | null) => void): () => void {
 let seq = 0;
 let abort: AbortController | null = null;
 
+/**
+ * The spot's own exposures (shipped, or fetched live for the spot) and its test target. Every
+ * field size and pan of the spot starts from these.
+ */
+let home: { set: RealSet; target: Target | null } | null = null;
+/** Real sets fetched live for wider fields, newest last; kept across loads for reuse. */
+const onHand: RealSet[] = [];
+const ON_HAND = 4;
+/**
+ * The field last asked for (`place`): centre and size. `S` takes them only once its pictures are
+ * cut, so a wider set arriving meanwhile is placed by this, not by `S`.
+ */
+let wanted: { ra: number; dec: number; fov: Fov } | null = null;
+
 /** Starts a new load: the older one's answers are ignored from now on. */
 function begin(): { id: number; signal: AbortSignal } {
   abort?.abort();
@@ -80,6 +109,9 @@ function begin(): { id: number; signal: AbortSignal } {
   stepNote = '';
   liveJob = null;
   missingPasses = [];
+  home = null;
+  wanted = null;
+  stopWidening();
   return { id: seq, signal: abort.signal };
 }
 const current = (id: number) => id === seq;
@@ -126,8 +158,9 @@ async function loadShipped(target: Target, fov?: number): Promise<void> {
     const base = `${import.meta.env.BASE_URL}data/${target.key}/`;
     const set = await fetchSet(base, target.key, 'shipped', signal);
     if (!current(id)) return;
+    home = { set, target };
     const own = fov === undefined ? nearestFov(set.data.fov) : S.fov;
-    await show(set, target, centreOf(set.data), own, 'real');
+    await place(centreOf(set.data), own, null);
   } catch (err) {
     if (!current(id) || signal.aborted) return;
     console.warn('load: shipped data failed', err);
@@ -188,6 +221,13 @@ export async function aimAt(ra: number, dec: number, fov?: number): Promise<void
   S.fov = want;
   S.target = null;
   S.label = formatCoords(S.ra, S.dec);
+  // Real exposures fetched earlier for a wider field may already hold this spot.
+  const held = [...onHand].reverse().find((set) => covers(set.data, S.ra, S.dec, want));
+  if (held) {
+    home = { set: held, target: null };
+    await place({ ra: S.ra, dec: S.dec }, want, null);
+    return;
+  }
   if (!LIVE_API) {
     clearData('none');
     noPictures = {
@@ -203,10 +243,7 @@ export async function aimAt(ra: number, dec: number, fov?: number): Promise<void
   await pollLive(id, signal);
 }
 
-/** Field size as the live service fetches it: the nearest of 3, 6 and 12 that covers the field. */
-export function liveFov(fov: number): number {
-  return LIVE_FOVS.find((f) => f >= fov) ?? 12;
-}
+export { centreOf, liveFov };
 
 async function pollLive(id: number, signal: AbortSignal): Promise<void> {
   const q = `${LIVE_API}?ra=${S.ra.toFixed(4)}&dec=${S.dec.toFixed(4)}&fov=${liveFov(S.fov)}`;
@@ -258,7 +295,7 @@ async function pollLive(id: number, signal: AbortSignal): Promise<void> {
       case 'searching':
         if (!shown)
           setLoad({
-            what: `Searching NASA’s archive for SPHEREx exposures of this spot…${busyNote(status, ' ', '.')}`,
+            what: `Searching NASA’s archive for SPHEREx exposures of this spot…${searchNote(status) || busyNote(status, ' ', '.')}`,
             step: 'searching',
           });
         break;
@@ -312,11 +349,29 @@ async function pollLive(id: number, signal: AbortSignal): Promise<void> {
         }
         return giveUp(
           id,
-          `NASA’s archive could not give the pictures (${status.error || 'no reason given'}).`,
+          status.searchTimedOut
+            ? `${status.error || 'NASA’s search did not answer'}.`
+            : `NASA’s archive could not give the pictures (${status.error || 'no reason given'}).`,
+          'NASA’s archive is sometimes slow or busy. Asking again often works.',
         );
     }
     await wait(POLL_MS, signal);
   }
+}
+
+/**
+ * While the service searches: how long NASA's search has not answered and which try this is,
+ * once that matters ("NASA’s search has not answered for 1 min 40 s (try 3 of 4)."); else ''.
+ */
+export function searchNote(status: LiveStatus): string {
+  const t = status.searchElapsed ?? 0;
+  const n = status.searchTry ?? 0;
+  if (status.state !== 'searching' || (t < 20 && n < 2)) return '';
+  const m = Math.floor(t / 60);
+  const s = Math.floor(t % 60);
+  const time = m ? `${m} min ${s} s` : `${s} s`;
+  const of = n && status.searchTries ? ` (try ${n} of ${status.searchTries})` : '';
+  return ` NASA’s search has not answered for ${time}${of}.`;
 }
 
 /** Says that NASA's archive is answering busy and the service asks again (the wait is theirs). */
@@ -344,6 +399,8 @@ async function showLive(
     if (!current(id)) return false;
     stepNote = step === 'first' ? 'First look' : '';
     const keepEpoch = S.groups[S.epoch]?.mjd ?? null;
+    home = { set, target: null };
+    if (step === 'full') keep(set);
     return await show(set, null, { ra: S.ra, dec: S.dec }, S.fov, 'live', keepEpoch);
   } catch (err) {
     if (!current(id) || signal.aborted) return false;
@@ -352,31 +409,24 @@ async function showLive(
   }
 }
 
-function giveUp(id: number, why: string): void {
+/** No pictures from the live service: says why, and offers to ask again (Retry). */
+function giveUp(id: number, why: string, more: string | null = null): void {
   if (!current(id)) return;
   clearData('none');
-  noPictures = { why, more: null };
+  noPictures = { why, more, retry: true };
   announce();
 }
 
 /**
  * Changes the field size (FRM-6) and cuts the pictures again. The sky stays still; the patch
- * square changes size. Lane D only (the − and + buttons and the wheel over the picture); others
- * go through `aimAt`.
+ * square changes size. A field wider than the exposures keeps them on screen and fetches wider
+ * real ones in the background (`place`). Lane D only (the − and + buttons and the wheel over the
+ * picture); others go through `aimAt`.
  */
 export async function setFov(fov: Fov): Promise<void> {
   if (fov === S.fov) return;
-  const set = S.set;
-  if (set && S.source !== 'loading') {
-    const covered = set.data.size * 60;
-    // A live spot fetched narrower than the new field: ask the service for the wider one.
-    if (set.origin === 'live' && liveFov(fov) > Math.round(covered) && covered < 12) {
-      return aimAt(S.ra, S.dec, fov);
-    }
-    S.fov = fov;
-    const keep = S.groups[S.epoch]?.mjd ?? null;
-    await show(set, S.field?.target ?? null, { ra: S.ra, dec: S.dec }, fov, S.source, keep);
-    return;
+  if (home && S.set && S.source !== 'loading') {
+    return place({ ra: S.ra, dec: S.dec }, fov, S.groups[S.epoch]?.mjd ?? null);
   }
   if (S.source === 'loading' && !S.target) return aimAt(S.ra, S.dec, fov);
   S.fov = fov;
@@ -385,24 +435,238 @@ export async function setFov(fov: Fov): Promise<void> {
 
 /**
  * Moves the patch by a sky offset without leaving the data (FRM-12: dragging inside the picture).
- * Shipped and live pictures are cut again around the new centre; where the exposures do not
- * reach, the picture is empty and says so. A drag that leaves the exposures altogether aims the
- * frame at the new spot.
+ * The pictures are cut again around the new centre; where the exposures do not reach, the sky
+ * map shows around them while wider real ones are fetched. A drag that leaves the exposures
+ * altogether aims the frame at the new spot.
  */
 export function panTo(ra: number, dec: number): void {
   const set = S.set;
-  if (!set || !S.field) {
+  if (!home || !set || !S.field || !overlaps(set.data, ra, dec, S.fov)) {
     void aimAt(ra, dec);
     return;
   }
-  const c = centreOf(set.data);
-  const reach = (set.data.size / 2) * 0.9;
-  if (separation(c.ra, c.dec, ra, dec) > reach) {
-    void aimAt(ra, dec);
+  void place({ ra, dec }, S.fov, S.groups[S.epoch]?.mjd ?? null);
+}
+
+// ----- Fields wider than the exposures -----------------------------------------------------------
+
+/** Waits this long after the last field change before asking for wider pictures, ms. */
+const WIDEN_AFTER_MS = 600;
+let widen: { key: string; abort: AbortController; timer: number } | null = null;
+
+/** Keeps a live set for later fields, replacing an older step of the same patch. */
+function keep(set: RealSet): void {
+  const at = onHand.findIndex((s) => s.key === set.key);
+  if (at >= 0) onHand.splice(at, 1);
+  onHand.push(set);
+  if (onHand.length > ON_HAND) onHand.shift();
+}
+
+const withTarget = new WeakMap<RealSet, RealSet>();
+const grafted = new WeakSet<RealSet>();
+/**
+ * A live set shown for a shipped target: the target's own catalogue position, motion and
+ * neighbours go with it (they are facts about the target, not the exposures), so Measure, the
+ * stack along the motion and the blend check work there as on the shipped pictures.
+ */
+function forHome(set: RealSet): RealSet {
+  const own = home?.set;
+  if (!own || set === own || own.origin !== 'shipped' || grafted.has(set)) return set;
+  let out = withTarget.get(set);
+  if (!out) {
+    const { catalogue, neighbours, neighboursFrom } = own.data;
+    out = { ...set, data: { ...set.data, catalogue, neighbours, neighboursFrom } };
+    pinCentre(out.data, nominal(set.data));
+    withTarget.set(set, out);
+    grafted.add(out);
+  }
+  return out;
+}
+
+/**
+ * Puts the real set that best holds a field on screen: the spot's own exposures when they cover
+ * it, else wider ones fetched earlier, else the ones on screen (the sky map shows around them)
+ * while wider real ones are asked for.
+ */
+async function place(
+  centre: { ra: number; dec: number },
+  fov: Fov,
+  keepMjd: number | null,
+): Promise<void> {
+  const h = home;
+  if (!h) return;
+  const { ra, dec } = centre;
+  wanted = { ra, dec, fov };
+  // The size shows at once (the pictures on screen rescale), so a second press steps on from it.
+  S.fov = fov;
+  const fit = [h.set, ...[...onHand].sort((a, b) => a.data.size - b.data.size)].find((s) =>
+    covers(s.data, ra, dec, fov),
+  );
+  const shownSet = S.set && S.source !== 'loading' ? S.set : null;
+  const raw = fit ?? (shownSet && overlaps(shownSet.data, ra, dec, fov) ? shownSet : h.set);
+  if (fit) stopWidening();
+  else askWider(centre, fov);
+  const set = forHome(raw);
+  const source: PatchSource = h.set.origin === 'shipped' ? 'real' : 'live';
+  await show(set, h.target, centre, fov, source, keepMjd);
+}
+
+/** Asks again for real exposures of the field on screen, after a wider fetch failed. */
+export function retryWider(): void {
+  if (!home || !S.set) return;
+  stopWidening();
+  const v = wanted ?? { ra: S.ra, dec: S.dec, fov: S.fov };
+  askWider({ ra: v.ra, dec: v.dec }, v.fov);
+}
+
+function stopWidening(): void {
+  if (widen) {
+    clearTimeout(widen.timer);
+    widen.abort.abort();
+    widen = null;
+  }
+  setWidening(null);
+}
+
+/** Asks the live service for real exposures of a field the ones on hand do not cover. */
+function askWider(centre: { ra: number; dec: number }, fov: Fov): void {
+  const h = home;
+  if (!h) return;
+  if (!LIVE_API) {
+    stopWidening();
+    setWidening({
+      state: 'off',
+      what: 'Real exposures end at the dashed line. Wider ones come from a live service that is not running for this page',
+      done: null,
+      total: null,
+    });
     return;
   }
-  const keep = S.groups[S.epoch]?.mjd ?? null;
-  void show(set, S.field.target, { ra, dec }, S.fov, S.source, keep);
+  const want = widerPatch(centreOf(h.set.data), centre.ra, centre.dec, fov);
+  const key = `${want.ra.toFixed(4)}|${want.dec.toFixed(4)}|${want.fov}`;
+  if (widen?.key === key) return;
+  stopWidening();
+  const ab = new AbortController();
+  const loadId = seq;
+  widen = {
+    key,
+    abort: ab,
+    timer: window.setTimeout(() => void pollWider(want, loadId, ab.signal), WIDEN_AFTER_MS),
+  };
+  setWidening({
+    state: 'busy',
+    what: 'Asking NASA’s archive for real exposures of the wider field…',
+    done: null,
+    total: null,
+  });
+}
+
+/** Follows the live patch for a wider field and shows its pictures when they arrive. */
+async function pollWider(
+  want: { ra: number; dec: number; fov: number },
+  loadId: number,
+  signal: AbortSignal,
+): Promise<void> {
+  let url = `${LIVE_API}?ra=${want.ra.toFixed(4)}&dec=${want.dec.toFixed(4)}&fov=${want.fov}`;
+  let got: 'first' | 'full' | null = null;
+  let failures = 0;
+  const live = () => current(loadId) && !signal.aborted;
+  const say = (what: string, done: number | null = null, total: number | null = null) =>
+    live() && setWidening({ state: 'busy', what, done, total });
+  const fail = (why: string) => {
+    if (!live()) return;
+    widen = null;
+    setWidening({
+      state: 'failed',
+      what: got ? `First look of the wider field only: ${why}` : `Real exposures end at the dashed line: ${why}`,
+      done: null,
+      total: null,
+    });
+  };
+  while (live()) {
+    let status: LiveStatus;
+    try {
+      const res = await fetch(url, { signal });
+      const body = (await res.json()) as LiveStatus & { error?: string };
+      if (!live()) return;
+      if (!res.ok) {
+        if (res.status === 503) {
+          say('NASA’s archive is busy with other spots. Waiting for a turn…');
+          await wait(POLL_MS * 2, signal);
+          continue;
+        }
+        return fail(`the live service refused the wider field (${body.error || res.status})`);
+      }
+      status = body;
+      failures = 0;
+    } catch (err) {
+      if (!live()) return;
+      if (++failures < 3) {
+        await wait(POLL_MS, signal);
+        continue;
+      }
+      return fail(`the live service did not answer (${errText(err)})`);
+    }
+    url = `${LIVE_API}/${status.id}`;
+    const step: 'first' | 'full' | null = status.full && got !== 'full' ? 'full' : status.first && !got ? 'first' : null;
+    const folder = step === 'full' ? status.full : step === 'first' ? status.first : null;
+    if (step && folder) {
+      try {
+        const set = await fetchSet(folder.endsWith('/') ? folder : `${folder}/`, status.id, 'live', signal);
+        if (!live()) return;
+        got = step;
+        keep(set);
+        // Shown only if it holds the field wanted now (the user may have moved on).
+        const v = wanted ?? { ra: S.ra, dec: S.dec, fov: S.fov };
+        if (covers(set.data, v.ra, v.dec, v.fov) && home) {
+          const keepMjd = S.groups[S.epoch]?.mjd ?? null;
+          const source: PatchSource = home.set.origin === 'shipped' ? 'real' : 'live';
+          await show(forHome(set), home.target, { ra: v.ra, dec: v.dec }, v.fov, source, keepMjd);
+        }
+        if (step === 'full' && status.state === 'ready') {
+          widen = null;
+          setWidening(null);
+          return;
+        }
+      } catch (err) {
+        if (!live()) return;
+        console.warn(`load: wider ${step} set failed`, err);
+      }
+    }
+    const busy = busyNote(status, ' ', '.');
+    switch (status.state) {
+      case 'queued':
+        say('Waiting for a turn at NASA’s archive for the wider field…');
+        break;
+      case 'searching':
+        say(`Searching NASA’s archive for exposures of the wider field…${searchNote(status) || busy}`);
+        break;
+      case 'first':
+      case 'rest':
+        if (status.total) {
+          say(
+            got
+              ? `Wider field, first look. Fetching the rest: ${status.done} of ${status.total}${busy}`
+              : `Fetching ${status.done} of ${status.total} real exposures of the wider field${busy}`,
+            status.done,
+            status.total,
+          );
+        } else say(`Found ${status.found} exposures of the wider field. Choosing which to fetch…`);
+        break;
+      case 'ready':
+        if (!status.full && !status.first) return fail('the live service sent no pictures');
+        break;
+      case 'empty':
+        return fail('SPHEREx has no released exposures of the wider field');
+      case 'failed':
+        return fail(
+          status.searchTimedOut && status.error
+            ? status.error
+            : `NASA’s archive could not give them (${status.error || 'no reason given'})`,
+        );
+    }
+    await wait(POLL_MS, signal);
+  }
 }
 
 /** Tells the sky where the patch is while the user drags inside the picture (no reload). */
@@ -600,18 +864,6 @@ export async function fetchSet(
     }),
   ]);
   return decodeFrames(meta, new Uint8Array(bin), { key, origin });
-}
-
-/** The middle of the exposures: the median of the cutout centres. */
-export function centreOf(data: TargetData): { ra: number; dec: number } {
-  const ras = data.frames.map((f) => f.wcs.crval[0]).sort((a, b) => a - b);
-  const decs = data.frames.map((f) => f.wcs.crval[1]).sort((a, b) => a - b);
-  const mid = (v: number[]) => v[v.length >> 1] ?? Number.NaN;
-  const ra = mid(ras);
-  const dec = mid(decs);
-  return Number.isFinite(ra) && Number.isFinite(dec)
-    ? { ra, dec }
-    : { ra: data.catalogue.ra, dec: data.catalogue.dec };
 }
 
 function clearData(source: PatchSource): void {

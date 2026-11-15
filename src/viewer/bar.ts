@@ -141,7 +141,7 @@ function paint(bar: HTMLElement): void {
   if (playBtn) {
     playBtn.innerHTML = icon(S.playing ? 'pause' : 'play');
     playBtn.setAttribute('aria-label', S.playing ? 'Pause' : 'Play');
-    playBtn.dataset.tip = S.playing ? 'Pause (Space)' : 'Play (Space)';
+    playBtn.dataset.tip = many ? (S.playing ? 'Pause (Space)' : 'Play (Space)') : waitWhy();
     playBtn.disabled = !many;
   }
   // BAR-6: what needs pictures is dimmed and cannot be pressed while there are none.
@@ -194,7 +194,20 @@ function paint(bar: HTMLElement): void {
     .forEach((b, i) => b.classList.toggle('on', i + 1 === S.det));
 
   const dates = bar.querySelector<HTMLElement>('[data-dates]');
-  if (dates) paintDates(dates);
+  if (dates) paintDates(dates, ready ? '' : waitWhy());
+}
+
+/** BAR-6: why the bar cannot play now, in a few words (shown on the date scale and as the tip). */
+export function waitWhy(): string {
+  if (S.source === 'loading') {
+    return S.load?.step === 'shipped'
+      ? 'Waiting for the pictures to load…'
+      : 'Waiting for pictures from NASA’s archive…';
+  }
+  if (!S.field || !S.groups.length) {
+    return S.source === 'none' ? 'No pictures here to play' : `No D${S.det} pictures to play`;
+  }
+  return S.groups.length < 2 ? 'Only one date here: nothing to play' : '';
 }
 
 function setLam(lam: number): void {

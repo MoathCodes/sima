@@ -71,6 +71,11 @@ MAX_CONCURRENT = 8                      # requests to outside services at a time
 RETRY_STATUS = {429, 500, 502, 503, 504}
 RETRY_WAITS = [2, 4, 8, 15, 30, 60]     # seconds before each retry (plus a little jitter)
 TIMEOUT = (20, 180)                     # connect, read (seconds)
+# The search step of a live patch has its own, shorter budget: IRSA's TAP service sometimes takes
+# a query and never answers, and with TIMEOUT and RETRY_WAITS one query could hang for 20 minutes.
+SEARCH_TIMEOUT = (15, 40)               # connect, read (seconds) for one try of a search query
+SEARCH_WAITS = [3, 8, 15]               # waits between tries: 4 tries in all
+SEARCH_BUDGET = 180                     # seconds for the whole search step, every try included
 
 CACHE_DIR = Path(os.environ.get("SIMA_CACHE", Path.home() / ".cache" / "sima-rebuild" / "irsa"))
 SEARCH_TTL = 12 * 3600                  # a search is reused for this long (seconds)
@@ -248,24 +253,41 @@ def _session() -> requests.Session:
 
 
 def fetch(url: str, *, params=None, data=None, headers=None, stop=None, what: str = "",
-          waits: list[float] | None = None) -> tuple[int, bytes]:
+          waits: list[float] | None = None, timeout=None, deadline: float | None = None,
+          on_try=None) -> tuple[int, bytes]:
     """GET (or POST when `data` is given). Busy replies and dropped connections are retried after
     each wait in `waits` (default RETRY_WAITS). `stop(buffer)` may end a download early once enough
-    bytes have arrived. Returns (status, body). Raises FetchError for any other failure."""
+    bytes have arrived. `timeout` is (connect, read) seconds for one try (default TIMEOUT).
+    `deadline` (a time.time() value) ends the retries: no try starts after it and none reads past
+    it. `on_try(n, tries)` hears the start of each try. Returns (status, body). Raises FetchError
+    for any other failure, and when the deadline passes."""
     global _last_retry
     waits = RETRY_WAITS if waits is None else waits
+    connect, read = timeout or TIMEOUT
+    tries = len(waits) + 1
     last = ""
-    for attempt in range(len(waits) + 1):
+    cut = False  # the deadline ended the tries
+    for attempt in range(tries):
         if attempt:
             wait = waits[attempt - 1] * (1 + 0.25 * random.random())
+            if deadline is not None and time.time() + wait >= deadline:
+                cut = True
+                break
             log(f"  retry {attempt} in {wait:.0f}s ({last}) {what or url[:100]}")
             _last_retry = time.time()
             time.sleep(wait)
         with _sem:
+            left = None if deadline is None else deadline - time.time()
+            if left is not None and left <= 0.05:
+                cut = True
+                break
+            if on_try:
+                on_try(attempt + 1, tries)
+            limit = (min(connect, left), min(read, left)) if left is not None else (connect, read)
             try:
                 method = "POST" if data is not None else "GET"
                 with _session().request(method, url, params=params, data=data, headers=headers,
-                                        stream=True, timeout=TIMEOUT) as r:
+                                        stream=True, timeout=limit) as r:
                     if r.status_code in RETRY_STATUS:
                         last = f"HTTP {r.status_code}"
                         continue
@@ -280,7 +302,9 @@ def fetch(url: str, *, params=None, data=None, headers=None, stop=None, what: st
             except (requests.ConnectionError, requests.Timeout, requests.exceptions.ChunkedEncodingError) as e:
                 last = type(e).__name__
                 continue
-    raise FetchError(f"gave up after {len(waits) + 1} tries ({last}): {what or url[:120]}")
+    if cut:
+        raise FetchError(f"no answer within the time allowed ({last or 'no reply'}): {what or url[:120]}")
+    raise FetchError(f"gave up after {tries} tries ({last}): {what or url[:120]}")
 
 
 def _cache_path(*parts: str) -> Path:
@@ -299,8 +323,9 @@ def _fresh(path: Path, ttl: float | None) -> bool:
     return path.exists() and (ttl is None or time.time() - path.stat().st_mtime < ttl)
 
 
-def tap(service: str, adql: str, *, ttl: float | None = SEARCH_TTL, what: str = "") -> list[dict]:
-    """Run one synchronous ADQL query and return rows as dicts (strings). Cached on disk for `ttl`."""
+def tap(service: str, adql: str, *, ttl: float | None = SEARCH_TTL, what: str = "", **retry) -> list[dict]:
+    """Run one synchronous ADQL query and return rows as dicts (strings). Cached on disk for `ttl`.
+    `retry` (waits, timeout, deadline, on_try) goes to fetch()."""
     key = hashlib.sha1((service + "\n" + adql).encode()).hexdigest()
     path = _cache_path("tap", key + ".csv")
     if _fresh(path, ttl):
@@ -309,7 +334,7 @@ def tap(service: str, adql: str, *, ttl: float | None = SEARCH_TTL, what: str = 
         form = {"QUERY": adql, "FORMAT": "csv"}
         if "gea.esac" in service:
             form.update({"REQUEST": "doQuery", "LANG": "ADQL"})
-        _, body = fetch(service, data=form, what=what or "TAP query")
+        _, body = fetch(service, data=form, what=what or "TAP query", **retry)
         head = body[:300].lstrip()
         if head.startswith(b"<") or b"ERROR" in head[:100].upper():
             raise FetchError(f"TAP error from {service}: {body[:400]!r}")
@@ -385,21 +410,23 @@ def parse_search_row(row: dict, release: str) -> dict | None:
     }
 
 
-def search_release(ra: float, dec: float, release: str, ttl: float | None = SEARCH_TTL) -> list[dict]:
-    rows = tap(IRSA_TAP, search_adql(ra, dec, release), ttl=ttl, what=f"search {release}")
+def search_release(ra: float, dec: float, release: str, ttl: float | None = SEARCH_TTL,
+                   **retry) -> list[dict]:
+    rows = tap(IRSA_TAP, search_adql(ra, dec, release), ttl=ttl, what=f"search {release}", **retry)
     out = [e for e in (parse_search_row(r, release) for r in rows) if e]
     return out
 
 
 def search(ra: float, dec: float, releases: list[str], ttl: float | None = SEARCH_TTL,
-           check_retired: bool = True):
+           check_retired: bool = True, **retry):
     """All releases at once, one TAP query each, in parallel. An exposure found in more than one
     release is kept from the first release in the list. Returns (exposures sorted by time,
     {release: count}, [warnings]). With check_retired=False the caller checks empty releases itself
-    (release_note), so a slow collection-list query does not hold up the search."""
+    (release_note), so a slow collection-list query does not hold up the search. `retry` (waits,
+    timeout, deadline, on_try) goes to every query's fetch()."""
     found: dict[str, list[dict]] = {}
     with ThreadPoolExecutor(max_workers=len(releases)) as pool:
-        futs = {pool.submit(search_release, ra, dec, r, ttl): r for r in releases}
+        futs = {pool.submit(search_release, ra, dec, r, ttl, **retry): r for r in releases}
         for f in as_completed(futs):
             found[futs[f]] = f.result()
     seen, exps = set(), []
@@ -755,7 +782,9 @@ def download_cutout(url: str, waits: list[float] | None = None) -> bytes:
     def stop(buf):
         if len(buf) < state["next"]:
             return False
-        state["next"] = len(buf) + 2880 * 8
+        # Look again after another quarter: a 48' cutout is about 3.6 MB, and every look copies
+        # and reads the whole buffer.
+        state["next"] = len(buf) + max(2880 * 8, len(buf) // 4)
         return scan_hdus(bytes(buf))[1]
 
     _, body = fetch(url, stop=stop, what="cutout " + url.rsplit("/", 1)[-1][:60], waits=waits)

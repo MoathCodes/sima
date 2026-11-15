@@ -1,0 +1,120 @@
+/**
+ * Lane D's flows for fields wider than the real exposures (FRM-6, FRM-12) and for waiting on
+ * NASA's archive (BAR-6). The smoke test runs without the live service, so this is the "service
+ * off" path: the real pictures stay, the line says why nothing wider comes, and the sky map
+ * around them (when its tiles load) is labelled. Owner: lane D.
+ */
+import { guide, pressStep, type Flow, type Step } from '../smoke.ts';
+
+type Sima = {
+  sima: {
+    S: { fov: number; source: string; field: { n: number } | null; groups: unknown[]; ra: number };
+    bus: { emit: (t: string, m: unknown) => void };
+  };
+};
+
+const ownWay = pressStep('welcome-own', 'Close the welcome card');
+
+function expectStep(name: string, fn: string, timeout = 8000): Step {
+  return {
+    name,
+    async run(page) {
+      await page.waitForFunction(fn, undefined, { timeout });
+    },
+  };
+}
+
+/** The real pictures are on screen: a field, more than one date, and the data line says so. */
+const stillReal = (why: string) =>
+  expectStep(
+    `Real pictures still on screen ${why}`,
+    `(() => { const S = window.sima.S;
+       return !!S.field && S.groups.length > 1 && S.source === 'real' &&
+         document.querySelector('#frame-exif')?.textContent?.startsWith('Real SPHEREx data') &&
+         document.getElementById('frame-cover')?.hidden === true; })()`,
+  );
+
+export const flows: Flow[] = [
+  {
+    name: 'Wider fields keep the real pictures (D, FRM-6, FRM-12)',
+    owner: 'D',
+    path: '/?target=barnard',
+    steps: [
+      ownWay,
+      stillReal('at the start'),
+      pressStep('fov-larger', 'Field 12′'),
+      pressStep('fov-larger', 'Field 24′'),
+      expectStep('The field is 24′', `document.querySelector('.frame-fov')?.textContent === '24′'`),
+      stillReal('at 24′ (not a blank frame)'),
+      expectStep(
+        'The data line says where the real exposures stop',
+        `/real exposures cover the middle 6\\.\\d′/.test(document.querySelector('#frame-exif')?.textContent ?? '')`,
+      ),
+      expectStep(
+        'Without the live service the line says why nothing wider comes',
+        `(document.querySelector('#frame-load')?.textContent ?? '').includes('live service that is not running')`,
+      ),
+      {
+        name: 'The sky map around them, when it shows, is labelled as the all-dates average (H1)',
+        async run(page) {
+          // The map's tiles come from NASA's archive; when they load, the label must be there.
+          await page.waitForTimeout(3000);
+          const label = await page.evaluate(() => {
+            const el = document.querySelector<HTMLElement>('.pic-around');
+            return el && !el.hidden ? (el.textContent ?? '') : null;
+          });
+          if (label !== null && !label.includes('Sky map (all dates averaged)')) {
+            throw new Error(`unlabelled map: "${label}"`);
+          }
+        },
+      },
+      pressStep('fov-larger', 'Field 48′'),
+      stillReal('at 48′'),
+      {
+        name: 'Drag inside the picture past the exposures pans and keeps them (FRM-12)',
+        async run(page) {
+          const box = await page.locator(guide('picture')).boundingBox();
+          if (!box) throw new Error('no picture');
+          const before = await page.evaluate(() => (window as unknown as Sima).sima.S.ra);
+          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+          await page.mouse.down();
+          await page.mouse.move(box.x + box.width / 2 + box.width * 0.08, box.y + box.height / 2, { steps: 6 });
+          await page.mouse.up();
+          await page.waitForFunction(
+            (b) => (window as unknown as Sima).sima.S.ra > b,
+            before,
+          );
+        },
+      },
+      stillReal('after the pan'),
+      pressStep('fov-smaller', 'Field 24′ again'),
+      pressStep('fov-smaller', 'Field 12′ again'),
+      pressStep('fov-smaller', 'Field 6′ again'),
+      stillReal('back at 6′'),
+    ],
+  },
+  {
+    name: 'A new spot shows the frame and the bar says why it waits (D, BAR-6)',
+    owner: 'D',
+    path: '/?target=barnard',
+    steps: [
+      ownWay,
+      stillReal('at the start'),
+      pressStep('frame-hide', 'Hide the frame'),
+      {
+        name: 'Aim at a spot without pictures: the frame shows again',
+        async run(page) {
+          await page.evaluate(() =>
+            (window as unknown as Sima).sima.bus.emit('aim', { ra: 10, dec: 20 }),
+          );
+          await page.waitForFunction(() => document.getElementById('frame')?.hidden === false);
+        },
+      },
+      expectStep(
+        'The empty date scale says why the bar cannot play',
+        `(document.querySelector('.ds-why')?.textContent ?? '').length > 0 &&
+         document.querySelector('${guide('play')}')?.dataset.tip === document.querySelector('.ds-why')?.textContent`,
+      ),
+    ],
+  },
+];

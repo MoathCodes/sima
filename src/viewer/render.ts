@@ -6,8 +6,10 @@
  * and it runs after every paint, in the picture's own CSS pixels. Never edit this file for it.
  *
  * The picture is square. The field's grid covers at most what the exposures cover: a wider field
- * size shows them in its middle at the right scale, with the rest empty and outlined, so nothing
- * is filled in (H6). Pixels are drawn with hard edges, one square per grid pixel.
+ * size shows them in its middle at the right scale, outlined. Around them, and over any pixel no
+ * exposure covers, the sky map's own picture is drawn dimmed and labelled "Sky map (all dates
+ * averaged)" (surround.ts; H1, H6): it is never part of the real pictures, their numbers or their
+ * differences. Pixels are drawn with hard edges, one square per grid pixel.
  *
  * Pointer: a drag inside the picture pans the field (FRM-12) and the patch on the sky follows; a
  * tap without dragging goes to `onTap`; the wheel changes the field size one step per notch, and
@@ -16,7 +18,7 @@
 import { FOVS, S, pic, type Mode } from './state.ts';
 import { cleanupSteps, type PicSettings } from '../core/picture.ts';
 import { formatDate } from '../core/astro.ts';
-import { colourMatch, wcsPix2Sky, wcsSky2Pix } from '../core/real.ts';
+import { colourMatch, fieldGrid, wcsPix2Sky, wcsSky2Pix } from '../core/real.ts';
 import { groupFrames } from '../core/blink.ts';
 import type { Det, Field, Group } from '../core/types.ts';
 import {
@@ -36,6 +38,15 @@ import {
   type StackView,
 } from './paint.ts';
 import { trialView } from './motion.ts';
+import {
+  aroundMap,
+  aroundMapReady,
+  coverageMask,
+  maskOutline,
+} from './surround.ts';
+
+/** How bright the sky map is drawn around the real exposures: dimmed, so it never passes for them. */
+const MAP_ALPHA = 0.5;
 
 /** The picture on screen, for draw hooks and taps. */
 export interface PictureView {
@@ -327,7 +338,7 @@ export function exif(): string {
   const det = S.color ? 'D1–D6' : `D${S.det}`;
   const parts: string[] = [];
   if (f.simulated) parts.push('Simulated pictures for practice, not real data');
-  else if (S.source === 'live')
+  else if (S.source === 'live' || S.set?.origin === 'live')
     parts.push(`Real SPHEREx data, fetched live${releases ? `, ${releases}` : ''}`);
   else parts.push(`Real SPHEREx data${releases ? `, ${releases}` : ''}`);
   const mjds = frames.map((x) => x.mjd).filter(Number.isFinite);
@@ -347,7 +358,11 @@ export function exif(): string {
   const lams = lamRange(frames.map((x) => x.lam));
   parts.push(lams && !S.color ? `${det} ${lams}` : det);
   const covered = (f.n * f.scale) / 60;
-  if (covered < S.fov - 0.05) parts.push(`exposures cover the middle ${covered.toFixed(1)}′`);
+  const rest = aroundMapReady(f, S.fov, S.lam) ? ', the sky map (all dates averaged) the rest' : '';
+  if (covered < S.fov - 0.05) parts.push(`real exposures cover the middle ${covered.toFixed(1)}′${rest}`);
+  else if (!f.simulated && S.set && coverageMask(S.set, f)) {
+    parts.push(`real exposures cover part of the field${rest}`);
+  }
   const steps = S.original ? [] : cleanupSteps(pic());
   if (steps.length) parts.push(`Processed: ${steps.join(', ')}`);
   return parts.join(' · ');
@@ -439,30 +454,56 @@ function paint(now = false): void {
   const k = size / across;
   const o = (size - n * k) / 2;
   let values: Float32Array | null = null;
+  // Pixels no exposure covers (cutouts are turned with the telescope, or the field was panned).
+  const real = !!field && !field.simulated && !!S.set;
+  const mask = real && field && S.set ? coverageMask(S.set, field) : null;
+  const bare = real && (o > 0.5 || !!mask);
+  let map: OffscreenCanvas | null = null;
 
   if (field && group) {
-    const look = lookFor(field, S.groups, Math.min(S.ref, S.groups.length - 1), settings, S.det);
-    const img = imageFor(field, group, look, settings);
-    if (img) {
-      values = img.values;
-      blit(ctx, img.data, o, k, n);
-      if (img.right) {
-        // Swipe: the date on screen right of the divider, the reference left of it.
-        const cut = Math.round(size * S.swipe);
+    if (bare) {
+      // Around the exposures: the sky map's own picture of the field, dimmed (H1).
+      map = aroundMap(field, S.fov, S.lam, draw);
+      if (map) {
+        const all = fieldGrid(field.ra, field.dec, S.fov).n * k;
         ctx.save();
-        ctx.beginPath();
-        ctx.rect(cut, 0, size - cut, size);
-        ctx.clip();
-        blit(ctx, img.right, o, k, n);
+        ctx.globalAlpha = MAP_ALPHA;
+        ctx.drawImage(map, (size - all) / 2, (size - all) / 2, all, all);
         ctx.restore();
       }
     }
-    if (o > 0.5) {
-      // The exposures stop here: outline what they cover, leave the rest empty (H6).
+    const look = lookFor(field, S.groups, Math.min(S.ref, S.groups.length - 1), settings, S.det);
+    const img = imageFor(field, group, look, settings);
+    const cut = mask ? maskCanvas(field, mask) : null;
+    if (img) {
+      values = img.values;
+      blit(ctx, img.data, o, k, n, cut);
+      if (img.right) {
+        // Swipe: the date on screen right of the divider, the reference left of it.
+        const x = Math.round(size * S.swipe);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, 0, size - x, size);
+        ctx.clip();
+        blit(ctx, img.right, o, k, n, cut);
+        ctx.restore();
+      }
+    }
+    if (bare) {
+      // The real exposures stop here: outline what they cover (H6).
       ctx.save();
-      ctx.strokeStyle = cssVar('--st-ink-3');
+      ctx.strokeStyle = cssVar(map ? '--st-ink-2' : '--st-ink-3');
       ctx.setLineDash([4, 4]);
-      ctx.strokeRect(o + 0.5, o + 0.5, n * k - 1, n * k - 1);
+      if (mask && field) {
+        ctx.beginPath();
+        for (const [x0, y0, x1, y1] of outlineOf(field, mask)) {
+          ctx.moveTo(o + x0 * k, o + y0 * k);
+          ctx.lineTo(o + x1 * k, o + y1 * k);
+        }
+        ctx.stroke();
+      } else {
+        ctx.strokeRect(o + 0.5, o + 0.5, n * k - 1, n * k - 1);
+      }
       ctx.restore();
     }
   }
@@ -501,7 +542,7 @@ function paint(now = false): void {
       ctx.restore();
     }
   }
-  labels(p, size, k, field);
+  labels(p, size, k, field, !!map);
   if (field && group) warmNext(field);
 }
 
@@ -620,18 +661,53 @@ function colourPainted(field: Field, group: Group, p: PicSettings): Painted {
 }
 
 let scratch: OffscreenCanvas | null = null;
+/** Draws a field's image; with `cut`, only the pixels some exposure covers. */
 function blit(
   ctx: CanvasRenderingContext2D,
   img: ImageData,
   o: number,
   k: number,
   n: number,
+  cut: OffscreenCanvas | null = null,
 ): void {
   if (!scratch || scratch.width !== img.width || scratch.height !== img.height) {
     scratch = new OffscreenCanvas(img.width, img.height);
   }
-  scratch.getContext('2d')?.putImageData(img, 0, 0);
+  const sc = scratch.getContext('2d');
+  sc?.putImageData(img, 0, 0);
+  if (sc && cut) {
+    sc.globalCompositeOperation = 'destination-in';
+    sc.drawImage(cut, 0, 0);
+    sc.globalCompositeOperation = 'source-over';
+  }
   ctx.drawImage(scratch, o, o, n * k, n * k);
+}
+
+const cuts = new WeakMap<Field, OffscreenCanvas>();
+/** The covered pixels of a field as an alpha mask, kept per field. */
+function maskCanvas(field: Field, mask: Uint8Array): OffscreenCanvas {
+  let c = cuts.get(field);
+  if (!c) {
+    c = new OffscreenCanvas(field.n, field.n);
+    const g = c.getContext('2d');
+    if (g) {
+      const img = g.createImageData(field.n, field.n);
+      for (let i = 0; i < mask.length; i++) img.data[i * 4 + 3] = mask[i] ? 255 : 0;
+      g.putImageData(img, 0, 0);
+    }
+    cuts.set(field, c);
+  }
+  return c;
+}
+
+const outlines = new WeakMap<Field, [number, number, number, number][]>();
+function outlineOf(field: Field, mask: Uint8Array): [number, number, number, number][] {
+  let o = outlines.get(field);
+  if (!o) {
+    o = maskOutline(mask, field.n);
+    outlines.set(field, o);
+  }
+  return o;
 }
 
 function cssVar(name: string): string {
@@ -639,7 +715,7 @@ function cssVar(name: string): string {
 }
 
 /** The picture's own labels: date badge, the pass tint at the edge, scale bar and north/east. */
-function labels(p: Parts, size: number, k: number, field: Field | null): void {
+function labels(p: Parts, size: number, k: number, field: Field | null, map: boolean): void {
   const h = hud();
   const g = S.groups[S.epoch];
   p.badge.hidden = !h;
@@ -648,9 +724,13 @@ function labels(p: Parts, size: number, k: number, field: Field | null): void {
       ? `<span class="pic-letter" style="--tint:var(--p${((g?.window ?? 0) % 4) + 1})">${h.letter}</span>`
       : '';
     const warn = h.warn ? `<span class="pic-warn">${esc(h.warn)}</span>` : '';
+    // Around the real exposures, the sky map: said on the badge that says what the picture is (H1).
+    const around = map
+      ? '<span class="pic-around"><b>Sky map (all dates averaged)</b> outside the dashed line</span>'
+      : '';
     p.badge.innerHTML = `${warn}<span class="pic-title">${tile}<b>${esc(h.title)}</b></span>${h.lines
       .map((l) => `<span>${esc(l)}</span>`)
-      .join('')}`;
+      .join('')}${around}`;
   }
   // The edge takes the tint of the pass on screen while the pictures flip (DESIGN "Data windows").
   const tinted = !!g && !S.color && (S.mode === 'flip' || S.mode === 'trail');

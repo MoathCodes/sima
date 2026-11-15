@@ -244,6 +244,15 @@ export interface LiveStatus {
   searched: string[];
   /** True while NASA's archive answers busy and the service waits to ask again. Optional. */
   retrying?: boolean;
+  /** While searching: the try under way (1 = the first), of `searchTries`. Optional. */
+  searchTry?: number;
+  searchTries?: number;
+  /** While searching: seconds the search has waited on NASA's archive so far. Optional. */
+  searchElapsed?: number;
+  /** Seconds the search may take in all before the patch fails. Optional. */
+  searchBudget?: number;
+  /** True when the patch failed because NASA's search did not answer in time. Optional. */
+  searchTimedOut?: boolean;
 }
 
 /** An error answer of the live service: `400 {error}`, `404`, or `503 {error: 'busy', state: 'busy'}`. */

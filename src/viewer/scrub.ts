@@ -42,16 +42,24 @@ function domain(groups: readonly Group[]): [number, number] | null {
 }
 
 /** Fills the date scale. `el` is the bar's `[data-dates]` element. */
-export function paintDates(el: HTMLElement): void {
+export function paintDates(el: HTMLElement, why = ''): void {
   const groups = S.groups;
   const dom = domain(groups);
   const measure = S.level === 'measure';
   el.classList.toggle('measure', measure);
   el.classList.toggle('off', !dom);
   if (!dom) {
-    el.innerHTML = '<span class="ds-line"></span>';
+    // With no dates, the scale says why (BAR-6), so a dimmed bar is never a riddle.
+    const html = `<span class="ds-line"></span>${why ? `<span class="ds-why"></span>` : ''}`;
+    if (el.dataset.empty !== html + why) {
+      el.dataset.empty = html + why;
+      el.innerHTML = html;
+      const w = el.querySelector('.ds-why');
+      if (w) w.textContent = why;
+    }
     return;
   }
+  delete el.dataset.empty;
   const [t0, t1] = dom;
   const x = (mjd: number) => `${((mjd - t0) / (t1 - t0)) * 100}%`;
   const parts: string[] = [];

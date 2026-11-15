@@ -6,7 +6,7 @@ real SPHEREx cutouts in the same format as public/data/ (docs/data-format.md). I
 scripts/prebake.py for all of that and adds only the web part, with Python's standard library.
 
 Routes (GET):
-  /api/patch?ra=<deg>&dec=<deg>&fov=<3|6|12>       start or find the patch; answers its status
+  /api/patch?ra=<deg>&dec=<deg>&fov=<3|6|12|24|48> start or find the patch; answers its status
   /api/patch/<id>                                   status of a patch by id
   /api/patch/<id>/<first|full>/frames.json          a step's frames (same format as public/data)
   /api/patch/<id>/<first|full>/frames.bin.gz
@@ -41,13 +41,18 @@ import prebake as pb  # noqa: E402
 # Settings
 # ---------------------------------------------------------------------------------------------
 
-FOVS = (3, 6, 12)                  # field sizes the viewer offers (arcmin)
+FOVS = (3, 6, 12, 24, 48)          # field sizes the viewer offers (arcmin)
 ROUND_DEG = 3                      # positions are rounded to 0.001 deg (3.6", about half a pixel)
 LIVE_PER_DET = 2                   # exposures per detector per visit
+# A 48' cutout is 16 times the pixels of a 12' one (about 3.6 MB from IRSA, 1.3 MB to the page),
+# so the widest field keeps one exposure per detector per visit: half the downloads.
+WIDE_FOV = 48
+WIDE_PER_DET = 1
 LIVE_MAX_FRAMES = 48               # exposures per patch
 MAX_RUNNING = 2                    # patches fetched at once
 MAX_QUEUED = 8                     # patches waiting; more gets 503 busy
 RETRY_FAILED_AFTER = 30            # seconds before a failed patch may be tried again
+RETRY_SEARCH_AFTER = 3             # the same after NASA's search did not answer (the page's Retry)
 EMPTY_TTL = pb.SEARCH_TTL          # an empty spot is searched again after this long
 CATALOG_LIMIT = 5000               # rows per catalogue in catalog.json, brightest first
 DEFAULT_ORIGINS = ["http://localhost:5173"]
@@ -96,7 +101,7 @@ def parse_patch_query(query: str) -> tuple[float, float, int]:
     if not -90 <= dec <= 90:
         raise BadRequest("dec must be between -90 and 90 degrees")
     if fov not in FOVS:
-        raise BadRequest("fov must be 3, 6 or 12 arcminutes")
+        raise BadRequest("fov must be 3, 6, 12, 24 or 48 arcminutes")
     return round_position(ra, dec) + (int(fov),)
 
 
@@ -116,6 +121,11 @@ def patch_id(ra: float, dec: float, fov: int, rels: list[str]) -> str:
 
 def cutout_size(fov: int) -> float:
     return round(fov / 60 + pb.CUTOUT_MARGIN_DEG, 2)
+
+
+def per_det(fov: int) -> int:
+    """Exposures kept per detector per visit for a field size."""
+    return WIDE_PER_DET if fov >= WIDE_FOV else LIVE_PER_DET
 
 
 def first_look_groups(p: dict) -> list[tuple]:
@@ -139,6 +149,18 @@ def first_look(got: dict, p: dict) -> list:
         return []
     frames = [r for (w, _), rs in got.items() if w in (old, new) for r in rs]
     return sorted(frames, key=lambda r: (r[0]["mjd"], r[0]["det"]))
+
+
+def search_limits(started: float) -> dict:
+    """How long the search step may try: read timeout per try, waits between tries, and a
+    deadline `pb.SEARCH_BUDGET` seconds after it started."""
+    return {"timeout": pb.SEARCH_TIMEOUT, "waits": pb.SEARCH_WAITS, "deadline": started + pb.SEARCH_BUDGET}
+
+
+def minutes(seconds: float) -> str:
+    """75 -> "1 min 15 s", 40 -> "40 s"."""
+    s = int(round(seconds))
+    return f"{s // 60} min {s % 60} s" if s >= 60 else f"{s} s"
 
 
 def allowed_origin(origin: str | None, allowed: list[str]) -> str | None:
@@ -180,16 +202,25 @@ class Patch:
             "releases": [], "error": "", "warning": "", "first": None, "full": None,
             "catalog": None, "catalogError": "",
             "ra": ra, "dec": dec, "fov": fov, "searched": rels,
+            # The search step: the try under way (both releases are asked in parallel, so the
+            # higher of the two), how many tries are allowed and how many seconds it may take.
+            "searchTry": 0, "searchTries": len(pb.SEARCH_WAITS) + 1, "searchBudget": pb.SEARCH_BUDGET,
+            "searchTimedOut": False,
         }
+        self.search_started = 0.0
         self.started = time.time()
         self.finished = 0.0
         self.timings: dict[str, float] = {}
         self.cat_started = False
         self.cat_failed = 0.0
+        self.retry_after = RETRY_FAILED_AFTER
 
     def snapshot(self) -> dict:
         with self.lock:
             st = dict(self.status)
+            # Seconds the search has been waiting on NASA's archive, while it searches.
+            st["searchElapsed"] = (round(time.time() - self.search_started, 1)
+                                   if st["state"] == "searching" and self.search_started else 0)
         # NASA's archive answered busy lately and requests wait to be asked again.
         st["retrying"] = st["state"] in ("searching", "first", "rest") and pb.retrying()
         return st
@@ -207,8 +238,31 @@ class Patch:
         cat = patch_catalogue(ra, dec)
         size = cutout_size(fov)
         try:
+            self.search_started = time.time()
             self.set(state="searching")
-            exps, counts, _ = pb.search(ra, dec, rels, check_retired=False)
+            tries: dict[str, int] = {}
+
+            def on_try(n, _of):
+                # Both releases search in parallel; the status shows the later of the two.
+                with self.lock:
+                    tries[threading.current_thread().name] = n
+                    self.status["searchTry"] = max(tries.values())
+
+            try:
+                exps, counts, _ = pb.search(ra, dec, rels, check_retired=False,
+                                            on_try=on_try, **search_limits(self.search_started))
+            except pb.FetchError as e:
+                took = time.time() - self.search_started
+                pb.log(f"patch {self.id} search gave up after {took:.0f}s: {e}")
+                self.retry_after = RETRY_SEARCH_AFTER
+                silent = str(e).startswith(("no answer within", "gave up after"))
+                n = self.snapshot()["searchTry"]
+                self.set(state="failed", searchTimedOut=silent,
+                         error=(f"NASA’s search did not answer within {minutes(took)} "
+                                f"({n} {'try' if n == 1 else 'tries'})") if silent
+                         else f"NASA’s search failed: {e}"[:300])
+                self.finish()
+                return
             self.timings["search"] = time.time() - t0
             self.set(found=len(exps))
             empty = [r for r, c in counts.items() if c == 0]
@@ -221,7 +275,7 @@ class Patch:
             pb.load_plan_tables(exps)
             for e in exps:
                 pb.estimate_lam(e, ra, dec)
-            p = pb.plan(exps, LIVE_PER_DET, LIVE_MAX_FRAMES)
+            p = pb.plan(exps, per_det(fov), LIVE_MAX_FRAMES)
             planned = sum(min(p["perDet"], len(g)) for g in p["groups"].values())
             self.set(state="first", done=0, total=planned, kept=0)
 
@@ -373,7 +427,7 @@ class Service:
             p = self.patches.get(pid)
             if p is not None:
                 st = p.snapshot()
-                if st["state"] == "failed" and time.time() - p.finished > RETRY_FAILED_AFTER:
+                if st["state"] == "failed" and time.time() - p.finished > p.retry_after:
                     p = None
                 elif st["state"] in ("ready", "empty") and not p.dir.exists():
                     p = None  # cache folder was deleted

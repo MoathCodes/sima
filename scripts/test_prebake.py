@@ -11,6 +11,7 @@ import struct
 import sys
 import tempfile
 import threading
+import time
 import unittest
 import warnings
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -434,6 +435,67 @@ class TestFetch(unittest.TestCase):
             pb.RETRY_WAITS = old
             srv.shutdown()
             srv.server_close()
+
+
+class _Silent(BaseHTTPRequestHandler):
+    """Takes the request and never answers in time (IRSA's TAP service on a bad day)."""
+    hits = 0
+
+    def do_POST(self):
+        type(self).hits += 1
+        time.sleep(2)
+
+    do_GET = do_POST
+
+    def log_message(self, *a):
+        pass
+
+
+class TestSearchBudget(unittest.TestCase):
+    def setUp(self):
+        _Silent.hits = 0
+        self.srv = ThreadingHTTPServer(("127.0.0.1", 0), _Silent)
+        self.srv.daemon_threads = True
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        self.url = f"http://127.0.0.1:{self.srv.server_address[1]}/tap"
+
+    def tearDown(self):
+        self.srv.shutdown()
+        self.srv.server_close()
+
+    def test_read_timeout_retries_then_gives_up_by_the_deadline(self):
+        heard = []
+        t0 = time.time()
+        with self.assertRaises(pb.FetchError) as cm:
+            pb.fetch(self.url, data={"QUERY": "x"}, timeout=(1, 0.3), waits=[0.05, 0.05, 0.05],
+                     deadline=t0 + 0.9, on_try=lambda n, of: heard.append((n, of)))
+        took = time.time() - t0
+        self.assertLess(took, 1.6)               # never past the deadline (plus a little)
+        self.assertIn("no answer within", str(cm.exception))
+        self.assertGreaterEqual(len(heard), 2)   # tried again after a read timeout
+        self.assertEqual(heard[0], (1, 4))
+        self.assertEqual([n for n, _ in heard], list(range(1, len(heard) + 1)))
+
+    def test_without_deadline_every_try_is_used(self):
+        heard = []
+        with self.assertRaises(pb.FetchError) as cm:
+            pb.fetch(self.url, timeout=(1, 0.2), waits=[0.01, 0.01], on_try=lambda n, of: heard.append(n))
+        self.assertEqual(heard, [1, 2, 3])
+        self.assertIn("gave up after 3 tries", str(cm.exception))
+
+    def test_long_wait_is_not_started_past_the_deadline(self):
+        t0 = time.time()
+        with self.assertRaises(pb.FetchError):
+            pb.fetch(self.url, timeout=(1, 0.2), waits=[30], deadline=t0 + 5)
+        self.assertLess(time.time() - t0, 2)     # did not sleep 30 s
+        self.assertEqual(_Silent.hits, 1)
+
+    def test_search_budget_is_a_few_minutes(self):
+        tries = len(pb.SEARCH_WAITS) + 1
+        worst = tries * pb.SEARCH_TIMEOUT[1] + sum(pb.SEARCH_WAITS)
+        self.assertLessEqual(pb.SEARCH_BUDGET, 180)
+        self.assertGreaterEqual(worst, pb.SEARCH_BUDGET)  # the budget, not the tries, is the cap
+        self.assertLess(pb.SEARCH_TIMEOUT[1], pb.TIMEOUT[1])
 
 
 class TestFetchPlan(unittest.TestCase):
