@@ -39,6 +39,11 @@ const RAIL_RIGHT = 72;
 /** Cards end this far above the bar. */
 const ABOVE_BAR = 14;
 const MIN_WIDTH = 300;
+/**
+ * Narrower than this the frame's lines wrap faster than its picture shrinks, so a frame that is
+ * too tall stops getting narrower here and its picture gets smaller instead.
+ */
+const FIT_MIN = 340;
 /** The picture's smallest side when the window is too short for the frame at its narrowest. */
 const PIC_MIN = 120;
 const TOOLS_WIDTH = 320;
@@ -162,8 +167,9 @@ function place(opts: { glide?: boolean; closing?: boolean } = {}): void {
     set(frame, 'width', `${width}px`);
     set(frame, '--pic-max', '');
     let height = frame.offsetHeight;
-    for (let i = 0; i < 3 && height > bottom - FRAME_TOP && width > MIN_WIDTH - 40; i++) {
-      width = Math.max(MIN_WIDTH - 40, width - (height - (bottom - FRAME_TOP)));
+    const narrowest = Math.min(width, FIT_MIN);
+    for (let i = 0; i < 3 && height > bottom - FRAME_TOP && width > narrowest; i++) {
+      width = Math.max(narrowest, width - (height - (bottom - FRAME_TOP)));
       set(frame, 'width', `${width}px`);
       height = frame.offsetHeight;
     }

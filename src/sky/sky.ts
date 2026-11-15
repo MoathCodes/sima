@@ -19,6 +19,7 @@ import { emit, on, type BusEvents, type PatchSource } from '../shell/bus.ts';
 import { frameRect, onFrameMove, skyReady, type SkyLoad } from '../shell/shell.ts';
 import { icon } from '../shell/icons.ts';
 import { onLayout } from '../shell/sheet.ts';
+import { softwareRenderer } from '../shell/glass.ts';
 import { formatCoords } from '../core/astro.ts';
 import { CHANNEL_LAM, DEFAULT_LAM, WISE_HIPS, channelFor, detectorOf } from './hips.ts';
 import {
@@ -742,12 +743,17 @@ function brightGrid(): { w: number; h: number; lin: Float32Array } | null {
   if (!canvas || !canvas.width || !skyEl) return bright;
   let done = 0;
   for (const t of tracks.values()) done += t.done.size;
-  const key = `${skyEl.dataset.view} ${hostBox.w} ${hostBox.h} ${done} ${current?.key ?? ''}`;
+  const view = `${skyEl.dataset.view} ${hostBox.w} ${hostBox.h} ${current?.key ?? ''}`;
+  const key = `${view} ${done}`;
   const now = performance.now();
-  if (bright && (bright.key === key || now - bright.at < 250)) return bright;
-  // Reading the map back from the GPU is slow on a software renderer: only once the view has
-  // stopped (labels are only added then), and never under the intro.
+  // A new view is read at most 4 times a second; tiles still coming in, once a second.
+  const wait = bright?.key.startsWith(`${view} `) ? 1000 : 250;
+  if (bright && (bright.key === key || now - bright.at < wait)) return bright;
+  // Reading the map back from the GPU blocks the page: only once the view has stopped (labels
+  // are only added then), never under the intro, and never on a software renderer, where one
+  // read takes seconds (labels then keep their halo only).
   if (now - movedAt < 200 || document.documentElement.dataset.intro !== undefined) return bright;
+  if (slowMap(canvas)) return null;
   const w = Math.max(1, Math.ceil(hostBox.w / SAMPLE_PX));
   const h = Math.max(1, Math.ceil(hostBox.h / SAMPLE_PX));
   if (!sampler) {
@@ -775,6 +781,20 @@ function brightGrid(): { w: number; h: number; lin: Float32Array } | null {
     bright = { key, at: now, w, h, lin: new Float32Array(w * h) };
   }
   return bright;
+}
+
+let software: boolean | null = null;
+
+/** True when the map draws on a software renderer (SwiftShader, llvmpipe). Asked once. */
+function slowMap(canvas: HTMLCanvasElement): boolean {
+  if (software === null) {
+    // The map's own context: getContext returns the one Aladin made (null for the other kind).
+    const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+    const ext = gl?.getExtension('WEBGL_debug_renderer_info');
+    const name: unknown = gl ? gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER) : null;
+    software = softwareRenderer(typeof name === 'string' ? name : null);
+  }
+  return software;
 }
 
 // ----- For the intro (src/intro/intro.ts) -----------------------------------------------------

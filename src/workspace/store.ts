@@ -17,6 +17,7 @@ import { pause, setEpoch } from '../viewer/playback.ts';
 import { emit, on } from '../shell/bus.ts';
 import { toast } from '../shell/toast.ts';
 import { setLevel } from '../explore/game.ts';
+import { setMeasureOpen } from '../viewer/detail.ts';
 import { camera, flyTo } from '../sky/sky.ts';
 import { decodeWorkspace, encodeWorkspace, LINK_LIMIT, migrate, workspaceInHash, type Workspace } from './schema.ts';
 import { frames, onChange, restoreFrames, snapshot } from './frames.ts';
@@ -132,6 +133,9 @@ export function apply(ws: Workspace, opts: { main: boolean; camera: boolean }): 
   } finally {
     restoring = false;
   }
+  // The workspace does not keep Measure's state; its extra frames stand where Measure would
+  // open, so Measure starts closed over them (Expert keeps the Measure level: one press opens it).
+  if (ws.frames.length && S.level === 'measure') setMeasureOpen(false);
   if (opts.camera && ws.camera) flyTo(ws.camera, { animate: false });
   const m = ws.main;
   if (opts.main && m) {
