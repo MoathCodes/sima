@@ -60,6 +60,8 @@ export interface SkyPoint {
 }
 
 const FOV_MIN = 0.05; // 3 arcminutes
+/** The smallest a patch square is drawn, CSS px. */
+const MIN_SIDE = 16;
 /** The first view: Barnard's Star, as wide as the reference pictures (a 6′ patch is ~78 px). */
 const START = { ra: 269.452, dec: 4.693, fov: 1.9 };
 const CROSSFADE_MS = 260; // DESIGN.md Motion, --t-crossfade
@@ -472,7 +474,8 @@ function boxAt(at: { ra: number; dec: number; fov: number } | null): DOMRect | n
   const half = at.fov / 120; // arcminutes → half the side in degrees
   const top = project(view, at.ra, Math.min(90, at.dec + half));
   const bottom = project(view, at.ra, Math.max(-90, at.dec - half));
-  const side = Math.max(12, top && bottom ? Math.abs(bottom.y - top.y) : 12);
+  // Never smaller than 16 px, so the line style (FRM-1) reads at every zoom.
+  const side = Math.max(MIN_SIDE, top && bottom ? Math.abs(bottom.y - top.y) : MIN_SIDE);
   const box = new DOMRect(c.x - side / 2, c.y - side / 2, side, side);
   if (box.right < 0 || box.bottom < 0 || box.left > cam.width || box.top > cam.height) return null;
   return box;
@@ -926,7 +929,7 @@ function loop(): void {
     if (readCamera() || drawQueued) {
       drawQueued = false;
       draw();
-    }
+    } else if (patchLoading() && !reducedMotion()) drawPatch(); // the creeping dashes
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
@@ -1049,6 +1052,11 @@ function patchAt(): { ra: number; dec: number; fov: number } | null {
   return patch;
 }
 
+/** The patch shows the loading style now (FRM-1). */
+function patchLoading(): boolean {
+  return !!patch && (!!(dragging && !dragging.ring) || !!dropped || patch.source === 'loading');
+}
+
 /** FRM-1: line style says what the patch holds. */
 function patchStyle(
   source: PatchSource = (dragging && !dragging.ring) || dropped ? 'loading' : (patch?.source ?? 'none'),
@@ -1059,7 +1067,7 @@ function patchStyle(
     case 'none':
       return { stroke: colours.ink3 ?? '', dash: [0.1, 5], cap: 'round' };
     case 'loading':
-      return { stroke: colours.ink2 ?? '', dash: [6, 4], cap: 'butt' };
+      return { stroke: colours.ink ?? '', dash: [5, 3], cap: 'butt' };
     default:
       return { stroke: colours.mark ?? '', dash: [], cap: 'butt' };
   }
@@ -1087,19 +1095,25 @@ function drawPatch(): void {
   const f = frameRect();
   // The tether: a dotted line from the patch to the nearest point of the frame (DESIGN.md).
   if (f && !(dragging && !dragging.ring)) tether(ctx, box, f);
+  const moving = !!((dragging && !dragging.ring) || dropped);
+  const loading = moving || patch.source === 'loading';
   ctx.save();
-  ctx.strokeStyle = style.stroke;
-  ctx.lineWidth = 2;
   ctx.lineCap = style.cap;
   ctx.setLineDash(style.dash);
+  // While loading, the dashes creep round the square, so the wait shows at any zoom.
+  ctx.lineDashOffset = loading && !reducedMotion() ? -((performance.now() / 60) % 8) : 0;
+  // A dark edge under the line keeps it readable on the bright Milky Way.
+  ctx.strokeStyle = 'rgba(5, 7, 13, 0.6)';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(box.x, box.y, box.width, box.height);
+  ctx.strokeStyle = style.stroke;
+  ctx.lineWidth = 2;
   ctx.strokeRect(box.x, box.y, box.width, box.height);
   ctx.restore();
   // The patch label: only when nothing else names the patch (DESIGN.md Marks on the sky).
-  const moving = !!((dragging && !dragging.ring) || dropped);
-  const loading = moving || patch.source === 'loading';
   if (loading || !f) {
     const text = loading ? `${moving ? 'Moving here' : patch.label} · loading` : patch.label;
-    tag(ctx, box, text, style.stroke);
+    tag(ctx, box, text, style.stroke, true);
   }
 }
 
@@ -1123,17 +1137,64 @@ function drawRings(ctx: CanvasRenderingContext2D): void {
   }
 }
 
-/** A small tag on a square's top left corner (or under it near the top of the window). */
-function tag(ctx: CanvasRenderingContext2D, box: DOMRect, text: string, fill: string): void {
+/**
+ * A small tag on a square's top left corner (or under it near the top of the window). With
+ * `clear`, it moves to another side of the square when a card would cover it.
+ */
+function tag(
+  ctx: CanvasRenderingContext2D,
+  box: DOMRect,
+  text: string,
+  fill: string,
+  clear = false,
+): void {
   ctx.font = colours.font ?? '';
   const w = ctx.measureText(text).width + 10;
-  const y = tagTop(box);
+  const at = clear ? tagSpot(box, w) : { x: box.left - 1, y: tagTop(box) };
   ctx.fillStyle = fill;
-  roundRect(ctx, box.left - 1, y, w, 17, 4);
+  roundRect(ctx, at.x, at.y, w, 17, 4);
   ctx.fill();
   ctx.fillStyle = colours.sky ?? '';
   ctx.textBaseline = 'middle';
-  ctx.fillText(text, box.left + 4, y + 9);
+  ctx.fillText(text, at.x + 5, at.y + 9);
+}
+
+let cardCache: { at: number; boxes: DOMRect[] } | null = null;
+/** The cards on screen (re-read at most every 300 ms). */
+function cardBoxes(): DOMRect[] {
+  const now = performance.now();
+  if (!cardCache || now - cardCache.at > 300) {
+    cardCache = {
+      at: now,
+      boxes: [...document.querySelectorAll('[data-card]')]
+        .filter((el) => el.checkVisibility())
+        .map((el) => el.getBoundingClientRect()),
+    };
+  }
+  return cardCache.boxes;
+}
+
+/** Where a tag `w` wide goes by a square: above, below, right or left, wherever no card is. */
+function tagSpot(box: DOMRect, w: number): { x: number; y: number } {
+  const h = 17;
+  const tries = [
+    { x: box.left - 1, y: box.top - 19 },
+    { x: box.left - 1, y: box.bottom + 3 },
+    { x: box.right - w + 1, y: box.top - 19 },
+    { x: box.right - w + 1, y: box.bottom + 3 },
+    { x: box.right + 6, y: box.top + box.height / 2 - h / 2 },
+    { x: box.left - 6 - w, y: box.top + box.height / 2 - h / 2 },
+  ];
+  const cards = cardBoxes();
+  const free = tries.find(
+    (t) =>
+      t.x >= 4 &&
+      t.y >= 4 &&
+      t.x + w <= cam.width - 4 &&
+      t.y + h <= cam.height - 4 &&
+      !cards.some((c) => t.x < c.right && t.x + w > c.left && t.y < c.bottom && t.y + h > c.top),
+  );
+  return free ?? { x: box.left - 1, y: tagTop(box) };
 }
 
 /** Where a square's tag starts: above its top left corner, or under it near the window's top. */
