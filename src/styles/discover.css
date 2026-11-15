@@ -55,6 +55,11 @@
   /* Never over the sky note (H1): it sits in the bottom 56 px. */
   max-height: calc(100vh - 76px - 60px);
   display: flex;
+  /* Only a mount: the rounded card inside is the glass. app.css lists this id as Regular glass,
+     which drew a square rim and blur around the card. */
+  --mat-filter: none;
+  background: none;
+  box-shadow: none;
 }
 #discover-list > .dsc-card {
   flex: 1;
@@ -90,6 +95,11 @@
   overflow-y: auto;
   padding: 28px 28px 22px;
   border-radius: 26px;
+}
+/* With the frame open the globe is centred left of it (sky.ts), so the welcome keeps to the
+   gutter and clear of the globe's middle, where the first beacon is. */
+html:has(#frame:not([hidden])) #dsc-welcome {
+  inset-inline-start: var(--v2-gutter);
 }
 #discover-list[hidden],
 #mission[hidden],
@@ -405,6 +415,11 @@
 .dsc-list-hd .dsc-faint {
   margin-inline-start: auto;
 }
+/* Room for the rows' highlight, which reaches 8 px past their content (the scroll clips). */
+.dsc-list > .dsc-scroll {
+  margin-inline: -8px;
+  padding-inline: 8px;
+}
 .dsc-mlist {
   position: relative;
   display: grid;
@@ -420,12 +435,15 @@
 }
 .dsc-m,
 .dsc-o {
-  width: 100%;
+  /* The highlight reaches 8 px past the icon and the button on each side; the content stays
+     on the card's edge. */
+  width: calc(100% + 16px);
+  margin-inline: -8px;
   display: grid;
   grid-template-columns: 44px 1fr auto;
   gap: 12px;
   align-items: center;
-  padding: 8px 8px 8px 0;
+  padding: 8px;
   border: 0;
   border-radius: 14px;
   background: transparent;
