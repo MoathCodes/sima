@@ -40,7 +40,12 @@ import {
 import { trialView } from './motion.ts';
 import { fmtList, t as tr } from '../shell/i18n.ts';
 import { liveWords } from './seed.ts';
-import { aroundMap, aroundMapReady, coverageMask, maskOutline } from './surround.ts';
+import {
+  aroundMap,
+  aroundMapReady,
+  coverageMask,
+  maskOutline,
+} from './surround.ts';
 
 /** How bright the sky map is drawn around the real exposures: dimmed, so it never passes for them. */
 const MAP_ALPHA = 0.5;
@@ -257,14 +262,7 @@ export function hud(): Hud | null {
       }),
       // Measure names the detector and wavelengths, as the badge does for one date (H2).
       lines: measure
-        ? [
-            `D${S.det} ${lamRange(
-              framesOf(
-                field,
-                [a, b].filter((x): x is Group => !!x),
-              ).map((x) => x.lam),
-            )}`,
-          ]
+        ? [`D${S.det} ${lamRange(framesOf(field, [a, b].filter((x): x is Group => !!x)).map((x) => x.lam))}`]
         : [],
       warn: sim,
     };
@@ -301,8 +299,7 @@ export function hud(): Hud | null {
   }
   const frames = framesOf(field, [g]);
   // Discover and phones: the date alone; how many shots are blended is in the data line's tooltip.
-  if (!measure)
-    return { letter: g.letter, title: formatDate(g.mjd, 'month'), lines: [], warn: sim };
+  if (!measure) return { letter: g.letter, title: formatDate(g.mjd, 'month'), lines: [], warn: sim };
   // One line under the date: pass, detector and wavelength, "· reference" on the reference date.
   // A different colour from the reference is the only other line (redesign item 2: few words; what
   // each view shows is in the frame's "About this picture").
@@ -311,24 +308,18 @@ export function hud(): Hud | null {
   const refFrame = ref ? framesOf(field, [ref])[0] : undefined;
   const lam =
     frames.length > 1
-      ? tr('pic.shots', {
-          lam: `D${g.det} ${lamRange(frames.map((x) => x.lam))}`,
-          n: String(frames.length),
-        })
+      ? tr('pic.shots', { lam: `D${g.det} ${lamRange(frames.map((x) => x.lam))}`, n: String(frames.length) })
       : f
         ? `D${g.det} ${f.lam.toFixed(2)} µm`
         : `D${g.det}`;
-  const lines = [
-    `${passName(field, g.window)} · ${lam}${ref === g ? ` · ${tr('pic.reference')}` : ''}`,
-  ];
+  const lines = [`${passName(field, g.window)} · ${lam}${ref === g ? ` · ${tr('pic.reference')}` : ''}`];
   const differs = !!f && !!refFrame && ref !== g && !colourMatch(f, refFrame);
   return {
     letter: g.letter,
     title: formatDate(g.mjd, 'time'),
     lines,
     warn: sim,
-    note:
-      differs && refFrame ? tr('pic.refWas', { lam: `${refFrame.lam.toFixed(2)} µm` }) : undefined,
+    note: differs && refFrame ? tr('pic.refWas', { lam: `${refFrame.lam.toFixed(2)} µm` }) : undefined,
   };
 }
 
@@ -404,10 +395,7 @@ export function dataLine(): string {
     const n = stackShown()?.frames ?? frames.length;
     parts.push(
       mjds.length
-        ? tr('pic.stackNRange', {
-            n: String(n),
-            range: shortRange(Math.min(...mjds), Math.max(...mjds)),
-          })
+        ? tr('pic.stackNRange', { n: String(n), range: shortRange(Math.min(...mjds), Math.max(...mjds)) })
         : tr('pic.stackN', { n: String(n) }),
     );
   } else if (mjds.length) parts.push(shortRange(Math.min(...mjds), Math.max(...mjds)));
@@ -475,8 +463,7 @@ function stackNow() {
   const field = S.field;
   if (!field || S.mode !== 'stack') return null;
   // The motion handle's trial stack (motion.ts, O-V6) when its arrow is off the catalogue motion.
-  stackCache =
-    trialView() ?? stackPicture(field, S.groups, S.det, S.set?.data.catalogue ?? null, pic(), draw);
+  stackCache = trialView() ?? stackPicture(field, S.groups, S.det, S.set?.data.catalogue ?? null, pic(), draw);
   return stackCache;
 }
 
@@ -490,13 +477,7 @@ function paint(now = false): void {
   if (!p) return;
   // A new picture of the patch on screen waits for its pictures to be made off the page's thread
   // (TLS-8); the one on screen stays until then. A new patch, or drawNow, paints at once.
-  if (
-    !now &&
-    S.field &&
-    S.field === view?.field &&
-    !picturesReady(S.field, neededGroups(S.field), pic(), draw)
-  )
-    return;
+  if (!now && S.field && S.field === view?.field && !picturesReady(S.field, neededGroups(S.field), pic(), draw)) return;
   const { canvas, host } = p;
   const size = Math.round(host.clientWidth) || 1;
   const dpr = devicePixelRatio || 1;

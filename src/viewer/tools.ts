@@ -31,12 +31,13 @@ import { buildClean, updateClean } from './tools/tab-clean.ts';
 import { buildFind, updateFind } from './tools/tab-find.ts';
 import { buildLayers, updateLayers } from './tools/tab-layers.ts';
 import { esc, num, sig } from './tools/dom.ts';
+import { t as tr } from '../shell/i18n.ts';
 
 const TABS: readonly [ToolsTab, string][] = [
-  ['picture', 'Picture'],
-  ['clean', 'Clean up'],
-  ['find', 'Find changes'],
-  ['layers', 'Layers'],
+  ['picture', tr('tt.picture')],
+  ['clean', tr('tt.clean')],
+  ['find', tr('tt.find')],
+  ['layers', tr('tt.layers')],
 ];
 
 const PARTS: Record<ToolsTab, [(root: HTMLElement) => void, (root: HTMLElement) => void]> = {
@@ -139,7 +140,7 @@ function update(): void {
   const reset = panel.querySelector<HTMLButtonElement>('[data-reset]');
   if (reset) reset.disabled = !anyChanged();
   const foot = panel.querySelector('[data-foot]');
-  if (foot) foot.textContent = 'Kept in this browser and in shared links';
+  if (foot) foot.textContent = tr('tt.kept');
 }
 
 // ----- Over the picture: Original, Processed, the value under the pointer -------------------
@@ -188,12 +189,12 @@ function picTools(): void {
   const display = displayChanges();
   const lines: string[] = [];
   if (S.original) {
-    lines.push('Original: the pixels as recorded');
+    lines.push(tr('tt.original'));
     if (display) lines.push(`Display kept: ${display}`);
   } else if (steps.length) {
     lines.push(`Processed: ${steps.join(', ')}`);
     if (pic().median && (S.mode === 'diff' || S.mode === 'two')) {
-      lines.push('The median filter can erase faint stars and movers here');
+      lines.push(tr('tt.median'));
     }
   }
   label.hidden = !lines.length;
@@ -303,8 +304,8 @@ function pointer(): void {
 
 /** One pixel, in words: ["123 µJy · 4.2× noise · flagged pixel", "RA Dec · pixel (31, 40)"]. */
 function pixelLine(view: Readonly<PictureView>, px: number, py: number): string[] {
-  if (view.field?.simulated) return ['Simulated pictures: no real pixel values'];
-  if (S.color) return ['The Color view mixes six detectors: pick one to read a value'];
+  if (view.field?.simulated) return [tr('tt.simPx')];
+  if (S.color) return [tr('tt.colorPx')];
   const f = view.toField(px, py);
   const x = Math.round(f.x);
   const y = Math.round(f.y);
@@ -315,11 +316,11 @@ function pixelLine(view: Readonly<PictureView>, px: number, py: number): string[
   const where = `${sky ? `${whole(formatRa(sky.ra))} ${whole(formatDec(sky.dec))} · ` : ''}pixel (${x}, ${y})`;
   if (x < 0 || y < 0 || x >= n || y >= n) return ['', where];
   const frames = (view.group?.frames ?? []).map((i) => view.field?.frames[i]).filter((fr) => !!fr);
-  if (!frames.length) return ['No exposure in this detector on this date', where];
+  if (!frames.length) return [tr('tt.noExp'), where];
   const flagged = frames.filter((fr) => fr.bad[y * n + x]).length;
-  if (!view.values) return ['Two dates shows two pictures: pick one view to read a value', where];
+  if (!view.values) return [tr('tt.twoPx'), where];
   const v = view.values[y * n + x] ?? Number.NaN;
-  if (!Number.isFinite(v)) return ['No data here', where];
+  if (!Number.isFinite(v)) return [tr('tt.noData'), where];
   const noise = noiseOf(view);
   const times = noise ? ` · ${num((v - noise.sky) / noise.sigma, 1)}× noise` : '';
   const flag = flagged ? ` · flagged pixel (${flagged} of ${frames.length} exposures)` : '';
@@ -334,7 +335,7 @@ function pixelLine(view: Readonly<PictureView>, px: number, py: number): string[
  * the clean ones.
  */
 function region(view: Readonly<PictureView>, b: { x0: number; y0: number; x1: number; y1: number }): string[] {
-  if (!view.values) return ['Pick a view with one picture to measure a box'];
+  if (!view.values) return [tr('tt.pickBox')];
   const a = view.toField(Math.min(b.x0, b.x1), Math.min(b.y0, b.y1));
   const z = view.toField(Math.max(b.x0, b.x1), Math.max(b.y0, b.y1));
   const frames = (view.group?.frames ?? []).map((i) => view.field?.frames[i]).filter((fr) => !!fr);

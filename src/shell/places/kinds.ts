@@ -5,6 +5,7 @@
 import type { Place, PlaceKind } from '../../data/schema.ts';
 import type { IconName } from '../icons.ts';
 import { hasCommonName, motionPerYear } from '../objects.ts';
+import { t } from '../i18n.ts';
 
 /** A sub-filter inside a list. */
 export interface Filter {
@@ -26,7 +27,7 @@ export interface KindChip {
   noun: string;
 }
 
-const all: Filter = { name: 'All', keep: () => true };
+const all: Filter = { name: t('kd.all'), keep: () => true };
 const kindIs =
   (...kinds: PlaceKind[]) =>
   (p: Place) =>
@@ -47,85 +48,85 @@ const GALAXIES: PlaceKind[] = ['spiral-galaxy', 'elliptical-galaxy', 'galaxy'];
 export const KIND_CHIPS: readonly KindChip[] = [
   {
     id: 'stars',
-    name: 'Stars',
+    name: t('kd.stars'),
     icon: 'star',
     kinds: STARS,
     has: kindIs(...STARS),
-    noun: 'stars',
+    noun: t('kd.starsN'),
     filters: [
       all,
-      { name: 'Arabic names', keep: (p) => !!p.names.arabic },
-      { name: 'With a name', keep: hasCommonName },
+      { name: t('kd.arabic'), keep: (p) => !!p.names.arabic },
+      { name: t('kd.named'), keep: hasCommonName },
     ],
   },
   {
     id: 'nearby',
-    name: 'Nearby',
+    name: t('kd.nearby'),
     icon: 'pin',
     kinds: NEARBY,
     has: (p) => NEARBY.includes(p.kind) || (p.distance !== undefined && p.distance.ly <= 30),
-    noun: 'nearby stars and brown dwarfs',
+    noun: t('kd.nearbyN'),
     filters: [
       all,
-      { name: 'Within 15 light-years', keep: near(15) },
-      { name: 'Fast movers', keep: (p) => (motionPerYear(p) ?? 0) >= 1 },
-      { name: 'Brown dwarfs', keep: kindIs('brown-dwarf') },
+      { name: t('kd.within15'), keep: near(15) },
+      { name: t('kd.fast'), keep: (p) => (motionPerYear(p) ?? 0) >= 1 },
+      { name: t('kd.bd'), keep: kindIs('brown-dwarf') },
     ],
   },
   {
     id: 'changing',
-    name: 'Changing',
+    name: t('kd.changing'),
     icon: 'chart',
     kinds: ['variable-star'],
     has: kindIs('variable-star'),
-    noun: 'changing stars',
+    noun: t('kd.changingN'),
     filters: [
       all,
-      { name: 'With a name', keep: hasCommonName },
-      { name: 'Seen by eye', keep: (p) => p.magnitude?.band === 'V' && p.magnitude.value <= 6 },
+      { name: t('kd.named'), keep: hasCommonName },
+      { name: t('kd.eye'), keep: (p) => p.magnitude?.band === 'V' && p.magnitude.value <= 6 },
     ],
   },
   {
     id: 'clusters',
-    name: 'Clusters',
+    name: t('kd.clusters'),
     icon: 'two',
     kinds: ['open-cluster', 'globular-cluster'],
     has: kindIs('open-cluster', 'globular-cluster'),
-    noun: 'star clusters',
+    noun: t('kd.clustersN'),
     filters: [
       all,
-      { name: 'Open', keep: kindIs('open-cluster') },
-      { name: 'Globular', keep: kindIs('globular-cluster') },
+      { name: t('kd.open'), keep: kindIs('open-cluster') },
+      { name: t('kd.globular'), keep: kindIs('globular-cluster') },
     ],
   },
   {
     id: 'nebulae',
-    name: 'Nebulae',
+    name: t('kd.nebulae'),
     icon: 'layers',
     kinds: NEBULAE,
     has: kindIs(...NEBULAE),
-    noun: 'clouds and shells',
+    noun: t('kd.nebulaeN'),
     filters: [
       all,
-      { name: 'Glowing gas', keep: kindIs('emission-nebula') },
-      { name: 'Reflecting', keep: kindIs('reflection-nebula') },
-      { name: 'Dark dust', keep: kindIs('dark-nebula') },
-      { name: 'Dying stars', keep: kindIs('planetary-nebula') },
-      { name: 'Exploded stars', keep: kindIs('supernova-remnant') },
+      { name: t('kd.glow'), keep: kindIs('emission-nebula') },
+      { name: t('kd.reflect'), keep: kindIs('reflection-nebula') },
+      { name: t('kd.dark'), keep: kindIs('dark-nebula') },
+      { name: t('kd.dying'), keep: kindIs('planetary-nebula') },
+      { name: t('kd.exploded'), keep: kindIs('supernova-remnant') },
     ],
   },
   {
     id: 'galaxies',
-    name: 'Galaxies',
+    name: t('kd.galaxies'),
     icon: 'globe',
     kinds: GALAXIES,
     has: kindIs(...GALAXIES),
-    noun: 'galaxies',
+    noun: t('kd.galaxiesN'),
     filters: [
       all,
-      { name: 'Spiral', keep: kindIs('spiral-galaxy') },
-      { name: 'Elliptical', keep: kindIs('elliptical-galaxy') },
-      { name: 'Other', keep: kindIs('galaxy') },
+      { name: t('kd.spiral'), keep: kindIs('spiral-galaxy') },
+      { name: t('kd.elliptical'), keep: kindIs('elliptical-galaxy') },
+      { name: t('kd.other'), keep: kindIs('galaxy') },
     ],
   },
 ];
