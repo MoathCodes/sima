@@ -539,7 +539,7 @@
 }
 .tl-cmap[aria-pressed='true'] {
   background: var(--action-soft);
-  color: var(--action);
+  color: var(--on-action-soft);
 }
 .tl-swatch {
   height: 10px;

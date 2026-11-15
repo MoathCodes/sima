@@ -207,7 +207,7 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
   font: var(--text-label);
 }
 .frame-measure[aria-pressed='true'] {
-  color: var(--action);
+  color: var(--ink);
 }
 /* At 1366 in Measure the header keeps only Measure's icon (spec-img/19). */
 @media (max-width: 1420px) {

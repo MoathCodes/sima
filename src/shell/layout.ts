@@ -257,6 +257,8 @@ function measureWidth(): number {
 
 function barTop(): number {
   const bar = byId('bar');
+  // Discover hides the bar: the frame may then reach the window's bottom.
+  if (bar && getComputedStyle(bar).display === 'none') return innerHeight - GUTTER;
   return bar ? bar.getBoundingClientRect().top : innerHeight - 30 - 84;
 }
 

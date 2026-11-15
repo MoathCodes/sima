@@ -147,7 +147,7 @@ export function frameRect(): DOMRect | null {
  */
 export function openPlace(place: PlaceRef, opts: { fly?: boolean } = {}): void {
   hideFrame(false);
-  emit('aim', { ra: place.ra, dec: place.dec, fov: place.fov, target: place.target ?? null });
+  emit('aim', { ra: place.ra, dec: place.dec, fov: place.fov, target: place.target ?? null, name: place.name });
   if (opts.fly !== false) flyTo({ ra: place.ra, dec: place.dec });
 }
 

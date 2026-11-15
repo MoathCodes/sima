@@ -86,7 +86,7 @@ let lastInput = 0;
 export function startTips(): void {
   const el = document.getElementById('tip');
   if (!el) return;
-  el.className = 'tip-card';
+  el.className = 'tip-card glass-raised';
   el.setAttribute('role', 'note');
   window.setInterval(check, 400);
   for (const type of ['pointerdown', 'keydown', 'wheel'])
