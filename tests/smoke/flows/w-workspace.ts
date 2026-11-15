@@ -30,7 +30,6 @@ const nearest = (id: string, at: string) =>
   `((f, t) => f.groups.length > 0 && f.groups.every((g) => Math.abs(g.mjd - t) >= Math.abs(f.groups[f.epoch].mjd - t)))(${WS}.frameById('${id}'), ${at})`;
 
 const start: Step[] = [
-  pressStep('welcome-own', 'Close the welcome card'),
   {
     name: 'Pause the main frame',
     async run(page) {

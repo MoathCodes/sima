@@ -2,9 +2,8 @@
  * Lane D's flows: the frame card and the bar on real shipped data (FRM-5 to FRM-12, BAR-1 to
  * BAR-6), and a spot with no pictures (FRM-11). Owner: lane D.
  */
-import { guide, keyStep, pressStep, type Flow, type Step } from '../smoke.ts';
+import { guide, keyStep, pressStep, type Flow, type Step, openMeasureStep } from '../smoke.ts';
 
-const ownWay = pressStep('welcome-own', 'Close the welcome card');
 
 /** Fails unless `fn` is true in the page within a few seconds. */
 function expectStep(name: string, fn: string): Step {
@@ -28,7 +27,6 @@ export const flows: Flow[] = [
     owner: 'D',
     path: '/?target=barnard',
     steps: [
-      ownWay,
       playing,
       keyStep('Space', 'Space pauses (BAR-1)'),
       expectStep(
@@ -103,7 +101,7 @@ export const flows: Flow[] = [
           await page.mouse.click(box.x + 4, box.y + 32);
         },
       },
-      pressStep('measure', 'Measure: six views, visit dots, counter'),
+      openMeasureStep('Measure: six views, visit dots, counter'),
       expectStep(
         'The counter shows',
         `/\\d+ \\/ \\d+/.test(document.querySelector('[data-count]')?.textContent ?? '')`,
@@ -120,7 +118,6 @@ export const flows: Flow[] = [
     owner: 'D',
     path: '/?target=r-dra',
     steps: [
-      ownWay,
       playing,
       ...['eps-indi-b', 'wise-0855', 'rw-aur'].map((key): Step => ({
         name: `Open ${key}`,
@@ -153,7 +150,6 @@ export const flows: Flow[] = [
     owner: 'D',
     path: '/?ra=10&dec=20',
     steps: [
-      ownWay,
       expectStep(
         'The frame says why and lists the five targets',
         `document.querySelectorAll('.cover-targets [data-target]').length === 5 &&

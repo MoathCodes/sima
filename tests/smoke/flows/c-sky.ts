@@ -8,7 +8,6 @@
 import { guide, keyStep, pressStep, type Flow, type Step } from '../smoke.ts';
 import type { Page } from 'playwright-core';
 
-const ownWay = pressStep('welcome-own', 'Close the welcome card');
 
 async function viewOf(page: Page): Promise<number[]> {
   const v = await page.locator('#sky').getAttribute('data-view');
@@ -71,7 +70,6 @@ export const flows: Flow[] = [
     name: 'Sky map, patch and click card (C)',
     owner: 'C',
     steps: [
-      ownWay,
       skyReady,
       {
         name: 'The wheel zooms the sky toward the pointer (SKY-3)',
@@ -140,7 +138,6 @@ export const flows: Flow[] = [
     name: 'Sky map chooser and wavelength (C)',
     owner: 'C',
     steps: [
-      ownWay,
       skyReady,
       pressStep('sky-map-button', 'Open the sky map chooser'),
       pressStep('sky-map-wise-w2', 'AllWISE 4.6 µm (SKY-4)'),

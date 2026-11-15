@@ -4,9 +4,8 @@
  * pretend mark on the picture, and closes on Escape. About's Planet X section opens it too.
  * Owner: V.
  */
-import { guide, keyStep, press, pressStep, type Flow, type Step } from '../smoke.ts';
+import { guide, keyStep, press, type Flow, type Step } from '../smoke.ts';
 
-const ownWay = pressStep('welcome-own', 'Close the welcome card');
 
 const fromSearch: Step = {
   name: 'Search "planet x" and open the sandbox',
@@ -63,7 +62,6 @@ export const flows: Flow[] = [
     owner: 'V',
     path: '/?target=wise-0855',
     steps: [
-      ownWay,
       fromSearch,
       verdictSays('A model verdict at 500 AU', /^Model\s+SPHEREx would not show it here/),
       closer,
@@ -76,6 +74,6 @@ export const flows: Flow[] = [
     name: 'Sandbox from About',
     owner: 'V',
     path: '/?target=barnard',
-    steps: [ownWay, fromAbout, keyStep('Escape', 'Escape closes it'), closed],
+    steps: [fromAbout, keyStep('Escape', 'Escape closes it'), closed],
   },
 ];

@@ -11,7 +11,6 @@ import { guide, keyStep, pressStep, type Flow, type Step } from '../smoke.ts';
 const fixture = (name: string): string =>
   readFileSync(new URL(`../../fixtures/${name}`, import.meta.url), 'utf8');
 
-const ownWay = pressStep('welcome-own', 'Close the welcome card');
 
 /** Answers the page's VizieR requests with a saved answer (by catalogue), or fails them. */
 function vizier(mode: 'answer' | 'fail'): Step {
@@ -80,7 +79,6 @@ export const flows: Flow[] = [
     name: 'Catalogue search: fast movers and cold objects',
     owner: 'V',
     steps: [
-      ownWay,
       vizier('answer'),
       openPanel,
       pressStep('finds-search', 'Search this view (Gaia DR3)'),
@@ -113,7 +111,6 @@ export const flows: Flow[] = [
     name: 'Catalogue search: VizieR down says so, with Try again',
     owner: 'V',
     steps: [
-      ownWay,
       vizier('fail'),
       {
         name: 'Search "fast movers"',

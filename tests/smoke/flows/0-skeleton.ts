@@ -4,29 +4,36 @@
  * when a lane builds a step that is missing here (the tour ringing Play, tapping the mover), it
  * asks the integrator to add it.
  */
-import { guide, keyStep, press, pressStep, type Flow } from '../smoke.ts';
+import { guide, keyStep, press, pressStep, type Flow, openMeasureStep } from '../smoke.ts';
 
-/** Closes the welcome card the way a visitor who wants to look around does. */
-const ownWay = pressStep('welcome-own', 'Close the welcome card ("Or explore the sky on my own")');
 
 export const flows: Flow[] = [
   {
     name: 'First visit',
     owner: 'integrator',
-    steps: [],
+    firstVisit: true,
+    steps: [
+      {
+        name: 'A first visit opens Discover with its welcome card (VIEW-1)',
+        async run(page) {
+          await page.waitForFunction(() => document.documentElement.dataset.view === 'discover');
+          await page.locator(guide('discover-welcome')).waitFor();
+        },
+      },
+    ],
   },
   {
     name: 'Demo flow (SPEC 9.6)',
     owner: 'integrator',
+    path: '/?target=barnard',
     steps: [
-      pressStep('starter-runaway', 'Press "Runaway star"'),
       pressStep('play', 'Press Play'),
       pressStep('view-diff', 'Show Difference'),
       pressStep('view-two', 'Show Two dates'),
       pressStep('view-flip', 'Back to Flip'),
       keyStep('Space', 'Space pauses'),
       keyStep('ArrowRight', 'Right arrow steps'),
-      pressStep('measure', 'Press Measure'),
+      openMeasureStep('Open Measure'),
       pressStep('zoom-out', 'Zoom the sky out'),
       pressStep('zoom-out', 'Zoom the sky out again'),
       {
@@ -48,9 +55,9 @@ export const flows: Flow[] = [
   {
     name: 'Measure and the picture tools',
     owner: 'integrator',
+    path: '/?target=barnard',
     steps: [
-      pressStep('starter-runaway', 'Press "Runaway star"'),
-      pressStep('measure', 'Press Measure'),
+      openMeasureStep('Open Measure'),
       pressStep('all-numbers', 'Show all the numbers'),
       pressStep('tools-button', 'Open the picture tools'),
       pressStep('tools-tab-clean', 'Clean up tab'),
@@ -65,7 +72,6 @@ export const flows: Flow[] = [
     name: 'Menus, dialogs and the sky map',
     owner: 'integrator',
     steps: [
-      ownWay,
       pressStep('places-button', 'Open Places'),
       keyStep('Escape', 'Escape closes Places'),
       pressStep('guide-button', 'Open Guide'),
@@ -84,7 +90,6 @@ export const flows: Flow[] = [
     name: 'A click on the sky asks first (FRM-3)',
     owner: 'integrator',
     steps: [
-      ownWay,
       {
         name: 'Click empty sky',
         async run(page, size) {
@@ -102,13 +107,13 @@ export const flows: Flow[] = [
     name: 'A spot with no pictures (FRM-11)',
     owner: 'integrator',
     path: '/?ra=10&dec=20',
-    steps: [ownWay, pressStep('measure', 'Press Measure')],
+    steps: [openMeasureStep('Open Measure')],
   },
   {
     name: 'Embed mode (GEN-3)',
     owner: 'integrator',
     path: '/?embed=1&target=barnard',
     scrolls: true,
-    steps: [pressStep('measure', 'Press Measure')],
+    steps: [openMeasureStep('Open Measure')],
   },
 ];

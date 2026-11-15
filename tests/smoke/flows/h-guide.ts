@@ -4,7 +4,7 @@
  * Owner: lane H.
  */
 import type { Page } from 'playwright-core';
-import { guide, keyStep, press, pressStep, type Flow, type Step } from '../smoke.ts';
+import { guide, keyStep, press, pressStep, type Flow, type Step, openMeasureStep } from '../smoke.ts';
 
 /** Fails unless `fn` (page JavaScript) becomes true within a few seconds. */
 function expect(name: string, fn: string, timeout = 10000): Step {
@@ -98,7 +98,7 @@ export const flows: Flow[] = [
       ),
       taskSays('Rings: catalogue predictions'),
       onStep(6),
-      pressStep('measure', 'Press Measure'),
+      openMeasureStep('Open Measure'),
       onStep(7),
       ringsPart('wavelength'),
       {
@@ -255,7 +255,7 @@ export const flows: Flow[] = [
     path: '/?target=barnard',
     steps: [
       pressStep('welcome-own', 'Close the welcome card'),
-      pressStep('measure', 'Press Measure'),
+      openMeasureStep('Open Measure'),
       { name: 'Reload', run: async (page) => void (await page.reload()) },
       expect('Measure is open', `!document.getElementById('measure').hidden`),
       expect('No welcome card', `document.getElementById('welcome').hidden`),

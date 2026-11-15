@@ -3,9 +3,8 @@
  * Owner: lane E. Parts are found by their data-guide names; checks throw with a plain reason.
  */
 import type { Page } from 'playwright-core';
-import { guide, openPage, press, pressStep, type Flow, type Step } from '../smoke.ts';
+import { guide, openPage, press, pressStep, type Flow, type Step, openMeasureStep } from '../smoke.ts';
 
-const ownWay = pressStep('welcome-own', 'Close the welcome card');
 
 /** MSR-8: Measure fits with no inner scroll. */
 const noInnerScroll: Step = {
@@ -70,8 +69,7 @@ export const flows: Flow[] = [
     owner: 'E',
     path: '/?target=rw-aur',
     steps: [
-      ownWay,
-      pressStep('measure', 'Press Measure'),
+      openMeasureStep('Open Measure'),
       sameDetector(6),
       viewsReadable,
       noInnerScroll,
@@ -101,8 +99,7 @@ export const flows: Flow[] = [
     owner: 'E',
     path: '/?target=eps-indi-b',
     steps: [
-      ownWay,
-      pressStep('measure', 'Press Measure'),
+      openMeasureStep('Open Measure'),
       pressStep('all-numbers', 'Show all the numbers'),
       {
         name: 'Path: "Measured: x ± y″/yr" next to the catalogue',
@@ -121,8 +118,7 @@ export const flows: Flow[] = [
     name: 'Find changes: a mover shows its path in place; the readout wraps (lane E)',
     owner: 'E',
     steps: [
-      ownWay,
-      pressStep('measure', 'Press Measure'),
+      openMeasureStep('Open Measure'),
       pressStep('tools-button', 'Open the picture tools'),
       {
         name: 'The Shift-drag box is explained',
@@ -168,8 +164,7 @@ export const flows: Flow[] = [
     name: 'Measure: calm, all the numbers, remembered (lane E)',
     owner: 'E',
     steps: [
-      ownWay,
-      pressStep('measure', 'Press Measure'),
+      openMeasureStep('Open Measure'),
       noInnerScroll,
       pressStep('all-numbers', 'Show all the numbers'),
       noInnerScroll,
@@ -196,8 +191,7 @@ export const flows: Flow[] = [
     owner: 'E',
     path: '/?ra=10&dec=20',
     steps: [
-      ownWay,
-      pressStep('measure', 'Press Measure'),
+      openMeasureStep('Open Measure'),
       {
         name: '"Nothing to measure here"',
         async run(page) {
@@ -212,8 +206,7 @@ export const flows: Flow[] = [
     name: 'Picture tools: tabs, Original, threshold, reset (lane E)',
     owner: 'E',
     steps: [
-      ownWay,
-      pressStep('measure', 'Press Measure'),
+      openMeasureStep('Open Measure'),
       pressStep('tools-button', 'Open the picture tools'),
       {
         name: 'Stretch Log, then Reset all',

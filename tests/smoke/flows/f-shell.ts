@@ -7,9 +7,8 @@
  * console errors, page scroll and overlapping cards after each one (smoke.ts).
  */
 import type { Page } from 'playwright-core';
-import { guide, keyStep, openPage, press, pressStep, type Flow, type Step } from '../smoke.ts';
+import { guide, keyStep, openPage, press, pressStep, type Flow, type Step, openMeasureStep } from '../smoke.ts';
 
-const ownWay = pressStep('welcome-own', 'Close the welcome card');
 
 /** A field of the frame's state (dev builds expose `window.sima.S`). */
 function state<T>(page: Page, key: string): Promise<T> {
@@ -58,7 +57,6 @@ export const flows: Flow[] = [
     name: 'Keys and search (GEN-1)',
     owner: 'F',
     steps: [
-      ownWay,
       {
         name: '"/" focuses search',
         async run(page) {
@@ -121,8 +119,7 @@ export const flows: Flow[] = [
     name: 'Escape order: popover, dialog, tools, Measure (GEN-1)',
     owner: 'F',
     steps: [
-      ownWay,
-      pressStep('measure', 'Open Measure'),
+      openMeasureStep('Open Measure'),
       pressStep('tools-button', 'Open the picture tools'),
       pressStep('places-button', 'Open the Places menu'),
       {
@@ -160,8 +157,7 @@ export const flows: Flow[] = [
     name: 'Escape always closes an open places list (O-I12)',
     owner: 'F',
     steps: [
-      ownWay,
-      pressStep('measure', 'Open Measure'),
+      openMeasureStep('Open Measure'),
       {
         name: 'Open the Stars list',
         // At 1366 the chip sits in the "More" menu: press it the way the menu does.
@@ -189,7 +185,6 @@ export const flows: Flow[] = [
     name: 'Share round trip (GEN-2)',
     owner: 'F',
     steps: [
-      ownWay,
       pressStep('view-two', 'Show Two dates'),
       {
         name: 'Pause',
@@ -266,7 +261,6 @@ export const flows: Flow[] = [
             expect(text.includes(k), `the note to name ${k}`);
         },
       },
-      ownWay,
     ],
   },
   {
@@ -305,7 +299,6 @@ export const flows: Flow[] = [
     name: 'Move, size, hide and show the frame (FRM-5)',
     owner: 'F',
     steps: [
-      ownWay,
       {
         name: 'Drag the frame by its header',
         async run(page) {
@@ -339,7 +332,6 @@ export const flows: Flow[] = [
           expect(Math.abs(again.width - after.width) < 2, 'the same width after a reload');
         },
       },
-      ownWay,
       pressStep('frame-hide', 'Hide the frame'),
       pressStep('frame-show', 'Show it again'),
       {

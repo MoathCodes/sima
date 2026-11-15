@@ -152,14 +152,16 @@ async function runFlow(
   const lines: string[] = [];
   const context = await browser.newContext({ viewport: size, deviceScaleFactor: 1 });
   // The opening intro plays once per browser: every flow starts as a return visit, except flows
-  // that ask for it with ?intro=1 (flows/intro.ts).
-  await context.addInitScript(() => {
+  // that ask for it with ?intro=1 (flows/intro.ts). Flows test Expert (VIEW-3) unless they are a
+  // first visit: Expert is preset only while no view is remembered, so a switch survives a reload.
+  await context.addInitScript((firstVisit) => {
     try {
       localStorage.setItem('sima-intro', '1');
+      if (!firstVisit && !localStorage.getItem('sima-view')) localStorage.setItem('sima-view', 'expert');
     } catch {
       // storage blocked: no intro either
     }
-  });
+  }, flow.firstVisit ?? false);
   const page = await context.newPage();
   // 20 s: under load one sky frame can take seconds, and a click waits for two steady frames.
   page.setDefaultTimeout(20_000);

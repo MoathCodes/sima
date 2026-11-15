@@ -1,6 +1,7 @@
 /**
  * The opening intro (src/intro/, DESIGN.md "Intro"): it plays with ?intro=1 and ends in the
- * normal first-visit state; any key skips it; About's "Play the intro" plays it again.
+ * first-visit state, Discover's welcome on the globe (DSC-1); any key skips it to the same state;
+ * About's "Play the intro" plays it again.
  * Every other flow starts with the intro already seen (run.ts presets `sima-intro`).
  * Owner: the intro. Run with `npm run smoke -- intro`.
  */
@@ -19,36 +20,32 @@ async function introGone(page: Page, ms: number): Promise<void> {
   });
 }
 
-/** The page as on a first visit: no intro, the welcome card up, the frame playing, the sky on
- * its own view (1.9° wide) with nothing left of the intro on the cards. */
+/** The page as on a first visit (DSC-1): no intro, Discover's welcome card up over the globe,
+ * with nothing left of the intro on the cards. */
 const firstVisit: Step = {
   name: 'It ends in the first-visit state',
   async run(page) {
     const read = () =>
       page.evaluate(() => {
-        const welcome = document.querySelector<HTMLElement>('[data-guide="welcome"]');
-        const fov = Number(document.getElementById('sky')?.dataset.view?.split(' ')[2]);
-        const frame = document.getElementById('frame');
+        const welcome = document.querySelector<HTMLElement>('[data-guide="discover-welcome"]');
         return {
           intro: document.documentElement.dataset.intro ?? null,
+          view: document.documentElement.dataset.view ?? null,
           welcome:
             !!welcome && !welcome.hidden && welcome.checkVisibility({ opacityProperty: true }),
-          frame: !!frame && getComputedStyle(frame).opacity === '1',
-          playing: (window as unknown as { sima: { S: { playing: boolean } } }).sima.S.playing,
-          fov,
+          globe: document.getElementById('sky')?.dataset.globe === '1',
           seen: localStorage.getItem('sima-intro'),
         };
       });
-    // The starter may still be loading when the intro is skipped early: allow it 10 s.
+    // The globe may still be turning when the intro is skipped early: allow it 10 s.
     let s = await read();
-    for (const end = Date.now() + 10_000; !s.playing && Date.now() < end; s = await read()) {
+    for (const end = Date.now() + 10_000; !(s.welcome && s.globe) && Date.now() < end; s = await read()) {
       await page.waitForTimeout(200);
     }
     expect(s.intro === null, `no html[data-intro], got ${s.intro}`);
-    expect(s.welcome, 'the welcome card on screen');
-    expect(s.frame, 'the frame fully shown');
-    expect(s.playing, 'the frame playing');
-    expect(Math.abs(s.fov - 1.9) < 0.01, `the sky 1.9° wide, got ${s.fov}`);
+    expect(s.view === 'discover', `Discover, got ${s.view}`);
+    expect(s.welcome, "Discover's welcome card on screen");
+    expect(s.globe, 'the sky a globe');
     expect(s.seen === '1', 'the browser to remember the intro');
   },
 };
@@ -67,7 +64,6 @@ const workspaceFrame = '.wf[data-frame="f1"]';
 const dropFrame: Step = {
   name: 'Drop a second frame from the tray (autosaved)',
   async run(page, size) {
-    await press(page, 'welcome-own');
     // Paused: while the frame plays, the autosave waits (src/workspace/store.ts, reported).
     if (
       await page.evaluate(
@@ -101,6 +97,7 @@ export const flows: Flow[] = [
   {
     name: 'Intro plays and lands on the first visit',
     owner: 'intro',
+    firstVisit: true,
     steps: [
       {
         name: 'Open with ?intro=1 and watch it to the end',
@@ -115,6 +112,7 @@ export const flows: Flow[] = [
   {
     name: 'Intro skips on a key and plays again from About',
     owner: 'intro',
+    firstVisit: true,
     steps: [
       {
         name: 'Open with ?intro=1 and press a key',

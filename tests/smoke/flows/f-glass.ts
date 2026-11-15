@@ -434,9 +434,8 @@ export const flows: Flow[] = [
       flatStep,
       wellStep,
       {
-        name: 'Close the welcome card and open a place card',
+        name: 'Open a place card',
         async run(page) {
-          await page.locator(guide('welcome-own')).click();
           await page.locator(guide('chip-stars')).click();
           await page.locator(`${guide('places-list')} .pl-row`).first().click();
           await page.locator(guide('place-card')).waitFor();
