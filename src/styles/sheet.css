@@ -345,6 +345,9 @@ html[data-layout^='phone'] body > #dsc-welcome {
 html[data-layout^='phone'] #wordmark {
   padding: 0 8px;
 }
+html[data-layout^='phone'] .wordmark-latin {
+  font-size: 17px;
+}
 
 /* The phone menu opens inside the screen under the top row (right-aligned to its button it would
    start left of the screen). */
