@@ -6,6 +6,16 @@
  * Owner: the intro (src/intro/).
  */
 import { RING_CHANNELS, sceneAt, type Plan } from './scene.ts';
+import { DEFAULT_CHANNEL, faceOf } from '../sky/hips.ts';
+
+/**
+ * The sharp globe: the shipped base tiles of the default channel (public/sky-seed/tiles, SPEC
+ * 6.2), order 1: 48 tiles of 512 px, so each of the 12 base faces is 1024 px (about 3.4′ a
+ * pixel, four times finer than the Allsky image, which is also smoothed harder). Other channels
+ * show their Allsky image.
+ */
+const FACE_ORDER = 1;
+const FACE_SIZE = 512 * 2 ** FACE_ORDER;
 
 export type Rgb = [number, number, number];
 
@@ -55,6 +65,8 @@ export function startPainter(
   }
   const loaded = new Map<number, Channel>();
   const has = (ch: number) => loaded.has(ch);
+  /** The sharp faces of the default channel, once every tile is in. */
+  let faces: WebGLTexture | null = null;
 
   // The shipped pictures: the first ring channel, the sky's channel, then the rest. One upload
   // a frame, so no task gets long.
@@ -93,6 +105,42 @@ export function startPainter(
       .catch((err: unknown) => console.warn(`intro: the shipped sky ${ch} did not load`, err));
   }
 
+  // The sharp globe's tiles, after the Allsky images (they are the first need), one upload a frame.
+  if (plan.skyChannel === DEFAULT_CHANNEL) {
+    const tiles = 12 * 4 ** FACE_ORDER;
+    const array = gl.faces(FACE_SIZE);
+    let done = 0;
+    const pending: { n: number; bitmap: ImageBitmap }[] = [];
+    let busy = false;
+    const put = () => {
+      const next = pending.shift();
+      if (!next || stopped || !array) {
+        busy = false;
+        next?.bitmap.close();
+        return;
+      }
+      const { face, row, col } = faceOf(FACE_ORDER, next.n);
+      array.put(next.bitmap, col * 512, row * 512, face);
+      next.bitmap.close();
+      if (++done === tiles) faces = array.finish();
+      frame(put);
+    };
+    for (let n = 0; n < tiles; n++) {
+      void fetch(`${init.base}sky-seed/tiles/${DEFAULT_CHANNEL}/Norder${FACE_ORDER}/Npix${n}.webp`)
+        .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`HTTP ${r.status}`))))
+        .then((b) => createImageBitmap(b, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }))
+        .then((bitmap) => {
+          if (stopped) return bitmap.close();
+          pending.push({ n, bitmap });
+          if (!busy) {
+            busy = true;
+            frame(put);
+          }
+        })
+        .catch((err: unknown) => console.warn(`intro: a sharp globe tile (${n}) did not load`, err));
+    }
+  }
+
   const tick = () => {
     if (stopped) return;
     frame(tick);
@@ -118,6 +166,7 @@ export function startPainter(
       radius: s.radius,
       rot: s.rot,
       globe: s.globe === null ? null : (loaded.get(s.globe)?.tex ?? null),
+      faces: s.globe === DEFAULT_CHANNEL ? faces : null,
       ringA: a?.tex ?? null,
       ringB: b?.tex ?? null,
       ringLo: [a?.lo ?? 0, b?.lo ?? 0],
@@ -193,6 +242,8 @@ interface DrawArgs {
   radius: number;
   rot: Float32Array;
   globe: WebGLTexture | null;
+  /** The sharp faces of the globe's channel, when shipped (overrides `globe`'s picture). */
+  faces: WebGLTexture | null;
   ringA: WebGLTexture | null;
   ringB: WebGLTexture | null;
   ringLo: [number, number];
@@ -209,6 +260,11 @@ interface Gl {
   /** The shader did not build: nothing will be drawn. */
   readonly failed: boolean;
   texture(img: ImageBitmap): WebGLTexture | null;
+  /** A 12-layer picture of the base faces, `size` px square, filled tile by tile. */
+  faces(size: number): {
+    put(img: ImageBitmap, x: number, y: number, face: number): void;
+    finish(): WebGLTexture;
+  } | null;
   draw(a: DrawArgs): void;
   dispose(): void;
 }
@@ -230,6 +286,8 @@ uniform mat3 uRot;
 uniform sampler2D uGlobe;
 uniform sampler2D uRingA;
 uniform sampler2D uRingB;
+uniform highp sampler2DArray uFaces;
+uniform float uHasFaces;
 uniform float uHasGlobe;
 uniform vec2 uLo;
 uniform vec2 uHi;
@@ -246,7 +304,8 @@ const float PI = 3.14159265358979;
 
 int spread3(int v) { return (v & 1) | ((v & 2) << 1) | ((v & 4) << 2); }
 
-vec2 allsky(vec3 d, float lod) {
+/* The base face holding a direction and the place in it, 0 to 1 (sphere.ts facePoint). */
+vec3 facePoint(vec3 d) {
   float z = clamp(d.z, -1.0, 1.0);
   float phi = atan(d.y, d.x);
   float za = abs(z);
@@ -275,8 +334,14 @@ vec2 allsky(vec3 d, float lod) {
     if (z >= 0.0) { face = int(ntt); fx = 1.0 - jm; fy = 1.0 - jp; }
     else { face = int(ntt) + 8; fx = jp; fy = jm; }
   }
-  float px = fx * 8.0;
-  float py = fy * 8.0;
+  return vec3(float(face), fx, fy);
+}
+
+vec2 allsky(vec3 d, float lod) {
+  vec3 fp = facePoint(d);
+  int face = int(fp.x);
+  float px = fp.y * 8.0;
+  float py = fp.z * 8.0;
   int tx = min(7, int(floor(px)));
   int ty = min(7, int(floor(py)));
   int tile = face * 64 + spread3(tx) + 2 * spread3(ty);
@@ -290,6 +355,13 @@ vec2 allsky(vec3 d, float lod) {
 
 float sky(sampler2D t, vec3 d, float lod) {
   return textureLod(t, allsky(d, lod), lod).r;
+}
+
+/* The sharp globe: a face picture's rows follow the face's x, its columns its y (as allsky). */
+float skyFaces(vec3 d, float lod) {
+  vec3 fp = facePoint(d);
+  float m = 0.5 * exp2(lod) / float(textureSize(uFaces, 0).x);
+  return textureLod(uFaces, vec3(clamp(fp.z, m, 1.0 - m), clamp(fp.y, m, 1.0 - m), fp.x), lod).r;
 }
 
 float ringLight(vec3 d, float lod) {
@@ -315,8 +387,15 @@ void main() {
     vec3 d = uRot * v;
     // Texture detail: Allsky pixels (~0.002 rad) per screen pixel, more toward the globe's edge.
     float stretchOut = 1.0 / max(cos(theta), 0.08);
-    float lod = clamp(log2(500.0 / (uR * uDpr)) + log2(max(stretchOut, 0.01)) * 0.5, 0.0, 6.0);
-    float g = sky(uGlobe, d, lod);
+    float stretch = log2(max(stretchOut, 0.01)) * 0.5;
+    float g;
+    if (uHasFaces > 0.5) {
+      // A face spans about 1.02 rad: its picture has size / 1.02 pixels a radian.
+      float facePx = float(textureSize(uFaces, 0).x) / 1.02;
+      g = skyFaces(d, clamp(log2(facePx / (uR * uDpr)) + stretch, 0.0, 10.0));
+    } else {
+      g = sky(uGlobe, d, clamp(log2(500.0 / (uR * uDpr)) + stretch, 0.0, 6.0));
+    }
     float lit = smoothstep(0.99, 1.01, length(p - uShadow));
     float inside = 1.0 - smoothstep(1.0 - px, 1.0 + px, r);
     col = vec3(g) * lit * inside;
@@ -416,6 +495,8 @@ function makeGl(canvas: HTMLCanvasElement | OffscreenCanvas, skyRgb: Rgb): Gl | 
       globe: u('uGlobe'),
       ringA: u('uRingA'),
       ringB: u('uRingB'),
+      faces: u('uFaces'),
+      hasFaces: u('uHasFaces'),
       hasGlobe: u('uHasGlobe'),
       lo: u('uLo'),
       hi: u('uHi'),
@@ -430,10 +511,16 @@ function makeGl(canvas: HTMLCanvasElement | OffscreenCanvas, skyRgb: Rgb): Gl | 
     gl.uniform1i(U.globe!, 0);
     gl.uniform1i(U.ringA!, 1);
     gl.uniform1i(U.ringB!, 2);
+    gl.uniform1i(U.faces!, 4);
     gl.uniform3f(U.sky!, ...skyRgb);
     return U;
   };
   const textures: WebGLTexture[] = [];
+  // A 1×1 empty face picture for the sampler while the sharp one is not in.
+  const noFaces = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE4);
+  gl.bindTexture(gl.TEXTURE_2D_ARRAY, noFaces);
+  gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.R8, 1, 1, 1, 0, gl.RED, gl.UNSIGNED_BYTE, new Uint8Array([0]));
 
   return {
     texture(img) {
@@ -452,6 +539,37 @@ function makeGl(canvas: HTMLCanvasElement | OffscreenCanvas, skyRgb: Rgb): Gl | 
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       textures.push(tex);
       return tex;
+    },
+    faces(size) {
+      const tex = gl.createTexture();
+      if (!tex) return null;
+      textures.push(tex);
+      const bind = () => {
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex);
+      };
+      bind();
+      gl.texStorage3D(gl.TEXTURE_2D_ARRAY, Math.log2(size) + 1, gl.R8, size, size, 12);
+      return {
+        put(img, x, y, face) {
+          bind();
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+          gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+          gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+          const t = gl.TEXTURE_2D_ARRAY;
+          gl.texSubImage3D(t, 0, x, y, face, img.width, img.height, 1, gl.RED, gl.UNSIGNED_BYTE, img);
+        },
+        finish() {
+          bind();
+          const t = gl.TEXTURE_2D_ARRAY;
+          gl.generateMipmap(t);
+          gl.texParameteri(t, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+          gl.texParameteri(t, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          gl.texParameteri(t, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(t, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          return tex;
+        },
+      };
     },
     get failed() {
       return failed;
@@ -488,6 +606,9 @@ function makeGl(canvas: HTMLCanvasElement | OffscreenCanvas, skyRgb: Rgb): Gl | 
       bind(0, a.globe);
       bind(1, a.ringA);
       bind(2, a.ringB);
+      gl.uniform1f(U.hasFaces, a.faces ? 1 : 0);
+      gl.activeTexture(gl.TEXTURE4);
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, a.faces ?? noFaces);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     },
     dispose() {

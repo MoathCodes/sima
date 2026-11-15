@@ -9,7 +9,9 @@
  *    Retry, so Aladin asks again for tiles that failed.
  * 2. Serves the shipped low-resolution sky first (public/sky-seed/): full base tiles of the
  *    default channel, and every channel's order-0 tiles cut from its Allsky image, so the first
- *    sky appears without waiting for NASA's archive.
+ *    sky appears without waiting for NASA's archive. Zoomed far out Aladin draws a layer's
+ *    Allsky image, so the sharp layer's is sharp (`allskyImage`); the smoothed shipped ones stay
+ *    under it.
  * 3. Fetches the rest from IRSA, the view's own channel first, with retries. Bright star centres,
  *    which the map leaves empty, are filled in from their rim (the sky note says so).
  * 4. A tile that still fails is drawn from the low-resolution sky (soft, never black) and
@@ -223,7 +225,12 @@ async function tile(ch, k, n, rev, clientId) {
     });
     const soft =
       (await fromBase(seed, ch, k, n).catch(() => null)) ??
-      (n >= 0 && hasAllsky(seed, ch) ? await fromAllsky(ch, k, n).catch(() => null) : null);
+      (n >= 0 && hasAllsky(seed, ch) ? await fromAllsky(ch, k, n).catch(() => null) : null) ??
+      (n < 0 && hasAllsky(seed, ch)
+        ? await fetch(`${SEED}allsky/${ch}.webp`)
+            .then((r) => (r.ok ? r.blob() : null))
+            .catch(() => null)
+        : null);
     if (soft) return image(soft);
     const canvas = new OffscreenCanvas(512, 512);
     canvas.getContext('2d', { willReadFrequently: true });
@@ -232,20 +239,50 @@ async function tile(ch, k, n, rev, clientId) {
 }
 
 /**
- * A channel's Allsky image (order 3), which Aladin shows until finer tiles arrive: the shipped
- * one, else IRSA's with its holes filled.
+ * The sharp layer's Allsky image (order 3). Aladin draws it instead of tiles when zoomed far out
+ * (the whole globe), so it must be sharp: the default channel's is put together from its
+ * shipped base tiles; the others' is IRSA's own, holes filled. The shipped Allsky images are
+ * smoothed hard to fit the budget, so they only lie under it (the soft layer) and stand in when
+ * IRSA's does not come.
  */
 async function allskyImage(ch, rev, clientId) {
   const seed = await manifest();
-  if (hasAllsky(seed, ch)) {
-    const res = await fetch(`${SEED}allsky/${ch}.webp`).catch(() => null);
-    if (res?.ok) {
-      tell(clientId, { ch, rev, k: 3, n: -1, state: 'start' });
+  if (seed?.base?.channel === ch && seed.base.orders.includes(1)) {
+    tell(clientId, { ch, rev, k: 3, n: -1, state: 'start' });
+    const blob = await allskyFromBase(ch).catch(() => null);
+    if (blob) {
       tell(clientId, { ch, rev, k: 3, n: -1, state: 'done', from: 'seed' });
-      return image(await res.blob());
+      return image(blob);
     }
   }
   return tile(ch, 3, -1, rev, clientId);
+}
+
+/** An Allsky image cut from the default channel's shipped order-1 base tiles (128 px a tile). */
+let baseAllsky = null;
+function allskyFromBase(ch) {
+  baseAllsky ??= (async () => {
+    const canvas = new OffscreenCanvas(1728, 1856);
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    await Promise.all(
+      Array.from({ length: 48 }, async (_, n1) => {
+        const res = await fetch(`${SEED}tiles/${ch}/Norder1/Npix${n1}.webp`);
+        if (!res.ok) throw new Error(`no shipped tile 1/${n1}`);
+        const bmp = await createImageBitmap(await res.blob());
+        for (let sub = 0; sub < 16; sub++) {
+          const { row, col } = subTilePosition(sub);
+          const box = allskyBox(n1 * 16 + sub);
+          ctx.drawImage(bmp, col * 128, row * 128, 128, 128, box.x, box.y, 64, 64);
+        }
+        bmp.close();
+      }),
+    );
+    return canvas.convertToBlob({ type: 'image/png' });
+  })();
+  baseAllsky.catch(() => (baseAllsky = null));
+  return baseAllsky;
 }
 
 /** A tile of the soft layer: shipped base tiles, else cut from the shipped Allsky image. */
