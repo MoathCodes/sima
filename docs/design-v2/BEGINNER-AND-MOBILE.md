@@ -706,6 +706,7 @@ Brought back only after v2.0 passes its gate. Each item carries what the reviews
 9. **Offline mission play**: needs a lane to cache `frames.bin.gz`.
 10. **Limb tags** for far-side objects.
 11. **The Arabic interface**, with fluent review of the astronomy wording and RTL layouts.
+12. **Tour resume (GDE-3)**: not reachable in v2.0, because its offer lived on v1's welcome card.
 
 ## 18. Open questions for the team
 
