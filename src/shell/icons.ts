@@ -75,5 +75,5 @@ export type IconName = keyof typeof PATHS;
  * @returns `<svg class="icon" aria-hidden="true">…</svg>`, 20 × 20 CSS pixels.
  */
 export function icon(name: IconName): string {
-  return `<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">${PATHS[name]}</svg>`;
+  return `<svg class="icon" data-icon="${name}" viewBox="0 0 20 20" aria-hidden="true" focusable="false">${PATHS[name]}</svg>`;
 }

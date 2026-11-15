@@ -9,6 +9,7 @@
  */
 import { emit } from './bus.ts';
 import { icon } from './icons.ts';
+import { t } from './i18n.ts';
 import { closeTop, nativeOpen, startEscape } from './escape.ts';
 import { phonePage } from './pages.ts';
 import { onView } from './view.ts';
@@ -66,24 +67,24 @@ export function startShell(): void {
   fill(
     'actions',
     `
-    <button class="btn quiet" popovertarget="guide-menu" data-guide="guide-button" data-expert-only>${icon('compass')}<span class="action-word">Guide</span></button>
-    <button class="btn quiet" popovertarget="places-menu" data-guide="places-button" data-expert-only>${icon('pin')}<span class="action-word">Places</span></button>
-    <button class="icon-btn" data-open="share" aria-label="Share" data-tip="Share this view" data-guide="share-button" data-expert-only>${icon('share')}</button>
-    <button class="icon-btn" data-open="settings" aria-label="Settings" aria-expanded="false" aria-controls="settings" data-tip="Settings" data-guide="settings-button">${icon('settings')}</button>
-    <button class="icon-btn" data-open="about" aria-label="About Sima" data-tip="About Sima" data-guide="about-button">${icon('info')}</button>
-    <button class="icon-btn phone-menu-btn" popovertarget="phone-menu" aria-label="Menu" data-guide="phone-menu">${icon('menu')}</button>`,
+    <button class="btn quiet" popovertarget="guide-menu" data-guide="guide-button" data-expert-only>${icon('compass')}<span class="action-word">${t('top.guide')}</span></button>
+    <button class="btn quiet" popovertarget="places-menu" data-guide="places-button" data-expert-only>${icon('pin')}<span class="action-word">${t('top.places')}</span></button>
+    <button class="icon-btn" data-open="share" aria-label="${t('word.share')}" data-tip="${t('top.shareTip')}" data-guide="share-button" data-expert-only>${icon('share')}</button>
+    <button class="icon-btn" data-open="settings" aria-label="${t('word.settings')}" aria-expanded="false" aria-controls="settings" data-tip="${t('word.settings')}" data-guide="settings-button">${icon('settings')}</button>
+    <button class="icon-btn" data-open="about" aria-label="${t('about.title')}" data-tip="${t('about.title')}" data-guide="about-button">${icon('info')}</button>
+    <button class="icon-btn phone-menu-btn" popovertarget="phone-menu" aria-label="${t('top.menu')}" data-guide="phone-menu">${icon('menu')}</button>`,
   );
 
   fill(
     'rail',
     `
-    <button class="icon-btn" data-zoom="0.5" aria-label="Zoom the sky in" data-tip="Zoom in (+)" data-tip-pos="right" data-guide="zoom-in">${icon('plus')}</button>
-    <button class="icon-btn" data-zoom="2" aria-label="Zoom the sky out" data-tip="Zoom out (−)" data-tip-pos="right" data-guide="zoom-out">${icon('minus')}</button>
+    <button class="icon-btn" data-zoom="0.5" aria-label="${t('rail.zoomInLabel')}" data-tip="${t('rail.zoomIn')}" data-tip-pos="right" data-guide="zoom-in">${icon('plus')}</button>
+    <button class="icon-btn" data-zoom="2" aria-label="${t('rail.zoomOutLabel')}" data-tip="${t('rail.zoomOut')}" data-tip-pos="right" data-guide="zoom-out">${icon('minus')}</button>
     <hr class="rail-rule">
-    <button class="icon-btn" popovertarget="sky-layers" aria-label="Sky map" data-tip="Sky map" data-tip-pos="right" data-guide="sky-map-button">${icon('layers')}</button>
-    <button class="icon-btn" data-grid aria-pressed="false" aria-label="Coordinate grid" data-tip="Coordinate grid" data-tip-pos="right" data-guide="grid-button">${icon('globe')}</button>
+    <button class="icon-btn" popovertarget="sky-layers" aria-label="${t('rail.skyMap')}" data-tip="${t('rail.skyMap')}" data-tip-pos="right" data-guide="sky-map-button">${icon('layers')}</button>
+    <button class="icon-btn" data-grid aria-pressed="false" aria-label="${t('rail.grid')}" data-tip="${t('rail.grid')}" data-tip-pos="right" data-guide="grid-button">${icon('globe')}</button>
     <hr class="rail-rule">
-    <button class="icon-btn" popovertarget="workspace" aria-label="Add a frame, workspaces" data-tip="Add a frame · workspaces" data-tip-pos="right" data-guide="workspace-button">${icon('add-frame')}</button>`,
+    <button class="icon-btn" popovertarget="workspace" aria-label="${t('rail.framesLabel')}" data-tip="${t('rail.frames')}" data-tip-pos="right" data-guide="workspace-button">${icon('add-frame')}</button>`,
   );
 
   fill(

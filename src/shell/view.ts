@@ -18,6 +18,7 @@
 import { setLevel } from '../explore/game.ts';
 import { viewFor, type Link, type View } from '../viewer/link.ts';
 import { icon } from './icons.ts';
+import { t } from './i18n.ts';
 import { S, watch } from '../viewer/state.ts';
 
 /** The two views, Discover and Expert. Also the link's `ui=` values. */
@@ -131,12 +132,12 @@ function drawSwitch(): void {
   const box = document.getElementById('view-switch');
   if (!box) return;
   box.setAttribute('role', 'radiogroup');
-  box.setAttribute('aria-label', 'View');
+  box.setAttribute('aria-label', t('top.view'));
   box.dataset.guide = 'view-switch';
   box.dataset.card = 'view-switch';
   const radio = (v: View, name: string, ico: 'discover' | 'chart') =>
     `<button type="button" role="radio" class="vs-seg" data-view="${v}" data-guide="view-${v}" aria-checked="false" tabindex="-1">${icon(ico)}<span>${name}</span></button>`;
-  box.innerHTML = radio('discover', 'Discover', 'discover') + radio('expert', 'Expert', 'chart');
+  box.innerHTML = radio('discover', t('word.discover'), 'discover') + radio('expert', t('word.expert'), 'chart');
   const radios = [...box.querySelectorAll<HTMLElement>('[role="radio"]')];
   const choose = (r: HTMLElement | undefined) => {
     if (!r) return;

@@ -74,6 +74,7 @@ table below and are not active in v2.0. **No file has two owners.** Files marked
 | **H. Missions engine** | The three missions' data and pure checks, progress, plain sentences, Planet X's edge search, "Try another object" templates; the guide | `src/explore/*` (incl. `missions.ts`, `progress.ts`, `plain.ts`*, `plan-x.ts`*), `src/guide/*`, `src/styles/guide.css`, `tests/missions.test.ts`*, `tests/progress.test.ts`, `tests/guide.test.ts` |
 | **K. Discover interface** | Welcome, home (mission list, skills record, "Try another object"), mission card, success card, coach | `src/discover/*`*, `src/styles/discover.css`* |
 | **M. Phone layout and sheet** | Fit and scroll layouts, the sheet, the Back rule, full-height pages | `src/shell/sheet.ts`, `src/shell/phone.ts`* (the phone layout; section 14 calls it `layout.ts`, a name lane F already uses), `src/styles/sheet.css`*, `tests/sheet.test.ts`* |
+| **L. Arabic locale** | The interface language (`?lang=`, the Settings switch), `t()`, Arabic words, number and date formats, right to left, the Arabic glossary | `src/shell/i18n.ts`*, `src/shell/language.ts`*, `src/locales/*`*, `src/styles/rtl.css`*, `docs/arabic-glossary.md`*, `tests/i18n.test.ts`* |
 | **Integrator** | `main.ts` wiring; `workspace.css` on the tokens; smoke flows; the release gate (section 15) | `src/main.ts`, `src/styles/workspace.css`, `src/styles/extras.css`, `src/workspace/*`, `src/intro/*`, `src/styles/intro.css`, `src/shell/bus.ts`, `tests/smoke/*`, `docs/*`, and the build files listed below |
 
 Stylesheets: each lane styles only its own classes in its own stylesheet, on the `--v2-*` tokens
@@ -360,6 +361,7 @@ are; ask lane F to change one. All stylesheets are imported by `src/main.ts`.
 | `src/styles/guide.css` | H |
 | `src/styles/intro.css` | Intro |
 | `src/styles/workspace.css` | Integrator (workspace) |
+| `src/styles/rtl.css` | L: only rules under `:lang(ar)` or `[dir='rtl']` |
 
 ## Browser storage (SPEC 8.5)
 
@@ -378,6 +380,7 @@ Wrap every read and write in `try`; storage can be blocked.
 | `sima-intro` | The opening intro has played in this browser (the smoke runner presets it) | Intro |
 | `sima-workspace` | The workspace now (autosave): extra frames and links come back on a plain visit | Integrator (workspace) |
 | `sima-workspaces` | Named workspaces (save, rename, open, delete) | Integrator (workspace) |
+| `sima-lang` | The Settings language choice, `en` or `ar` (a `?lang=` link wins) | L |
 
 ## Links (SPEC 8.5)
 
