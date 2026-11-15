@@ -217,7 +217,7 @@ export function headFrame(f: Live): void {
   const date = el.querySelector<HTMLElement>('.wf-date')!;
   if (f.s.type === 'stack') date.textContent = f.groups.length ? `All ${f.groups.length} dates` : '';
   else if (grp && f.s.type !== 'two') {
-    date.innerHTML = `<span class="pic-letter" style="--tint:var(--p${(grp.window % 4) + 1})">${grp.letter}</span>${esc(formatDate(grp.mjd, 'month'))}${steps ? ` <span class="wf-count">${f.epoch + 1} / ${steps}</span>` : ''}`;
+    date.innerHTML = `${esc(formatDate(grp.mjd, 'month'))}${steps ? ` <span class="wf-count">${f.epoch + 1} / ${steps}</span>` : ''}`;
   } else if (grp) {
     const a = f.groups[0];
     const b = laterOf(f);
@@ -333,11 +333,9 @@ function picture(f: Live, canvas: HTMLCanvasElement, body: HTMLElement, badge: H
   let img: ImageData | null = null;
   const lines: string[] = [];
   let title = '';
-  let letter = '';
   let warn = '';
   if (f.s.type === 'blink') {
     img = flipImage(field, g, look, P);
-    letter = g.letter;
     title = formatDate(g.mjd, 'month');
     const frames = framesOf(field, [g]);
     const ref = groups[0] ? framesOf(field, [groups[0]])[0] : undefined;
@@ -355,7 +353,6 @@ function picture(f: Live, canvas: HTMLCanvasElement, body: HTMLElement, badge: H
     lines.push(`Red: ${a ? formatDate(a.mjd, 'month') : '–'} · Cyan: ${later ? formatDate(later.mjd, 'month') : '–'}`);
   } else if (f.s.type === 'diff') {
     img = differenceImage(field, groups, f.epoch, look, P);
-    letter = g.letter;
     title = formatDate(g.mjd, 'month');
     lines.push('This date minus the typical sky');
   } else {
@@ -402,8 +399,7 @@ function picture(f: Live, canvas: HTMLCanvasElement, body: HTMLElement, badge: H
     ctx.lineWidth = 3;
     ctx.strokeRect(1.5, 1.5, size - 3, size - 3);
   }
-  const tile = letter ? `<span class="pic-letter" style="--tint:var(--p${(g.window % 4) + 1})">${letter}</span>` : '';
-  badge.innerHTML = `${warn ? `<span class="pic-warn">${esc(warn)}</span>` : ''}<span class="pic-title">${tile}<b>${esc(title)}</b></span>${lines.map((l) => `<span>${esc(l)}</span>`).join('')}`;
+  badge.innerHTML = `${warn ? `<span class="pic-warn">${esc(warn)}</span>` : ''}<span class="pic-title"><b>${esc(title)}</b></span>${lines.map((l) => `<span>${esc(l)}</span>`).join('')}`;
   badge.hidden = false;
   if (f.s.type === 'blink' || f.s.type === 'diff') warmNext(f);
 }
@@ -556,6 +552,6 @@ function infoTable(f: Live, field: Field, set: RealSet): string {
   });
   const t = f.status.target;
   const cat = t ? `<p class="wf-cat"><b>${esc(t.name)}</b>: catalogue position and motion from ${esc(t.values)}.</p>` : '';
-  const head = g ? `<p class="wf-cat">${g.letter ? `Date ${esc(g.letter)}, ` : ''}${esc(formatDate(g.mjd, 'month'))}: ${rows.length} exposure${rows.length === 1 ? '' : 's'} in D${f.s.det}. Flagged is the share of pixels NASA’s pipeline marks as bad.</p>` : '';
+  const head = g ? `<p class="wf-cat">${esc(formatDate(g.mjd, 'month'))}: ${rows.length} exposure${rows.length === 1 ? '' : 's'} in D${f.s.det}. Flagged is the share of pixels NASA’s pipeline marks as bad.</p>` : '';
   return `${head}<table class="wf-info"><thead><tr><th>Exposure</th><th>Date</th><th>Detector</th><th>Release</th><th>Flagged</th><th></th></tr></thead><tbody>${rows.join('') || `<tr><td colspan="6">No D${f.s.det} exposure on this date</td></tr>`}</tbody></table>${cat}`;
 }

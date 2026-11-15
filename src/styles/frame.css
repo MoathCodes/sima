@@ -315,17 +315,6 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
   font: var(--text-control);
   font-weight: 600;
 }
-.pic-letter {
-  display: inline-grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: var(--r-stop);
-  background: var(--tint);
-  color: rgb(var(--v2-tint)); /* dark letters on the pale pass tints */
-  font: var(--text-label);
-  font-weight: 600;
-}
 .pic-warn {
   color: var(--st-accent-2);
 }
