@@ -38,6 +38,7 @@ import {
   type StackView,
 } from './paint.ts';
 import { trialView } from './motion.ts';
+import { liveWords } from './seed.ts';
 import {
   aroundMap,
   aroundMapReady,
@@ -339,7 +340,7 @@ export function exif(): string {
   const parts: string[] = [];
   if (f.simulated) parts.push('Simulated pictures for practice, not real data');
   else if (S.source === 'live' || S.set?.origin === 'live')
-    parts.push(`Real SPHEREx data, fetched live${releases ? `, ${releases}` : ''}`);
+    parts.push(`Real SPHEREx data, ${liveWords(S.set?.data.live)}${releases ? `, ${releases}` : ''}`);
   else parts.push(`Real SPHEREx data${releases ? `, ${releases}` : ''}`);
   const mjds = frames.map((x) => x.mjd).filter(Number.isFinite);
   const count = frames.length;

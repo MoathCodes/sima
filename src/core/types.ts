@@ -108,8 +108,9 @@ export interface Neighbour {
  * The catalogue position and motion that centred each cutout (frames.json `catalogue`). Cutouts
  * are centred on the position moved by the motion only (parallax is under 0.6″).
  *
- * In a live patch this is the patch centre typed by the user: motion 0, parallax null, ep 2016.0,
- * and `from` says it is "a position, not a catalogue object".
+ * In a live patch this is the patch centre (asked for in the viewer, or chosen ahead of time by
+ * the seed job): motion 0, parallax null, ep 2016.0, and `from` says it is "a position, not a
+ * catalogue object".
  */
 export interface CatalogueTrack {
   /** Degrees at decimal year `ep`. */
@@ -139,6 +140,11 @@ export interface LiveBlock {
   found: number;
   /** Number of visit windows. */
   windows: number;
+  /**
+   * True when the seed job fetched it ahead of time (scripts/seed_live.py), not for a page that
+   * asked: its label gives the fetch date, never "fetched live". Optional (older files lack it).
+   */
+  ahead?: boolean;
 }
 
 /** One target's frames.json. */
@@ -253,6 +259,41 @@ export interface LiveStatus {
   searchBudget?: number;
   /** True when the patch failed because NASA's search did not answer in time. Optional. */
   searchTimedOut?: boolean;
+  /** True when the seed job fetched the patch ahead of time. Optional. */
+  ahead?: boolean;
+  /**
+   * True when a finished patch that holds the asked field answered instead of a new fetch: `id`,
+   * `ra`, `dec` and `fov` are then that patch's own. Optional.
+   */
+  reused?: boolean;
+}
+
+/** One patch of the static seed's `index.json` (scripts/seed_live.py, docs/live-service.md). */
+export interface SeedEntry {
+  /** The live service's id: its files are at `<seed base>/<id>/full/`. */
+  id: string;
+  /** Patch centre, degrees; field, arcmin; cutout side, degrees. */
+  ra: number;
+  dec: number;
+  fov: number;
+  size: number;
+  /** When the full set was written, UTC (ISO 8601). */
+  fetched: string;
+  /** Exposures in the patch, and exposures the search found. */
+  frames: number;
+  found: number;
+  /** Place ids (src/data/places.json) it was fetched for. */
+  places: string[];
+}
+
+/** The static seed's `index.json`. */
+export interface SeedIndex {
+  version: 1;
+  /** When the index was written, UTC (ISO 8601). */
+  made: string;
+  /** Collections searched. */
+  releases: string[];
+  patches: SeedEntry[];
 }
 
 /** An error answer of the live service: `400 {error}`, `404`, or `503 {error: 'busy', state: 'busy'}`. */

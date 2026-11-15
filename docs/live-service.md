@@ -36,7 +36,9 @@ Tests for the service's pure parts and its routes (no network):
 
 1. The viewer asks `GET /api/patch?ra=…&dec=…&fov=12`. The service rounds the position to 0.001°
    (3.6″, about half a pixel), finds or starts the job for that patch, and answers with its status.
-   It also starts the catalogue query for the patch (below), in parallel.
+   It also starts the catalogue query for the patch (below), in parallel. **If a finished patch
+   already holds the whole asked field** (a nudge of a few arcminutes, a smaller field, a seeded
+   tour stop), it answers with that patch instead, marked `reused: true` (see "Reuse" below).
 2. **Search.** One TAP query per release in `prebake.RELEASES`, all at once (the same join of
    `spherex.artifact`, `spherex.plane` and `spherex.observation` as IRSA's SPHEREx cutout notebook,
    with `CONTAINS(POINT(ra, dec), plane.poly)` and the collection name). The old build searched one
@@ -90,18 +92,24 @@ What makes the first look fast:
 | `GET /api/patch/<id>/first/frames.json`, `…/frames.bin.gz` | First look, same format as `public/data/<key>/` (`404` until written). |
 | `GET /api/patch/<id>/full/frames.json`, `…/frames.bin.gz` | Full set, same format. |
 | `GET /api/patch/<id>/catalog.json` | Gaia DR3 and CatWISE2020 sources in the patch (below). `202 {"state": "pending"}` while the query runs, `502 {"state": "failed", "error": …}` if both the primary service and the fallback failed. |
-| `GET /api/health` | `{"ok": true, "releases": [...], "fovs": [3, 6, 12, 24, 48]}` |
+| `GET /api/health` | `{"ok": true, "releases": [...], "fovs": [3, 6, 12, 24, 48], "counts": {...}}` |
 
 `frames.bin.gz` is sent as `application/octet-stream` without `Content-Encoding`, so the browser does
-not unpack it; the loader unpacks it (and reads it as is if a proxy already unpacked it).
+not unpack it; the loader unpacks it (and reads it as is if a proxy already unpacked it). A step's
+files and `catalog.json` never change once written (a new release list gives new ids), so they are
+sent with `Cache-Control: public, max-age=31536000, immutable`; status answers with `no-store`.
 
 A patch's `frames.json` is exactly the format of `docs/data-format.md`, with these differences:
 
 - `catalogue` is the patch centre with no motion (`pmra`, `pmdec` 0, `parallax` null, `ep` 2016.0),
-  and `from` says so: "Patch centre typed by the user (a position, not a catalogue object)".
+  and `from` says so: "Patch centre asked for in the viewer (a position, not a catalogue object)",
+  or, for a seeded patch, "Patch centre chosen ahead of time for a tour stop or a listed place (a
+  position, not a catalogue object)".
 - No `neighbours` block: the catalogue for the whole patch is in `catalog.json` instead.
 - An extra `live` block: `id`, `step` (`first` or `full`), `fetched` (UTC), `found` (exposures the
-  search found), `windows`.
+  search found), `windows`, and `ahead` (true when the seed job fetched it, not a page). The page
+  says "fetched live" only when `ahead` is false and `fetched` is less than an hour old; otherwise
+  it gives the date, for example "Real SPHEREx data, fetched 15 Nov 2026" (`src/viewer/seed.ts`).
 
 ## Status answer
 
@@ -136,8 +144,123 @@ and `searchTimedOut` (true when the patch failed because the search did not answ
 viewer turns them into "NASA’s search has not answered for 1 min 40 s (try 3 of 4)" after 20 s or
 from the second try.
 
+`ahead` is true for a patch the seed job fetched. `reused` is true when the answer comes from a
+finished patch that holds the asked field: `id`, `ra`, `dec` and `fov` are then that patch's own,
+and the page cuts its pictures around the spot it asked for (as it does for a pan).
+
 (SPEC 6.3 sketches the same answer with the names swapped: state `done` and count `ready`. This file
 is what the service sends.)
+
+## Who goes first, and stopping work nobody watches
+
+Plan: `docs/research/prediction.md`, option 1.
+
+- **Watched.** A patch is watched while a page asked for its status in the last 5 s (the page asks
+  every 1.5 s, so no new message is needed). Status reads by id and repeated `?ra=&dec=` requests
+  both count.
+- **Request slots by priority.** All 8 request slots of the process (`prebake._Gate`) go to watched
+  work first, then predicted work (not built), then seed work and patches nobody watches. That
+  lower work holds at most 4 slots at once and starts nothing for 5 s after any busy reply.
+- **Pausing.** A patch that loses its watcher finishes the cutouts already under way, then pauses
+  (`fetch_plan(keep_going=…)`). If its first look is not written yet it may start up to 4 more
+  cutouts first. What it fetched stays on disk (searches for 12 hours, cutouts for good), so when it
+  is asked again it is queued again and carries on quickly. A queued patch nobody watches is set
+  aside the same way. The page never sees a `paused` state: asking wakes it, so it answers `queued`.
+- **Queue order.** Two patches run at once: watched before seed, oldest first in each. Seed work
+  does not count towards the 8 waiting patches that give `503 busy`.
+
+## Reuse: a finished patch that holds the field
+
+Plan: `docs/research/prediction.md`, option 2. The service keeps an index of the finished patches
+on disk (centre and field; read again every minute, so patches the seed job writes are found too).
+A request is answered from one when its cutouts hold the whole asked field: along each axis,
+offset + asked field ÷ 2 ≤ (cutout side − 0.6′) ÷ 2. The narrowest such patch wins, then the
+nearest. A patch is used only up to two steps wider than asked (at least 12′), so a 6′ field never
+downloads a 48′ patch's 6 MB. A 12′ patch then serves a 6′ field within 3′ of its centre and a 3′
+field within 4.5′.
+
+The pictures are real exposures of that sky, cut from a slightly larger download; `frames.json`
+keeps its own centre and fetch date, and the label shows that date when it is not fresh.
+
+## Seed: tour stops and top places fetched ahead
+
+Plan: `docs/research/prediction.md`, option 3. `scripts/seed_live.py` fetches every tour stop
+(`src/data/tours.ts`) and every tier 0 and 1 place (`src/data/places.json`), less the five shipped
+targets: 156 spots on 15 November 2026. Each is fetched at 12′, or at the place's own field when
+it is wider (96 at 12′, 34 at 24′, 26 at 48′), so each also serves smaller fields and nudges near it.
+
+```
+.venv/bin/python scripts/seed_live.py --list            # the spots (no network)
+.venv/bin/python scripts/seed_live.py                   # fetch them all (hours; run at IRSA's night)
+.venv/bin/python scripts/seed_live.py --limit 3         # or a few; --only id,id; --max-fov 12
+.venv/bin/python scripts/seed_live.py --export          # write seed-out/ from what is fetched
+```
+
+It runs the live service's own code in its own process, as seed work: one spot at a time, at most
+4 requests at a time, holding back after busy replies. Give it the live service's cache
+(`--cache`, or `SIMA_CACHE`) and a running service answers those spots at once (it reads new
+finished patches from disk within a minute). Spots already held are skipped. Run it again after a
+new data release (new releases give new ids).
+
+**The static seed.** `--export [DIR]` (default `seed-out/`, ignored by git, never in `public/`)
+copies each patch that holds a spot to `DIR/<id>/full/frames.json` and `frames.bin.gz` (plus
+`DIR/<id>/catalog.json`), and writes `DIR/index.json`:
+
+```
+{ "version": 1, "made": "2026-11-15T05:00:00Z", "releases": ["spherex_dr1", "spherex_qr3"],
+  "patches": [ { "id": "…", "ra": 83.822, "dec": -5.391, "fov": 48, "size": 0.81,
+                 "fetched": "2026-11-15T04:12:09Z", "frames": 18, "found": 375, "places": ["m42"] }, … ] }
+```
+
+Upload the folder to any static host and build the page with its address in `VITE_SEED_BASE`
+(no trailing slash needed). The page then reads `index.json` once and opens a seeded spot from the
+host before it asks the live service, in the main frame and in workspace frames. **It works with
+no live service at all**: the tour stops still show real pictures. Without `VITE_SEED_BASE` the
+page behaves as before. The label gives the real fetch date ("Real data, fetched 15 Nov 2026"),
+never "fetched live".
+
+Google Cloud Storage:
+
+```
+gcloud storage buckets create gs://<bucket> --location=<region> --uniform-bucket-level-access
+gcloud storage buckets add-iam-policy-binding gs://<bucket> --member=allUsers --role=roles/storage.objectViewer
+gcloud storage rsync -r seed-out gs://<bucket>/seed
+gcloud storage objects update "gs://<bucket>/seed/**/frames.*" --cache-control="public, max-age=31536000, immutable"
+gcloud storage objects update gs://<bucket>/seed/index.json --cache-control="public, max-age=300"
+# CORS, only if the page is on another origin: cors.json =
+#   [{"origin": ["https://<page origin>"], "method": ["GET"], "maxAgeSeconds": 3600}]
+gcloud storage buckets update gs://<bucket> --cors-file=cors.json
+VITE_SEED_BASE=https://storage.googleapis.com/<bucket>/seed npm run build
+```
+
+Azure Blob Storage:
+
+```
+az storage account create -n <account> -g <group> --sku Standard_LRS --allow-blob-public-access true
+az storage container create --account-name <account> -n seed --public-access blob
+az storage blob upload-batch --account-name <account> -d seed -s seed-out --overwrite \
+    --content-cache-control "public, max-age=31536000, immutable"
+az storage blob upload --account-name <account> -c seed -n index.json -f seed-out/index.json --overwrite \
+    --content-cache-control "public, max-age=300"
+az storage cors add --account-name <account> --services b --methods GET --origins https://<page origin> \
+    --allowed-headers '*' --max-age 3600
+VITE_SEED_BASE=https://<account>.blob.core.windows.net/seed npm run build
+```
+
+Any other host works the same way (a CDN, the page's own host under a path such as `/seed`).
+`frames.bin.gz` must be served without `Content-Encoding: gzip` (store it as
+`application/octet-stream`; both commands above do). Expected size: about 1 MB per 12′ patch,
+3.7 MB per 24′, 6.5 MB per 48′: roughly 400 MB for all 156 spots, or about 100 MB with `--max-fov 12`.
+
+Limit: the catalogue tool still asks the live service for a seeded patch's `catalog.json`
+(`src/viewer/tools/catalogue.ts`), so with no service it says the catalogue is unavailable there.
+
+## Counters
+
+`/api/health` adds `counts`: requests answered from a patch already held (`cached`), from a covering
+patch (`reused`), new patches started for pages (`started`) and for the seed (`seeded`), patches
+paused and woken again (`paused`, `resumed`). The same line ends each patch's log line, with how
+long it waited in the queue (`wait=`). No positions or visitor details are counted.
 
 ## Catalogue for a patch: `catalog.json` (O-D4)
 

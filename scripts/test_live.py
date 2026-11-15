@@ -312,5 +312,256 @@ class TestBusy(unittest.TestCase):
                 live.Patch.run_catalog = orig
 
 
+def held(ra, dec, fov, pid="aaaaaaaaaaaaaaaa"):
+    return {"id": pid, "ra": ra, "dec": dec, "fov": fov}
+
+
+class TestCoverage(unittest.TestCase):
+    """A finished patch answers for a field its cutouts hold (prediction.md, option 2)."""
+
+    def test_inside_edge_outside(self):
+        h = held(100.0, 20.0, 12)                 # cutout 0.21 deg = 12.6', usable 12.0'
+        self.assertTrue(live.covers(h, 100.0, 20.0, 12))
+        self.assertTrue(live.covers(h, 100.0, 20.0, 6))
+        self.assertTrue(live.covers(h, 100.0, 20.0 + 2.99 / 60, 6))   # 3' + 3' = 6' = half the side
+        self.assertFalse(live.covers(h, 100.0, 20.0 + 3.1 / 60, 6))
+        self.assertTrue(live.covers(h, 100.0, 20.0 + 4.49 / 60, 3))
+        self.assertFalse(live.covers(h, 100.0, 20.0 + 4.6 / 60, 3))
+        self.assertFalse(live.covers(h, 100.0, 20.0 + 0.5 / 60, 12))
+        self.assertFalse(live.covers(h, 100.0, 20.0, 24))
+
+    def test_across_ra_zero_and_near_a_pole(self):
+        self.assertTrue(live.covers(held(359.98, 0.0, 12), 0.02, 0.0, 6))   # 2.4' across RA 0
+        self.assertFalse(live.covers(held(359.9, 0.0, 12), 0.1, 0.0, 6))    # 12' across RA 0
+        # Near the pole a degree of RA is short: 1 deg of RA at dec 89.9 is about 0.1'.
+        self.assertTrue(live.covers(held(10.0, 89.9, 12), 11.0, 89.9, 6))
+        self.assertFalse(live.covers(held(10.0, 60.0, 12), 11.0, 60.0, 6))
+
+    def test_small_fields_never_take_the_widest(self):
+        self.assertFalse(live.covers(held(10.0, 10.0, 48), 10.0, 10.0, 6))   # 6 MB for a 6' field
+        self.assertTrue(live.covers(held(10.0, 10.0, 24), 10.0, 10.0, 12))
+        self.assertTrue(live.covers(held(10.0, 10.0, 12), 10.0, 10.0, 3))
+        self.assertFalse(live.covers(held(10.0, 10.0, 24), 10.0, 10.0, 3))
+
+
+def write_ready(root: Path, pid, ra, dec, fov, ahead=False):
+    """A finished patch on disk, as Patch.finish leaves it."""
+    d = root / pid
+    (d / "full").mkdir(parents=True)
+    (d / "full" / "frames.json").write_text("{}")
+    (d / "catalog.json").write_text("{}")
+    st = {"id": pid, "state": "ready", "found": 3, "done": 1, "total": 1, "kept": 1, "releases": [],
+          "error": "", "warning": "", "first": f"/api/patch/{pid}/first/", "full": f"/api/patch/{pid}/full/",
+          "catalog": None, "catalogError": "", "ra": ra, "dec": dec, "fov": fov,
+          "searched": live.releases(), "ahead": ahead}
+    (d / "status.json").write_text(json.dumps(st))
+
+
+class QuietService(unittest.TestCase):
+    """A Service with no workers and no catalogue queries: jobs stay where the test puts them."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self._cat = live.Patch.run_catalog
+        live.Patch.run_catalog = lambda self: None
+
+    def service(self, **kw):
+        svc = live.Service(self.root, max_running=0, **kw)
+        svc.cat_queue = __import__("queue").Queue()
+        return svc
+
+    def tearDown(self):
+        live.Patch.run_catalog = self._cat
+        self.tmp.cleanup()
+
+
+class TestReuse(QuietService):
+    def test_nudge_and_smaller_field_reuse_a_finished_patch(self):
+        write_ready(self.root, "1111111111111111", 100.0, 20.0, 12, ahead=True)
+        svc = self.service()
+        st = svc.request(100.0, 20.02, 6)                 # 1.2' away, 6' field
+        self.assertTrue(st["reused"])
+        self.assertEqual(st["id"], "1111111111111111")
+        self.assertEqual((st["ra"], st["dec"], st["fov"]), (100.0, 20.0, 12))  # its own centre and field
+        self.assertEqual(st["state"], "ready")
+        self.assertTrue(st["ahead"])
+        self.assertEqual(svc.counts["reused"], 1)
+        self.assertEqual(svc.waiting, [])                 # nothing new was started
+        st = svc.request(100.0, 20.2, 6)                  # 12' away: a new patch
+        self.assertNotIn("reused", st)
+        self.assertEqual(st["state"], "queued")
+        self.assertFalse(st["ahead"])
+
+    def test_exact_patch_wins_and_a_deleted_one_is_not_reused(self):
+        write_ready(self.root, "1111111111111111", 100.0, 20.0, 12)
+        svc = self.service()
+        import shutil
+        shutil.rmtree(self.root / "1111111111111111")
+        self.assertEqual(svc.request(100.0, 20.0, 6)["state"], "queued")
+        self.assertNotIn("1111111111111111", svc.held)
+
+    def test_finished_patches_are_indexed_as_they_finish(self):
+        svc = self.service()
+        self.assertIsNone(svc.covering(50.0, 5.0, 6))
+        svc.hold({"id": "2222222222222222", "ra": 50.0, "dec": 5.0, "fov": 12, "full": "x",
+                  "searched": live.releases()})
+        self.assertEqual(svc.covering(50.0, 5.01, 6), "2222222222222222")
+        svc.hold({"id": "3333333333333333", "ra": 60.0, "dec": 5.0, "fov": 12, "full": "x",
+                  "searched": ["spherex_old"]})
+        self.assertIsNone(svc.covering(60.0, 5.0, 6))  # another release list: not reused
+
+
+class TestQueue(QuietService):
+    def test_watched_first_then_seed_and_unwatched_ones_pause(self):
+        svc = self.service()
+        seed = svc.request(1.0, 1.0, 12, klass="seed")["id"]
+        gone = svc.request(2.0, 1.0, 12)["id"]
+        watched = svc.request(3.0, 1.0, 12)["id"]
+        svc.patches[gone].last_seen -= live.WATCH_SECS + 1    # its page went away
+        self.assertEqual(svc._next().id, watched)
+        self.assertEqual(svc._next().id, seed)
+        self.assertEqual(svc.patches[gone].snapshot()["state"], "paused")
+        self.assertEqual(svc.waiting, [])
+        # Asked again (a status read), it is queued again.
+        self.assertEqual(svc.status(gone)["state"], "queued")
+        self.assertEqual(svc._next().id, gone)
+        self.assertEqual(svc.counts["paused"], 1)
+        self.assertEqual(svc.counts["resumed"], 1)
+
+    def test_seed_work_does_not_fill_the_busy_limit(self):
+        svc = self.service(max_queued=1)
+        svc.request(1.0, 1.0, 12, klass="seed")
+        svc.request(2.0, 1.0, 12, klass="seed")
+        svc.request(3.0, 1.0, 12)
+        with self.assertRaises(live.Busy):
+            svc.request(4.0, 1.0, 12)
+
+    def test_keep_going(self):
+        svc = self.service()
+        p = svc.patches[svc.request(1.0, 1.0, 12)["id"]]
+        self.assertTrue(p.keep_going())
+        self.assertEqual(p.priority(), live.pb.WATCHED)
+        p.last_seen -= live.WATCH_SECS + 1
+        self.assertEqual(p.priority(), live.pb.SEED)
+        # No first look yet: a few more cutouts may start, then it pauses.
+        self.assertEqual([p.keep_going() for _ in range(live.FIRST_GRACE + 2)],
+                         [True] * live.FIRST_GRACE + [False, False])
+        p.touch()
+        self.assertTrue(p.keep_going())
+        p.last_seen -= live.WATCH_SECS + 1
+        p.set(first="/api/patch/x/first/")
+        self.assertFalse(p.keep_going())                    # first look out: pause at once
+        s = svc.patches[svc.request(2.0, 1.0, 12, klass="seed")["id"]]
+        s.last_seen -= live.WATCH_SECS + 1
+        self.assertTrue(s.keep_going())                     # the seed job waits for it
+
+
+class TestPauseAndResume(QuietService):
+    """A whole run against a stub archive: the page leaves, the patch pauses, comes back, finishes."""
+
+    def setUp(self):
+        super().setUp()
+        self.saved = {k: getattr(live.pb, k) for k in ("search", "load_plan_tables", "estimate_lam", "plan",
+                                                        "download_cutout", "make_frame", "pack",
+                                                        "renumber_windows")}
+        self.downloads = []
+        exps = [{"id": f"e{w}{d}{i}", "t": 60000.0 + 200 * w, "det": d, "url": f"u{w}{d}{i}", "release": "r"}
+                for w in range(2) for d in range(1, 7) for i in range(3)]
+        groups = {}
+        for e in exps:
+            groups.setdefault((int((e["t"] - 60000) // 200), e["det"]), []).append(e)
+        live.pb.search = lambda ra, dec, rels, **kw: (exps, {r: len(exps) for r in rels}, [])
+        live.pb.load_plan_tables = lambda exps: None
+        live.pb.estimate_lam = lambda e, ra, dec: None
+        live.pb.plan = lambda exps, per, mx: {"groups": groups, "perDet": 2, "windows": [0, 1]}
+        self.gate = threading.Event()
+        self.gate.set()
+
+        def download(url, waits=None):
+            self.gate.wait(5)
+            self.downloads.append(url)
+            time.sleep(0.01)
+            return b""
+        live.pb.download_cutout = download
+        live.pb.make_frame = lambda e, body, cat, url: (({"mjd": e["t"], "det": e["det"]}, b""), "")
+        live.pb.pack = lambda frames: ([{"release": "r"} for _ in frames], {}, b"")
+        live.pb.renumber_windows = lambda entries: 2
+
+    def tearDown(self):
+        for k, v in self.saved.items():
+            setattr(live.pb, k, v)
+        super().tearDown()
+
+    def test_unwatched_patch_pauses_and_carries_on_when_asked_again(self):
+        svc = self.service()
+        pid = svc.request(10.0, 10.0, 12)["id"]
+        p = svc.patches[pid]
+        self.gate.clear()
+        th = threading.Thread(target=svc._runner, daemon=True)
+        th.start()
+        for _ in range(200):
+            if p.snapshot()["state"] in ("first", "rest"):
+                break
+            time.sleep(0.01)
+        p.last_seen -= live.WATCH_SECS + 1                   # the page aimed elsewhere
+        p.grace = 0
+        self.gate.set()
+        for _ in range(300):
+            if p.snapshot()["state"] == "paused":
+                break
+            time.sleep(0.01)
+        st = p.snapshot()
+        self.assertEqual(st["state"], "paused")
+        self.assertLess(len(self.downloads), 24)             # it stopped before the whole plan
+        self.assertLessEqual(len(self.downloads), live.pb.MAX_CONCURRENT)  # only those under way
+        self.assertIsNone(st["full"])
+        n = len(self.downloads)
+        time.sleep(0.2)
+        self.assertEqual(len(self.downloads), n)              # nothing more while nobody watches
+        self.assertEqual(svc.status(pid)["state"], "queued")  # the page is back
+        for _ in range(500):
+            if p.snapshot()["state"] == "ready":
+                break
+            time.sleep(0.01)
+        st = p.snapshot()
+        self.assertEqual(st["state"], "ready")
+        self.assertTrue((self.root / pid / "full" / "frames.json").exists())
+        self.assertEqual(svc.covering(10.0, 10.0, 6), pid)    # indexed for reuse
+        doc = json.loads((self.root / pid / "full" / "frames.json").read_text())
+        self.assertFalse(doc["live"]["ahead"])
+        self.assertIn("asked for in the viewer", doc["catalogue"]["from"])
+
+    def test_seed_patch_says_it_was_fetched_ahead(self):
+        svc = self.service()
+        pid = svc.request(20.0, 10.0, 12, klass="seed")["id"]
+        p = svc.patches[pid]
+        p.last_seen -= live.WATCH_SECS + 1                   # nobody watches: it still runs
+        threading.Thread(target=svc._runner, daemon=True).start()
+        for _ in range(500):
+            if p.snapshot()["state"] == "ready":
+                break
+            time.sleep(0.01)
+        self.assertEqual(p.snapshot()["state"], "ready")
+        self.assertEqual(len(self.downloads), 24)
+        doc = json.loads((self.root / pid / "full" / "frames.json").read_text())
+        self.assertTrue(doc["live"]["ahead"])
+        self.assertIn("chosen ahead of time", doc["catalogue"]["from"])
+        st = json.loads((self.root / pid / "status.json").read_text())
+        self.assertTrue(st["ahead"])
+
+
+class TestCacheHeaders(TestServer):
+    def test_finished_files_are_immutable(self):
+        st = self.wait_ready("ra=217.429&dec=-62.68&fov=12")
+        code, headers, _ = self.get(st["full"] + "frames.json")
+        self.assertEqual(code, 200)
+        self.assertIn("immutable", headers["Cache-Control"])
+        code, headers, _ = self.get("/api/patch/" + st["id"])
+        self.assertEqual(headers["Cache-Control"], "no-store")
+        counts = json.loads(self.get("/api/health")[2])["counts"]
+        self.assertGreaterEqual(counts["started"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

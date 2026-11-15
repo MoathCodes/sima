@@ -572,5 +572,118 @@ class TestShippedData(unittest.TestCase):
             self.assertEqual(mjds, sorted(mjds), key)
 
 
+class TestPriorityGate(unittest.TestCase):
+    """The shared request slots go to watched work first (docs/research/prediction.md, option 1)."""
+
+    def setUp(self):
+        self.saved = pb.MAX_CONCURRENT, pb._last_retry
+        pb._last_retry = 0.0
+
+    def tearDown(self):
+        pb.MAX_CONCURRENT, pb._last_retry = self.saved
+
+    def _queue_up(self, prios):
+        """Holds the only slot, lines up one thread per priority, then lets them go one by one."""
+        pb.MAX_CONCURRENT = 1
+        order = []
+        held = pb._gate.acquire(pb.WATCHED)
+        threads = []
+        for name, prio in prios:
+            def go(name=name, prio=prio):
+                lvl = pb._gate.acquire(prio)
+                order.append(name)
+                pb._gate.release(lvl)
+            t = threading.Thread(target=go, daemon=True)
+            t.start()
+            threads.append(t)
+            for _ in range(200):  # in line before the next one comes
+                if len(pb._gate.waiting) == len(threads):
+                    break
+                time.sleep(0.005)
+        return order, threads, held
+
+    def test_watched_before_seed_then_arrival(self):
+        order, threads, held = self._queue_up([("seed-1", pb.SEED), ("watched", pb.WATCHED),
+                                               ("seed-2", pb.SEED), ("predicted", pb.PREDICTED)])
+        pb._gate.release(held)
+        for t in threads:
+            t.join(5)
+        self.assertEqual(order, ["watched", "predicted", "seed-1", "seed-2"])
+
+    def test_priority_can_rise_while_waiting(self):
+        level = {"v": pb.SEED}
+        order, threads, held = self._queue_up([("other", pb.SEED), ("promoted", lambda: level["v"])])
+        level["v"] = pb.WATCHED  # a page started watching it
+        pb._gate.release(held)
+        for t in threads:
+            t.join(5)
+        self.assertEqual(order, ["promoted", "other"])
+
+    def test_low_work_holds_back_after_busy_and_is_capped(self):
+        pb.MAX_CONCURRENT = 8
+        pb._last_retry = time.time()  # a busy reply just now
+        got = []
+        t = threading.Thread(target=lambda: got.append(pb._gate.acquire(pb.SEED)), daemon=True)
+        t.start()
+        t.join(0.6)
+        self.assertEqual(got, [])                       # seed waits after a busy reply
+        lvl = pb._gate.acquire(pb.WATCHED)               # watched work does not
+        pb._gate.release(lvl)
+        pb._last_retry = 0.0
+        t.join(5)
+        self.assertEqual(got, [pb.SEED])
+        pb._gate.release(got[0])
+        lows = [pb._gate.acquire(pb.SEED) for _ in range(pb.LOW_SLOTS)]
+        extra = []
+        t = threading.Thread(target=lambda: extra.append(pb._gate.acquire(pb.SEED)), daemon=True)
+        t.start()
+        t.join(0.6)
+        self.assertEqual(extra, [])                      # at most LOW_SLOTS for low work
+        for lvl in lows:
+            pb._gate.release(lvl)
+        t.join(5)
+        pb._gate.release(extra[0])
+        self.assertEqual((pb._gate.used, pb._gate.low), (0, 0))
+
+    def test_priority_is_carried_into_pools(self):
+        seen = []
+        with pb.priority(pb.SEED):
+            run = pb.carry(lambda: seen.append(pb.current_priority()))
+        threading.Thread(target=run).start()
+        time.sleep(0.05)
+        self.assertEqual(seen, [pb.SEED])
+        self.assertEqual(pb.current_priority(), pb.WATCHED)
+
+
+class TestFetchPlanStops(unittest.TestCase):
+    def test_keep_going_stops_new_cutouts_and_says_so(self):
+        exps = {(w, d): [{"id": f"{w}-{d}-{i}", "t": 60000.0 + w, "url": "u"} for i in range(3)]
+                for w in range(2) for d in range(1, 7)}
+        p = {"groups": exps, "perDet": 2}
+        asked = []
+        saved = pb.download_cutout, pb.make_frame, pb.MAX_CONCURRENT
+        pb.download_cutout = lambda url, waits=None: b""
+        pb.make_frame = lambda e, body, cat, url: (asked.append(e["id"]) or ({"mjd": e["t"], "det": 1},), "")
+        pb.MAX_CONCURRENT = 1
+        calls = {"n": 0}
+
+        def keep_going():
+            calls["n"] += 1
+            return calls["n"] <= 5
+
+        try:
+            cat = {"ra": 0.0, "dec": 0.0, "ep": 2016.0, "pmra": 0.0, "pmdec": 0.0}
+            report = {}
+            frames, skipped = pb.fetch_plan(p, cat, 0.1, keep_going=keep_going, report=report)
+            whole, _ = pb.fetch_plan(p, cat, 0.1, report=(full := {}))
+        finally:
+            pb.download_cutout, pb.make_frame, pb.MAX_CONCURRENT = saved
+        self.assertTrue(report["stopped"])
+        self.assertEqual(len(frames), 4)        # 1 batch check + 4 cutouts, then no more
+        self.assertEqual(skipped, [])           # cutouts not asked are not "skipped"
+        self.assertFalse(full["stopped"])
+        self.assertEqual(len(whole), 24)
+
+
 if __name__ == "__main__":
     unittest.main()
