@@ -745,6 +745,9 @@ function brightGrid(): { w: number; h: number; lin: Float32Array } | null {
   const key = `${skyEl.dataset.view} ${hostBox.w} ${hostBox.h} ${done} ${current?.key ?? ''}`;
   const now = performance.now();
   if (bright && (bright.key === key || now - bright.at < 250)) return bright;
+  // Reading the map back from the GPU is slow on a software renderer: only once the view has
+  // stopped (labels are only added then), and never under the intro.
+  if (now - movedAt < 200 || document.documentElement.dataset.intro !== undefined) return bright;
   const w = Math.max(1, Math.ceil(hostBox.w / SAMPLE_PX));
   const h = Math.max(1, Math.ceil(hostBox.h / SAMPLE_PX));
   if (!sampler) {
@@ -1320,6 +1323,7 @@ function readCamera(force = false): boolean {
     return Math.abs(view.scale - before) > 1e-6 * before;
   }
   settle = 3;
+  movedAt = performance.now();
   Object.assign(cam, { ra: wrapRa(ra), dec, fov, width, height });
   if (fov > widest() * 1.0001 || fov < FOV_MIN - 1e-4) al.setFoV(clampFov(fov));
   calibrateView(cx, cy);
@@ -1328,6 +1332,8 @@ function readCamera(force = false): boolean {
 
 /** Frames left in which `readCamera` measures the scale again although nothing changed. */
 let settle = 0;
+/** When the view last changed (performance.now ms). */
+let movedAt = 0;
 
 /** Measures the view's scale from Aladin, at a point off the globe's centre (cx, cy). */
 function calibrateView(cx: number, cy: number): void {

@@ -221,23 +221,6 @@
     0 0 0 7px rgb(255 74 156 / 0.24),
     0 0 28px rgb(255 74 156 / 0.55);
 }
-/* Pulses once as the intro hands over. */
-.sky-beacon.pulse .sky-beacon-ring {
-  animation: sky-beacon-pulse 1.2s var(--v2-ease) 1;
-}
-@keyframes sky-beacon-pulse {
-  40% {
-    box-shadow:
-      0 0 0 14px rgb(255 74 156 / 0.1),
-      0 0 40px rgb(255 74 156 / 0.6);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .sky-beacon.pulse .sky-beacon-ring {
-    animation: none;
-  }
-}
-
 /* The tag: a Thin chip (the material comes from app.css's .glass-thin; without it, an opaque
    enough tint that white text passes over a bright sky). */
 .sky-beacon-tag {

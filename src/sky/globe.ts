@@ -106,15 +106,6 @@ export function startGlobe(): void {
       globeHome({ first, animate: false });
     });
   }
-  // The Barnard's Star beacon pulses once as the intro hands over (BEGINNER-AND-MOBILE 5.1).
-  if (html.dataset.intro !== undefined) {
-    const watch = new MutationObserver(() => {
-      if (html.dataset.intro !== undefined) return;
-      watch.disconnect();
-      els.get('runaway')?.el.classList.add('pulse');
-    });
-    watch.observe(html, { attributes: true, attributeFilter: ['data-intro'] });
-  }
 }
 
 /**
@@ -280,7 +271,6 @@ function build(): void {
     tag.className = b.kind === 'mission' ? 'sky-beacon-tag glass-thin' : 'sky-beacon-tag';
     el.append(ring, tag);
     el.addEventListener('click', () => press(b.id));
-    el.addEventListener('animationend', () => el.classList.remove('pulse'));
     layer.append(el);
     els.set(b.id, { el, tag, tagW: 0 });
     keepClear(tag);
