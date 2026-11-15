@@ -199,8 +199,14 @@ function peekHeight(): number | undefined {
   const el = sheetContent();
   const body = sheet?.querySelector<HTMLElement>('.sheet-body');
   if (!sheet || !el || !body || !shown(sheet)) return undefined;
-  const end = el.querySelector<HTMLElement>('[data-peek-end]');
-  if (!end || !end.checkVisibility()) return undefined;
+  // The content's peek end, or a card another lane put in the flow right after it (Planet X's
+  // sandbox card, shell/sandbox.ts): that card is the step's main control, so peek shows it.
+  const wrap = el.parentElement ?? el;
+  const ends = [...wrap.querySelectorAll<HTMLElement>('[data-peek-end], [data-under="flow"]')].filter(
+    (x) => x.checkVisibility(),
+  );
+  const end = ends[ends.length - 1];
+  if (!end) return undefined;
   const chrome = body.getBoundingClientRect().top - sheet.getBoundingClientRect().top;
   const pad = parseFloat(getComputedStyle(body).paddingTop) || 0;
   return Math.ceil(chrome + pad + end.getBoundingClientRect().bottom - el.getBoundingClientRect().top + 12);
