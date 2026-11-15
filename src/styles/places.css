@@ -2,16 +2,27 @@
    Style only lane G's own classes here (prefix pl-). Tokens and shared components are in app.css;
    app.css ("Lane G") places #places-list, #place-card and #places-menu. */
 
-/* ----- Chips: 30px cards on the sky, one Lift each; on = Ultramarine Wash. ----- */
+/* ----- Chips: 30px Thin glass pills on the sky (material from app.css); on = Ultramarine Wash. ----- */
 .pl-chip {
   height: 30px;
-  padding: 0 10px 0 8px;
+  padding: 0 11px 0 9px;
   gap: 5px;
-  background: var(--card);
-  box-shadow: var(--lift);
+  border-radius: var(--r-pill);
+  font-weight: 500;
+}
+.btn.pl-chip,
+.btn.pl-chip:hover {
+  background: var(--mat-bg); /* the Thin material, not .btn's fill */
 }
 .pl-chip:hover {
-  background: var(--card-2);
+  --mat-tint: rgb(30 36 64 / 0.92);
+}
+html[data-glass='glass'] .pl-chip:hover {
+  --mat-tint: rgb(30 36 64 / 0.62);
+}
+.pl-chip:is([aria-pressed='true'], [aria-expanded='true']) {
+  --mat-tint: var(--v2-action-soft);
+  color: var(--on-action-soft);
 }
 .pl-chip > .icon {
   width: 16px;
@@ -102,7 +113,7 @@
 }
 .pl-filter[aria-pressed='true'] {
   background: var(--action-soft);
-  color: var(--action);
+  color: var(--on-action-soft);
 }
 .pl-where {
   display: flex;
@@ -146,8 +157,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Arabic names: the Arabic text face (app.css :lang(ar)), never under 14 px (A11Y-4), and
+   always in a <bdi> (places/state.ts arabicSpan). */
 .pl-ar {
   color: var(--ink-2);
+  font-size: max(14px, 1em);
   font-weight: 400;
 }
 .pl-more-rows {
@@ -164,6 +178,7 @@
   margin: 0;
   font: var(--text-label);
   color: var(--ink-2);
+  line-height: 1.6;
 }
 .pl-label {
   color: var(--ink-3);
@@ -172,6 +187,23 @@
 .pl-ar-big {
   color: var(--ink);
   font: var(--text-control);
+  font-size: 16px;
+  font-family: var(--font-arabic-text);
+}
+/* Discover: "More facts" folds the facts after Brightness (BEGINNER-AND-MOBILE.md 5.8). */
+.pl-more > .pl-more-facts {
+  border-top: 0;
+  padding-top: 4px;
+}
+.pl-more-summary {
+  width: fit-content;
+  padding: 4px 0;
+  color: var(--ink);
+  font: var(--text-control);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgb(255 255 255 / 0.35);
+  text-underline-offset: 4px;
 }
 .pl-from {
   color: var(--ink-2);

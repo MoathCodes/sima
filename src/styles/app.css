@@ -385,7 +385,7 @@
 }
 
 /* Thin: chips, sky labels over bright sky, small tags on the sky. */
-:where(.glass-thin, .pl-chip, #chips .pl-more) {
+:where(.glass-thin, .pl-chip) {
   --mat-filter: var(--v2-thin-filter);
   --mat-tint: var(--v2-thin-tint);
   --mat-lift: var(--v2-lift-1);
@@ -446,7 +446,6 @@
 :where(
     .glass-thin,
     .pl-chip,
-    #chips .pl-more,
     .glass,
     .card,
     #wordmark,
@@ -484,10 +483,13 @@
     #sheet,
     .wf
   ) {
-  background:
+  /* --mat-bg lets a part whose own class sets a background (a .btn) take the material back:
+     `background: var(--mat-bg)`. */
+  --mat-bg:
     var(--v2-grain-img) 0 0 / 160px 160px repeat,
     var(--mat-sheen, linear-gradient(transparent, transparent)),
     linear-gradient(var(--mat-tint), var(--mat-tint));
+  background: var(--mat-bg);
   -webkit-backdrop-filter: var(--mat-filter);
   backdrop-filter: var(--mat-filter);
   box-shadow: var(--v2-rim-shadow), var(--mat-lift);
@@ -499,7 +501,6 @@
 :where(html[data-glass='solid'], html[data-embed]) :where(
     .glass-thin,
     .pl-chip,
-    #chips .pl-more,
     .glass,
     .card,
     #wordmark,

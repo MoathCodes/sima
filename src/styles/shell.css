@@ -80,6 +80,13 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The Arabic name beside the name: Arabic text face, 14 px or more, in a <bdi> (A11Y-4). */
+.search-ar {
+  margin-inline-start: 4px;
+  color: var(--ink-2);
+  font-size: max(14px, 1em);
+  font-weight: 400;
+}
 .search-row .line {
   overflow: hidden;
   text-overflow: ellipsis;
