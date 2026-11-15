@@ -696,6 +696,9 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
 .sima-bar {
   --dates-w: 400px;
   --wl-w: 424px;
+  /* Compact (redesign item 3): 64 px tall, the date scale 52 px; the frame gets the rest. */
+  --date-scale-h: 52px;
+  --bar-h: 64px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -744,7 +747,7 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
 .bar-rule {
   align-self: stretch;
   width: 1px;
-  margin: 14px 0;
+  margin: 10px 0;
   background: var(--rule);
   flex: none;
 }
@@ -794,18 +797,18 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
 .ds-line {
   left: 0;
   right: 0;
-  top: 32px;
+  top: 27px;
   height: 1px;
   background: var(--card-3);
 }
 .ds-pass {
-  top: 30px;
+  top: 25px;
   height: var(--pass-bar);
   border-radius: 2px;
   background: linear-gradient(to right, var(--ink-2) var(--played), var(--card-3) var(--played));
 }
 .ds-tick {
-  top: 35px;
+  top: 30px;
   width: 1px;
   height: 4px;
   background: var(--card-3);
@@ -815,26 +818,26 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
   background: var(--ink-3);
 }
 .ds-month {
-  top: 46px;
+  top: 41px;
   translate: -50% 0;
   color: var(--ink-3);
   font: var(--text-scale);
   white-space: nowrap;
 }
 .ds-today {
-  top: 24px;
+  top: 19px;
   width: 1px;
   height: 20px;
   background: var(--ink-3);
 }
 .ds-stem {
-  top: 22px;
+  top: 17px;
   width: 1px;
   height: 9px;
   background: var(--ink-3);
 }
 .ds-stop {
-  top: 2px;
+  top: 0;
   display: grid;
   place-items: center;
   width: var(--stop);
@@ -860,14 +863,14 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
   color: var(--ink-3);
 }
 .ds-passname {
-  top: 4px;
+  top: 2px;
   translate: -50% 0;
   color: var(--ink-3);
   font: var(--text-scale);
   white-space: nowrap;
 }
 .ds-dot {
-  top: 28px;
+  top: 23px;
   width: var(--visit-dot);
   height: var(--visit-dot);
   margin-left: calc(var(--visit-dot) / -2);
@@ -881,7 +884,7 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
   box-shadow: inset 0 0 0 1.5px var(--ink-3);
 }
 .ds-playhead {
-  top: 20px;
+  top: 15px;
   width: 2px;
   height: 22px;
   margin-left: -1px;
@@ -917,7 +920,7 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
 /* The wavelength scale (signature). */
 .wl {
   display: grid;
-  gap: 5px;
+  gap: 3px;
   flex: none;
   width: var(--wl-w);
 }
@@ -1297,4 +1300,165 @@ html[data-view='discover'] .frame-views > button > .icon {
   row-gap: 2px;
   height: auto;
   min-height: 22px;
+}
+
+/* Discover's views keep their words at any width (above, icons give way only in Expert). */
+html[data-view='discover'] .frame-views > button > span {
+  display: inline;
+}
+
+/* ----- Expert on a desktop: dense (redesign items 1 to 3) ------------------------------------
+   The header is one row: the name over one short source line (Real data · SPHEREx DR1 ⓘ), the
+   field size, tools, Measure and hide on the right. The picture's badge gives the date and
+   wavelength; ⓘ opens "About this picture" (the full data line, what the view shows, the legend
+   of the marks), so the caption and legend lines under the views are not shown here. */
+html:not([data-view='discover']):not([data-layout^='phone']) {
+  & :is(#frame-exif, #frame-explain, #frame-legend) {
+    display: none;
+  }
+  & #frame-head.frame-head {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    padding: 8px 0 6px;
+  }
+  & #frame-head .frame-name {
+    flex: 1 1 auto;
+  }
+  & .frame-title {
+    font-size: 15px;
+    line-height: 1.25;
+  }
+  & .frame-source {
+    min-width: 0;
+  }
+  /* The source keeps its words; the release and coordinates give way first. */
+  & .frame-source > .term {
+    flex: none;
+  }
+  & :is(.frame-rel, .frame-coords) {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* The loading line lies over the foot of the picture, only while it has something to say, so
+     the frame keeps its height either way (O-I5) and spends none on an empty line. */
+  & #frame {
+    grid-template-areas: 'head' 'task' 'pic' 'views' 'motion';
+  }
+  & #frame-head {
+    grid-area: head;
+  }
+  & #frame-task {
+    grid-area: task;
+  }
+  & #frame-pic {
+    grid-area: pic;
+  }
+  & #frame-views {
+    grid-area: views;
+  }
+  & #frame-motion {
+    grid-area: motion;
+  }
+  & #frame-load {
+    grid-area: pic;
+    align-self: end;
+    justify-self: center;
+    z-index: 2;
+    width: min(100%, var(--pic-max, 100%));
+    height: auto;
+    margin: 0;
+    padding: 4px 8px;
+    box-sizing: border-box;
+    background: var(--badge-bg);
+    color: var(--st-ink);
+    transition: opacity var(--dur-2, 200ms) var(--ease-out);
+  }
+  & #frame-load[data-empty] {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+.frame-info {
+  width: 20px;
+  height: 20px;
+  margin-left: 2px;
+  border-radius: 50%;
+  color: var(--ink-3);
+}
+.frame-info:hover,
+.frame-info[aria-expanded='true'] {
+  color: var(--ink);
+}
+.frame-info > .icon {
+  width: 14px;
+  height: 14px;
+}
+.frame-head .btn.frame-fov {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  height: var(--size-icon-btn-sm);
+  padding: 0 4px 0 8px;
+  border-radius: var(--r-window);
+  color: var(--ink);
+  font: var(--text-label);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.frame-fov > .icon {
+  width: 14px;
+  height: 14px;
+  color: var(--ink-3);
+  transition: transform var(--dur-2, 200ms) var(--ease-out);
+}
+.frame-fov[aria-expanded='true'] > .icon {
+  transform: rotate(180deg);
+}
+
+/* The frame's popovers: the field sizes, and "About this picture". They settle toward their
+   button (tools/dom.ts hangPopover sets the side), faster on close. */
+.frame-pop {
+  --t-settle: var(--dur-2, 200ms);
+  z-index: var(--z-popover);
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+}
+.frame-pop:not(:popover-open) {
+  display: none;
+  transition-duration: var(--dur-1, 120ms);
+}
+.fovs-menu {
+  display: grid;
+  min-width: 140px;
+}
+.fovs-menu .menu-item {
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+}
+.fovs-what {
+  color: var(--ink-3);
+  font: var(--text-label);
+}
+.frame-more {
+  display: grid;
+  gap: 8px;
+  width: min(340px, calc(100vw - 32px));
+  padding: 12px 14px;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.frame-more p {
+  margin: 0;
+}
+.frame-more b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.frame-more .fm-legend {
+  justify-content: flex-start;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
 }

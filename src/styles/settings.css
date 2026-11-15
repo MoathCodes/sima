@@ -87,3 +87,19 @@
 .sheet-body #settings :is(.btn, .seg > button) {
   min-height: var(--v2-hit-phone);
 }
+
+/* A label and its value or button on one row (redesign: fewer sentences). */
+.st-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+.st-group.st-row {
+  display: flex;
+}
+.st-row .st-note {
+  font: var(--text-label);
+  font-size: 13px;
+}

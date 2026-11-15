@@ -34,15 +34,22 @@
 }
 .ms-headrow {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  gap: 2px;
+  margin: -4px -6px 0 0;
 }
+/* The name and its kind on one line: "Barnard's Star  Red dwarf (M4V), 1.83 pc". */
 .ms-title {
   flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 8px;
   min-width: 0;
 }
 .ms-title h2 {
   font: var(--text-title);
+  font-size: 15px;
   overflow-wrap: anywhere;
 }
 .ms-kind {
@@ -94,8 +101,45 @@
   padding-block: 3px 4px;
 }
 /* The stable heading over every chart: which detector and which dates (O-T6). */
-.ms-chart-head {
+.ms-chart-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin-bottom: -4px;
+}
+.ms-wrap:not([data-state='measure']) .ms-chart-row {
+  display: none;
+}
+.ms-info {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: var(--ink-3);
+}
+.ms-info:hover,
+.ms-info[aria-expanded='true'] {
+  color: var(--ink);
+}
+.ms-info[hidden] {
+  display: none;
+}
+.ms-info > .icon {
+  width: 15px;
+  height: 15px;
+}
+/* "How to read this": the headline chart's paragraph, one tap away (frame.css .frame-pop moves it). */
+.ms-about {
+  width: min(380px, calc(100vw - 32px));
+  padding: 12px 14px;
+  color: var(--ink);
+  font: var(--text-label);
+}
+.ms-about p {
+  margin: 0;
+}
+.ms-chart-head {
+  flex: 1;
+  min-width: 0;
   color: var(--ink-2);
   font: var(--text-label);
 }
@@ -307,8 +351,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--rule);
 }
 .ms-foot-line {
   flex: 1 1 200px;

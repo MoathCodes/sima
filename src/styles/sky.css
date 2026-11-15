@@ -113,6 +113,12 @@
   height: 100%;
 }
 
+/* While the intro plays, its own source line says what the light is: one provenance line, not
+   two (redesign item 2). */
+html[data-intro] #sky-note {
+  visibility: hidden;
+}
+
 /* The sky note: the second fact explains itself on hover or focus (O-I6). */
 #sky-note .sky-note-more {
   text-decoration: underline dotted;

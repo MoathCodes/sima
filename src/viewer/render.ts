@@ -98,6 +98,8 @@ export interface Hud {
   lines: string[];
   /** Added by lane D: a line that says something is missing or simulated (drawn in amber). */
   warn?: string;
+  /** A caution after the lines, drawn in amber (a date in another colour than the reference). */
+  note?: string;
 }
 
 const tapFns = new Set<(p: { x: number; y: number; ra: number; dec: number }) => void>();
@@ -247,11 +249,8 @@ export function hud(): Hud | null {
     const [a, b] = pair();
     return {
       letter: '',
-      title: 'Two dates in one picture',
-      lines: [
-        `Red: ${a ? formatDate(a.mjd, 'month') : '–'} · Cyan: ${b ? formatDate(b.mjd, 'month') : '–'}`,
-        'White did not change',
-      ],
+      title: `Red ${a ? formatDate(a.mjd, 'month') : '–'} · Cyan ${b ? formatDate(b.mjd, 'month') : '–'}`,
+      lines: measure ? [] : ['White did not change'],
       warn: sim,
     };
   }
@@ -301,24 +300,27 @@ export function hud(): Hud | null {
             ];
     return { letter: g.letter, title: formatDate(g.mjd, 'month'), lines, warn: sim };
   }
+  // One line under the date: pass, detector and wavelength, "· reference" on the reference date.
+  // A different colour from the reference is the only other line (redesign item 2: few words; what
+  // each view shows is in the frame's "About this picture").
   const f = frames[0];
-  const lines = [passName(field, g.window)];
-  if (frames.length > 1)
-    lines.push(`D${g.det}, ${lamRange(frames.map((x) => x.lam))}, ${frames.length} shots`);
-  else if (f) lines.push(`D${g.det}, ${f.lam.toFixed(2)} µm`);
   const ref = S.groups[Math.min(S.ref, S.groups.length - 1)];
   const refFrame = ref ? framesOf(field, [ref])[0] : undefined;
-  if (f && refFrame && ref !== g) {
-    lines.push(
-      colourMatch(f, refFrame)
-        ? `Same colour as the reference (${refFrame.lam.toFixed(2)} µm)`
-        : `Different colour: ${f.lam.toFixed(2)} vs ${refFrame.lam.toFixed(2)} µm`,
-    );
-  } else if (f && ref === g) {
-    lines.push('This is the reference date');
-  }
-  if (S.mode === 'diff') lines.push('Minus the median of all dates');
-  return { letter: g.letter, title: formatDate(g.mjd, 'time'), lines, warn: sim };
+  const lam =
+    frames.length > 1
+      ? `D${g.det} ${lamRange(frames.map((x) => x.lam))} · ${frames.length} shots`
+      : f
+        ? `D${g.det} ${f.lam.toFixed(2)} µm`
+        : `D${g.det}`;
+  const lines = [`${passName(field, g.window)} · ${lam}${ref === g ? ' · reference' : ''}`];
+  const differs = !!f && !!refFrame && ref !== g && !colourMatch(f, refFrame);
+  return {
+    letter: g.letter,
+    title: formatDate(g.mjd, 'time'),
+    lines,
+    warn: sim,
+    note: differs && refFrame ? `Other colour than the reference (${refFrame.lam.toFixed(2)} µm)` : undefined,
+  };
 }
 
 /**
@@ -767,11 +769,11 @@ function labels(p: Parts, size: number, k: number, field: Field | null, map: boo
     const warn = h.warn ? `<span class="pic-warn">${esc(h.warn)}</span>` : '';
     // Around the real exposures, the sky map: said on the badge that says what the picture is (H1).
     const around = map
-      ? '<span class="pic-around"><b>Sky map (all dates averaged)</b> outside the dashed line</span>'
+      ? '<span class="pic-around"><b>Sky map (all dates averaged)</b> past the dashes</span>'
       : '';
     p.badge.innerHTML = `${warn}<span class="pic-title">${tile}<b>${esc(h.title)}</b></span>${h.lines
       .map((l) => `<span>${esc(l)}</span>`)
-      .join('')}${around}`;
+      .join('')}${h.note ? `<span class="pic-warn">${esc(h.note)}</span>` : ''}${around}`;
   }
   // The edge takes the tint of the pass on screen while the pictures flip (DESIGN "Data windows").
   const tinted = !!g && !S.color && (S.mode === 'flip' || S.mode === 'trail');
