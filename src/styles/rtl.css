@@ -9,11 +9,11 @@
    units and catalogue numbers read left to right inside an LTR isolate (i18n.ts ltr()).
    ------------------------------------------------------------------------------------------ */
 
-/* Type: Arabic letters in Noto Sans Arabic, Latin letters and Western digits in Archivo
+/* Type: Arabic letters in Cairo, Latin letters and Western digits in Archivo
    (Archivo's unicode-range leaves Arabic to the next face). Arabic needs about 12% more line
    height; these follow app.css's text tokens with only the line height raised. */
 :root:lang(ar) {
-  --font: 'Archivo', 'Noto Sans Arabic', 'Helvetica Neue', Arial, sans-serif;
+  --font: 'Archivo', 'Cairo', 'Helvetica Neue', Arial, sans-serif;
   --text-headline: 600 25px/1.3 var(--font);
   --text-title: 600 17px/1.35 var(--font);
   --text-body: 400 14px/1.62 var(--font);
