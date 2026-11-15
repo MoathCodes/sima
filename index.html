@@ -15,6 +15,23 @@
     <!-- The intro (src/intro/intro.ts introWanted): decided before the first paint, so the page
          never flashes under it. ?intro=1 forces it; ?intro=0, embed=1 and a #w= workspace link
          stop it. -->
+    <!-- The interface language (src/shell/i18n.ts pickLocale, the same rule): ?lang=ar|en, else
+         the Settings choice, else English. Set before the first paint, so no flash of the other
+         direction. -->
+    <script>
+      (function () {
+        var l = new URLSearchParams(location.search).get('lang');
+        if (l !== 'ar' && l !== 'en') {
+          try {
+            l = localStorage.getItem('sima-lang');
+          } catch (e) {}
+        }
+        if (l === 'ar') {
+          document.documentElement.lang = 'ar';
+          document.documentElement.dir = 'rtl';
+        }
+      })();
+    </script>
     <script>
       (function () {
         var q = new URLSearchParams(location.search);

@@ -16,6 +16,7 @@ import { showColour } from './strip.ts';
 import { decodePic, encodePic } from '../core/picture.ts';
 import { emit, on } from '../shell/bus.ts';
 import { toast } from '../shell/toast.ts';
+import { linkLang, t } from '../shell/i18n.ts';
 import { setLevel } from '../explore/game.ts';
 import { progress } from '../explore/progress.ts';
 import { getView, onView } from '../shell/view.ts';
@@ -107,7 +108,7 @@ function applyLoaded(link: Link, notes: string[]): void {
 /** One note for everything in the link that was left out. */
 function say(notes: string[]): void {
   if (notes.length) {
-    toast(`Not understood in the link, so left out: ${notes.join('; ')}.`, { ms: 12000 });
+    toast(t('link.notUnderstood', { notes: notes.join('; ') }), { ms: 12000 });
   }
 }
 
@@ -131,6 +132,9 @@ export function linkFor(opts: { embed?: boolean; date?: boolean } = {}): string 
   if (day) q.set('date', day);
   const pic = encodePic(S.pic);
   if (pic) q.set('pic', pic);
+  // The interface language, when the page was opened with one (i18n.ts).
+  const lang = linkLang();
+  if (lang) q.set('lang', lang);
   if (opts.embed) q.set('embed', '1');
   else {
     // v2.0: the view, so the link opens the way it was made (`ui` wins, link.ts viewFor), and in

@@ -68,7 +68,7 @@
   font-style: normal;
   font-weight: 400 600;
   font-display: swap;
-  src: url('./fonts/noto-sans-arabic-500.woff2') format('woff2');
+  src: url('./fonts/noto-sans-arabic-400-600.woff2') format('woff2');
   unicode-range:
     U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011,
     U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
@@ -652,8 +652,8 @@ body {
 }
 
 /* Arabic text anywhere (names in lists and cards) is set in the Arabic text face.
-   The wordmark's own سيما keeps the wordmark face. */
-:root :lang(ar):not(.wordmark-ar, .about-ar, .intro-ar) {
+   The wordmark's own سيما keeps the wordmark face. In the Arabic interface rtl.css sets it. */
+:root:not(:lang(ar)) :lang(ar):not(.wordmark-ar, .about-ar, .intro-ar) {
   font-family: var(--font-arabic-text);
 }
 
