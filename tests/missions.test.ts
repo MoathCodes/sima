@@ -15,7 +15,8 @@ import { fitMotion } from '../src/core/fit.ts';
 import { trialTrack } from '../src/core/motion.ts';
 import { stackAlong, psfWidth } from '../src/core/stack.ts';
 import { answer, verdict, DEFAULT_PLANET } from '../src/core/sandbox.ts';
-import { targetAt } from '../src/explore/track.ts';
+import { tapReach, targetAt } from '../src/explore/track.ts';
+import { blend, groupFrames } from '../src/core/blink.ts';
 import { loadField, loadSet, target } from './core-data.ts';
 
 const base: MissionInputs = { key: 'current', keyNow: 'current' };
@@ -204,4 +205,44 @@ test('object templates count the pictures actually shown and take catalogue type
     new RegExp(`${field.frames.length} pictures over`),
   );
   assert.match(objectLine('rw-aur', field, null), /Type not available/);
+});
+
+test("UX-1: a tap anywhere on Barnard's Star's glow hits it; a tap on another star does not", async () => {
+  const field = await loadField('barnard');
+  const groups = groupFrames(field, 5, 'window');
+  const k = 8; // CSS pixels per field pixel, as in the audit (old reach max(18, 3k) = 24 px)
+  const path = groups.map((g) => {
+    const p = targetAt(field, 'barnard', g.mjd)!;
+    return wcsSky2Pix(field.wcs, p.ra, p.dec);
+  });
+  const points = path.map((q) => ({ x: q.x * k, y: q.y * k }));
+  // The audit's taps, CSS px from the star's middle on the date shown.
+  const offsets = [[0, 0], [16, -15], [0, 25], [40, -12], [-2, 50], [-30, 0], [0, -30]] as const;
+  // The other catalogue stars in the picture (not Barnard's Star's own 2016 entry).
+  const t = target('barnard');
+  const own = wcsSky2Pix(field.wcs, t.ra, t.dec);
+  const away = (q: { x: number; y: number }) =>
+    Math.min(...path.map((c) => Math.hypot(q.x - c.x, q.y - c.y)));
+  const others = field.neighbours
+    .map((s) => wcsSky2Pix(field.wcs, s.ra, s.dec))
+    .filter((q) => Math.hypot(q.x - own.x, q.y - own.y) > 1);
+  for (let i = 0; i < groups.length; i++) {
+    // As the tour measures it: on the date's own picture, whichever view is on screen.
+    const radius = tapReach(blend(field, groups[i]!, 'median', false), field.n, path, k);
+    assert.ok(radius <= (field.n / 3) * k, 'at most a third of the picture');
+    for (const [dx, dy] of offsets) {
+      const tap = { x: points[i]!.x + dx, y: points[i]!.y + dy };
+      const state = checkStep('runaway', 'tap', { ...base, tap, points, radius }).state;
+      assert.equal(state, 'done', `tap ${dx},${dy} on date ${i}`);
+    }
+    // Stars outside its glow are told "Not that one".
+    const clear = others.filter((q) => away(q) * k > radius + k);
+    assert.ok(clear.length >= 3, 'other stars outside the reach');
+    for (const q of clear) {
+      const tap = { x: q.x * k, y: q.y * k };
+      assert.equal(checkStep('runaway', 'tap', { ...base, tap, points, radius }).state, 'failed');
+    }
+  }
+  // No picture: the old least reach.
+  assert.equal(tapReach(null, field.n, path, k), 24);
 });
