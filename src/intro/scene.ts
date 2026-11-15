@@ -127,10 +127,15 @@ export function phoneDisc(box: { x: number; y: number; w: number; h: number }): 
 /**
  * The phone's map box in Discover before the sky has set it up (the sky starts after the intro's
  * first frame): sky.ts `freeBox`, under the top row and its one-line sky note (64 + 19 + 8 px),
- * above the sheet's resting third. The turn takes up any small difference.
+ * above the sheet's resting third; `safeTop` is the notch's inset. The turn takes up any small
+ * difference.
  */
-export function phoneBox(w: number, h: number): { x: number; y: number; w: number; h: number } {
-  const y = Math.round(Math.max(64, Math.min(91, h / 3)));
+export function phoneBox(
+  w: number,
+  h: number,
+  safeTop = 0,
+): { x: number; y: number; w: number; h: number } {
+  const y = Math.round(Math.max(64, Math.min(91 + safeTop, h / 3)));
   const bottom = Math.max(y + 200, h - Math.round(h / 3));
   return { x: 0, y, w, h: bottom - y };
 }

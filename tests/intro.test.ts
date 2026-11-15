@@ -141,6 +141,7 @@ test("on a phone the disc rests where Discover's globe will, and lands without s
   const [w, h] = [390, 844];
   // The sky's box (sky.ts freeBox): under the top row and its note, above the sheet's third.
   assert.deepEqual(phoneBox(w, h), { x: 0, y: 91, w: 390, h: 472 });
+  assert.equal(phoneBox(w, h, 47).y, 138, 'under a notch, the note and the box sit lower');
   const home = phoneDisc(phoneBox(w, h));
   assert.deepEqual(home, { x: 195, y: 327, r: 171 });
   // Discover's globe at exactly that place: the disc never moves or grows on the way there.

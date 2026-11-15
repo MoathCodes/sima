@@ -11,6 +11,8 @@
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
+  /* Read by intro.ts: the notch's inset, where the phone's sky note sits under. */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 .intro-sky {
   position: absolute;

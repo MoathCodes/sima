@@ -209,7 +209,8 @@ function play(replay: boolean): void {
     const words = el.querySelector('.intro-name')?.getAnimations({ subtree: true })[0];
     if (!words) return go();
     words.ready.then(() => {
-      if (words.startTime !== null) run.start = performance.timeOrigin + Number(words.startTime) + lead;
+      if (words.startTime !== null)
+        run.start = performance.timeOrigin + Number(words.startTime) + lead;
       go();
     }, go);
   });
@@ -287,7 +288,11 @@ function home(): Disc | null {
   return phoneDisc(
     b.width > 0 && b.height > 0
       ? { x: b.x, y: b.y, w: b.width, h: b.height }
-      : phoneBox(innerWidth, innerHeight),
+      : phoneBox(
+          innerWidth,
+          innerHeight,
+          parseFloat(getComputedStyle(running?.el ?? document.body).paddingTop) || 0,
+        ),
   );
 }
 
