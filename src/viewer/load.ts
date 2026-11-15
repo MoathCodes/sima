@@ -211,6 +211,21 @@ async function loadPractice(key: string, fov?: number): Promise<void> {
 export async function aimAt(ra: number, dec: number, fov?: number): Promise<void> {
   const want = nearestFov(fov ?? S.fov);
   const near = TARGETS.find((t) => separation(t.ra, t.dec, ra, dec) < TARGET_RADIUS);
+  // A small move (a drag inside the picture, or of the patch on the sky) keeps the target and the
+  // pictures on hand: they are cut again around the new centre, and only the part they do not
+  // reach is asked for (`place`).
+  const set = S.set;
+  if (
+    (!near || near.key === S.target) &&
+    home &&
+    set &&
+    S.field &&
+    S.source !== 'loading' &&
+    overlaps(set.data, ra, dec, want)
+  ) {
+    const at = { ra: ((ra % 360) + 360) % 360, dec: Math.max(-90, Math.min(90, dec)) };
+    return place(at, want, S.groups[S.epoch]?.mjd ?? null);
+  }
   if (near) {
     return loadTarget(near.key, { fov: want });
   }
@@ -440,12 +455,7 @@ export async function setFov(fov: Fov): Promise<void> {
  * altogether aims the frame at the new spot.
  */
 export function panTo(ra: number, dec: number): void {
-  const set = S.set;
-  if (!home || !set || !S.field || !overlaps(set.data, ra, dec, S.fov)) {
-    void aimAt(ra, dec);
-    return;
-  }
-  void place({ ra, dec }, S.fov, S.groups[S.epoch]?.mjd ?? null);
+  void aimAt(ra, dec);
 }
 
 // ----- Fields wider than the exposures -----------------------------------------------------------
