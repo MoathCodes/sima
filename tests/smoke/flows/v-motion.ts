@@ -5,7 +5,7 @@
  * same handle works on a bright, saturated star. Owner: V.
  */
 import type { Page } from 'playwright-core';
-import { guide, press, pressStep, type Flow, type Step, openMeasure } from '../smoke.ts';
+import { guide, pressStep, type Flow, type Step, openMeasure } from '../smoke.ts';
 
 
 const toStack: Step = {
