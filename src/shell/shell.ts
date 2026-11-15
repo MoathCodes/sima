@@ -260,24 +260,24 @@ function placeLoading(card: HTMLElement): void {
 }
 
 function setCard(card: HTMLElement, load: SkyLoad, pct: number): void {
-  const name = load.layer ? `${load.layer} ` : '';
+  const name = load.layer ?? '';
   const failed = load.failed > 0 && load.loaded + load.failed >= load.total;
   const head = failed
-    ? `Part of the ${name}map did not load`
+    ? t(name ? 'load.failed' : 'load.failedMap', { name })
     : pct >= 100
-      ? `The ${name}map is in`
-      : `Loading the ${name}map · ${pct}%`;
+      ? t(name ? 'load.done' : 'load.doneMap', { name })
+      : `${t(name ? 'load.loading' : 'load.loadingMap', { name })} · ${pct}%`;
   const meanwhile = failed
-    ? 'The rest of the page works.'
+    ? t('load.rest')
     : load.why
       ? load.why
       : load.first
-        ? 'The frame and the bar work meanwhile.'
-        : 'You can keep working meanwhile.';
+        ? t('load.meanwhile')
+        : t('load.keepWorking');
   card.innerHTML = `
     <p class="sky-loading-head"></p>
     <p class="sky-loading-line"></p>
-    ${failed ? '<button class="btn text" data-retry>Retry</button>' : ''}
+    ${failed ? `<button class="btn text" data-retry>${t('load.retry')}</button>` : ''}
     <span class="sky-loading-bar" aria-hidden="true"><span style="width:${pct}%"></span></span>`;
   card.querySelector('.sky-loading-head')!.textContent = head;
   card.querySelector('.sky-loading-line')!.textContent = meanwhile;

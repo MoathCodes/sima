@@ -143,9 +143,12 @@ export function t(key: Key, vars?: Vars): string {
 /** Fills `{name}` in a string; numbers are written with `fmtNum`. Unknown names stay as they are. */
 export function fill(text: string, vars?: Vars): string {
   if (!vars) return text;
+  // In Arabic each value sits in a first-strong isolate (FSI … PDI), so a number with its unit
+  // ("2.00 µm", "10.50″/yr") or a Latin name keeps its own order inside a right-to-left sentence.
+  const iso = current === 'ar' ? (v: string) => `\u2068${v}\u2069` : (v: string) => v;
   return text.replace(/\{(\w+)\}/g, (all, k: string) => {
     const v = vars[k];
-    return v === undefined ? all : typeof v === 'number' ? fmtNum(v) : v;
+    return v === undefined ? all : iso(typeof v === 'number' ? fmtNum(v) : v);
   });
 }
 

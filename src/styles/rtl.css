@@ -111,7 +111,7 @@
     .fp-scale,
     [class^='ds-'],
     #frame-pic,
-    [class^='pic-'],
+    :is(.pic-scale, .pic-ne, .pic-bar, .pic-divider, .pic-edge, .pic-letter),
     .tl-slider,
     .tl-hist,
     .tl-cuts,
@@ -129,4 +129,13 @@
 /* About's heading is «عن سيما» in Arabic: the wordmark's سيما beside it would say the name twice. */
 :root:lang(ar) .about-ar {
   display: none;
+}
+
+/* The badge on the picture holds words and a date: each line reads in its own direction (the
+   date "23 مارس 2026، 15:46 UTC" right to left, a line still in English left to right). */
+[dir='rtl'] .pic-badge {
+  direction: rtl;
+}
+[dir='rtl'] .pic-badge > * {
+  unicode-bidi: plaintext;
 }

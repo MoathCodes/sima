@@ -254,9 +254,9 @@ export const ar: ArMessages = {
   'sky.h1Short': 'خريطة السماء، متوسط كل التواريخ',
   'sky.lost': 'أسقط المتصفح سطح رسم خريطة السماء، فتوقفت الخريطة عن الرسم.',
   'sky.reload': 'أعد تحميل الصفحة',
-  'sky.fact': 'SPHEREx ‏{lam}، الفجوات مملوءة',
-  'sky.factSoft': 'SPHEREx ‏{lam}، الفجوات مملوءة، ناعمة في مواضع',
-  'sky.factDiscover': 'SPHEREx ‏{det}، {band}، {lam}',
+  'sky.fact': 'SPHEREx {lam}، الفجوات مملوءة',
+  'sky.factSoft': 'SPHEREx {lam}، الفجوات مملوءة، ناعمة في مواضع',
+  'sky.factDiscover': 'SPHEREx {det}، {band}، {lam}',
   'sky.near': 'تحت الحمراء القريبة',
   'sky.deep': 'تحت الحمراء العميقة',
   'sky.more':
@@ -517,4 +517,16 @@ export const ar: ArMessages = {
   'ms.expNote': 'اللقطات وراء الصورة المعروضة، كما يقدّمها أرشيف ناسا.',
   'ms.under': 'القياس تحت',
   'ms.backTo': 'العودة إلى {name}',
+
+  // The sky map loading card (shell/shell.ts).
+  'load.failed': 'جزء من خريطة {name} لم يُحمَّل',
+  'load.failedMap': 'جزء من الخريطة لم يُحمَّل',
+  'load.done': 'وصلت خريطة {name}',
+  'load.doneMap': 'وصلت الخريطة',
+  'load.loading': 'جارٍ تحميل خريطة {name}',
+  'load.loadingMap': 'جارٍ تحميل الخريطة',
+  'load.rest': 'بقية الصفحة تعمل.',
+  'load.meanwhile': 'الإطار والشريط يعملان في أثناء ذلك.',
+  'load.keepWorking': 'يمكنك مواصلة العمل في أثناء ذلك.',
+  'load.retry': 'أعد المحاولة',
 };

@@ -11,6 +11,8 @@ import { readLink } from '../src/viewer/link.ts';
 const vars = (s: string) => new Set([...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
 const forms = (v: unknown): string[] =>
   typeof v === 'string' ? [v] : Object.values(v as Record<string, string>);
+/** t() without the Unicode isolates Arabic puts round each value. */
+const plain = (k: Parameters<typeof t>[0], v?: Parameters<typeof t>[1]) => t(k, v).replace(/[\u2068\u2069]/g, '');
 const AR_FORMS = ['zero', 'one', 'two', 'few', 'many', 'other'];
 
 test('every English key has an Arabic value, and Arabic has no extra keys', () => {
@@ -53,15 +55,18 @@ test('Simulated comes first in Arabic too', () => {
 
 test('t fills variables and picks Arabic plural forms', () => {
   useLocale('ar');
-  assert.equal(t('count.exposures', { n: 1 }), 'لقطة واحدة');
-  assert.equal(t('count.exposures', { n: 2 }), 'لقطتان');
-  assert.equal(t('count.exposures', { n: 5 }), '5 لقطات');
-  assert.equal(t('count.exposures', { n: 11 }), '11 لقطة');
-  assert.equal(t('count.exposures', { n: 100 }), '100 لقطة');
-  assert.equal(t('ws.saved', { name: 'x' }), 'حُفظ «x» في هذا المتصفح.');
+  // Values sit in Unicode isolates in Arabic (FSI … PDI), so a number keeps its order.
+  assert.equal(t('bar.handleText', { lam: '2.00 µm', det: 3 }), '\u20682.00 µm\u2069، الكاشف \u20683\u2069');
+
+  assert.equal(plain('count.exposures', { n: 1 }), 'لقطة واحدة');
+  assert.equal(plain('count.exposures', { n: 2 }), 'لقطتان');
+  assert.equal(plain('count.exposures', { n: 5 }), '5 لقطات');
+  assert.equal(plain('count.exposures', { n: 11 }), '11 لقطة');
+  assert.equal(plain('count.exposures', { n: 100 }), '100 لقطة');
+  assert.equal(plain('ws.saved', { name: 'x' }), 'حُفظ «x» في هذا المتصفح.');
   useLocale('en');
-  assert.equal(t('count.exposures', { n: 1 }), '1 exposure');
-  assert.equal(t('count.exposures', { n: 1234 }), '1,234 exposures');
+  assert.equal(plain('count.exposures', { n: 1 }), '1 exposure');
+  assert.equal(plain('count.exposures', { n: 1234 }), '1,234 exposures');
 });
 
 test('numbers and dates keep Western digits; Arabic months in Arabic', () => {

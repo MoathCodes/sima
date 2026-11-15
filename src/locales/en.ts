@@ -501,6 +501,18 @@ export const en = {
   'ms.expNote': 'The exposures behind the picture on screen, as NASA’s archive gives them.',
   'ms.under': 'The measurement is under',
   'ms.backTo': 'Back to {name}',
+
+  // The sky map loading card (shell/shell.ts).
+  'load.failed': 'Part of the {name} map did not load',
+  'load.failedMap': 'Part of the map did not load',
+  'load.done': 'The {name} map is in',
+  'load.doneMap': 'The map is in',
+  'load.loading': 'Loading the {name} map',
+  'load.loadingMap': 'Loading the map',
+  'load.rest': 'The rest of the page works.',
+  'load.meanwhile': 'The frame and the bar work meanwhile.',
+  'load.keepWorking': 'You can keep working meanwhile.',
+  'load.retry': 'Retry',
 } as const satisfies Record<string, string | EnPlural>;
 
 /** A message key. */
