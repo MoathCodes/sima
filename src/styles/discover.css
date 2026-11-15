@@ -1,0 +1,962 @@
+/* ------------------------------------------------------------------------------------------
+   Discover: welcome, mission list, mission card, success card, object card, coach. Lane K.
+   BEGINNER-AND-MOBILE.md sections 5, 7, 10 and 11; DESIGN-v2.md sections 4, 8.2, 9 and 10.
+
+   Materials: each card says its material in `data-material` (raised, regular). Lane F's
+   app.css draws the glass (GLS-1: `backdrop-filter` is written only there). Until then, and
+   whenever glass is off, the cards use the Solid fallback below. The fallback is wrapped in
+   :where() so any rule of lane F's wins over it.
+   Classes are prefixed `dsc-`. Logical properties throughout, so an Arabic interface can mirror.
+   ------------------------------------------------------------------------------------------ */
+
+:where(.dsc-card) {
+  position: relative;
+  background: var(--v2-solid-tint);
+  background-image: var(--v2-slate-sheen);
+  color: var(--v2-on-glass);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.14),
+    inset 0 0 0 1px rgb(255 255 255 / 0.07),
+    var(--v2-lift-2);
+  border-radius: var(--v2-r-card);
+}
+:where(.dsc-card[data-material='regular']) {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.14),
+    inset 0 0 0 1px rgb(255 255 255 / 0.07),
+    var(--v2-lift-1);
+}
+
+.dsc-card {
+  font: var(--v2-text-support-discover);
+  text-align: start;
+}
+.dsc-card :is(h2, h3, p, ol, ul) {
+  margin: 0;
+}
+.dsc-card :is(ol, ul) {
+  list-style: none;
+  padding: 0;
+}
+
+/* ----- Mount points: where each screen sits on a desktop (DESIGN-v2 8.2) ----------------- */
+
+#discover-list,
+#mission,
+#mission-success,
+#dsc-welcome,
+#coach {
+  position: fixed;
+  z-index: var(--z-card);
+}
+#discover-list {
+  inset-inline-start: var(--v2-gutter);
+  top: 76px;
+  width: 372px;
+  /* Never over the sky note (H1): it sits in the bottom 56 px. */
+  max-height: calc(100vh - 76px - 60px);
+  display: flex;
+}
+#discover-list > .dsc-card {
+  flex: 1;
+  min-height: 0;
+}
+#mission,
+#mission-success {
+  /* Left edge; wider than 1500 px, directly left of the frame (index.ts sets --dsc-x). */
+  inset-inline-start: var(--dsc-x, var(--v2-gutter));
+  top: 76px;
+  max-height: calc(100vh - 76px - 60px);
+  display: flex;
+}
+#mission {
+  width: 380px;
+}
+#mission-success {
+  width: 420px;
+}
+#mission > .dsc-card,
+#mission-success > .dsc-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+#dsc-welcome {
+  inset-inline-start: max(var(--v2-gutter), calc(50% - 560px));
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(470px, calc(100vw - 2 * var(--v2-gutter)));
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  padding: 28px 28px 22px;
+  border-radius: 26px;
+}
+#coach {
+  width: 340px;
+  padding: 18px;
+  z-index: var(--z-tip);
+}
+#discover-list[hidden],
+#mission[hidden],
+#mission-success[hidden],
+#dsc-welcome[hidden],
+#coach[hidden] {
+  display: none;
+}
+
+/* Glass enters on the glass element itself, by opacity and transform (DESIGN-v2 10). */
+@keyframes dsc-rise {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+@keyframes dsc-fade {
+  from {
+    opacity: 0;
+  }
+}
+#discover-list > .dsc-card,
+#mission > .dsc-card,
+#mission-success > .dsc-card,
+#coach.dsc-card {
+  animation: dsc-rise var(--v2-settle) var(--v2-ease) both;
+}
+#dsc-welcome {
+  animation: dsc-fade var(--v2-fade) ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  #discover-list > .dsc-card,
+  #mission > .dsc-card,
+  #mission-success > .dsc-card,
+  #coach.dsc-card,
+  #dsc-welcome {
+    animation: dsc-fade 0.3s ease-out both;
+  }
+}
+
+/* ----- Shared parts -------------------------------------------------------------------------- */
+
+.dsc-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.dsc-card .icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.dsc-hd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dsc-eyebrow {
+  font: 600 12px/1.3 var(--font);
+  color: var(--v2-on-glass-3);
+  letter-spacing: 0.02em;
+}
+.dsc-title {
+  font: 600 25px/1.15 var(--font);
+  letter-spacing: -0.02em;
+  margin-block: 8px 4px !important;
+  outline: none;
+}
+.dsc-title:focus-visible,
+.dsc-h:focus-visible {
+  outline: 2px solid var(--v2-action);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.dsc-h {
+  font: 600 17px/1.25 var(--font);
+  outline: none;
+}
+.dsc-lead {
+  font: var(--v2-text-body-discover);
+  color: var(--v2-on-glass-2);
+  margin-block-start: 10px !important;
+}
+.dsc-obj {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--v2-on-glass-2);
+}
+.dsc-fine {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--v2-on-glass-3);
+}
+.dsc-faint {
+  font: 500 12px/1.3 var(--font);
+  color: var(--v2-on-glass-3);
+}
+.dsc-scroll {
+  overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+
+/* Buttons (DESIGN-v2 9). 36 px on desktop, 48 px (.lg) for Discover's main actions and phones. */
+.dsc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--v2-r-control);
+  background: var(--v2-fill-1);
+  color: var(--v2-on-glass);
+  font: 500 14px/1.2 var(--font);
+  cursor: pointer;
+  text-align: start;
+}
+.dsc-btn:hover {
+  background: var(--v2-fill-2);
+}
+.dsc-btn:active {
+  translate: 0 1px;
+}
+.dsc-btn.quiet {
+  background: transparent;
+}
+.dsc-btn.quiet:hover {
+  background: var(--v2-fill-1);
+}
+.dsc-btn.primary {
+  background: var(--v2-action);
+  color: var(--v2-on-action);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    0 6px 18px -6px rgb(63 92 245 / 0.7);
+}
+.dsc-btn.primary:hover {
+  background: var(--v2-action-hi);
+}
+.dsc-btn.lg {
+  min-height: 48px;
+  padding: 0 20px;
+  font-size: 16px;
+  border-radius: 14px;
+}
+.dsc-icon-btn {
+  margin-inline-start: auto;
+  margin-inline-end: -8px;
+  width: 40px;
+  height: 40px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--v2-r-control);
+  background: transparent;
+  color: var(--v2-on-glass);
+  cursor: pointer;
+}
+.dsc-icon-btn:hover {
+  background: var(--v2-fill-1);
+}
+.dsc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--v2-on-glass);
+  font: 500 14px/1.3 var(--font);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: rgb(255 255 255 / 0.35);
+  cursor: pointer;
+}
+.dsc-card :is(button, [tabindex]):focus-visible {
+  outline: 2px solid var(--v2-action);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgb(255 255 255 / 0.9);
+}
+.dsc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.dsc-row {
+  display: flex;
+  gap: 8px;
+}
+
+/* Pills (DESIGN-v2 3). Simulated is a word and a dashed line (H3), never colour alone. */
+.dsc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  padding: 0 9px;
+  border-radius: var(--v2-r-pill);
+  font: 500 12px/1.2 var(--font);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.dsc-pill .icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
+.dsc-pill.sim {
+  background: var(--v2-warn-soft);
+  color: var(--v2-warn);
+  outline: 1px dashed var(--v2-warn);
+  outline-offset: -1px;
+}
+.dsc-pill.good {
+  background: var(--v2-good-soft);
+  color: var(--v2-good);
+}
+.dsc-pill.warn {
+  background: var(--v2-warn-soft);
+  color: var(--v2-warn);
+}
+.dsc-pill.done {
+  background: var(--v2-fill-2);
+  color: var(--v2-on-glass);
+}
+.dsc-busy {
+  display: inline-block;
+  width: 28px;
+  height: 4px;
+  border-radius: 2px;
+  margin-inline-end: 8px;
+  vertical-align: middle;
+  background: linear-gradient(90deg, transparent, var(--v2-on-glass-2), transparent) 0 0 / 200% 100% var(--v2-fill-2);
+  animation: dsc-busy 1.2s linear infinite;
+}
+@keyframes dsc-busy {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dsc-busy {
+    animation: none;
+  }
+}
+
+/* ----- The welcome card (5.1, mockup 01) ---------------------------------------------------- */
+
+.dsc-wm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-block-end: 18px !important;
+}
+.dsc-wm .ar {
+  font: 700 34px/1.3 var(--font-wordmark);
+}
+.dsc-wm .la {
+  font: 600 17px/1 var(--font);
+  letter-spacing: 0.02em;
+  color: var(--v2-on-glass-2);
+}
+.dsc-welcome .dsc-title {
+  margin-block: 0 !important;
+}
+.dsc-start {
+  width: 100%;
+  min-height: 64px;
+  justify-content: space-between;
+  padding: 0 18px;
+  border-radius: 16px;
+  margin-block-start: 22px;
+}
+.dsc-start .s1 {
+  display: block;
+  font: 600 16px/1.2 var(--font);
+}
+.dsc-start .s2 {
+  display: block;
+  font: 400 14px/1.2 var(--font);
+  opacity: 0.88;
+  margin-block-start: 4px;
+}
+.dsc-row2 {
+  display: flex;
+  gap: 10px;
+  margin-block-start: 10px;
+}
+.dsc-row2 .dsc-btn {
+  flex: 1;
+  min-height: 44px;
+}
+.dsc-welcome .dsc-fine {
+  margin-block-start: 18px !important;
+  padding-block-start: 14px;
+  border-block-start: 1px solid var(--v2-rule);
+}
+
+/* ----- The mission list (5.2, mockup 02) ---------------------------------------------------- */
+
+.dsc-list {
+  display: flex;
+  flex-direction: column;
+  padding: 18px 16px 12px;
+}
+.dsc-list-hd {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.dsc-list-hd .dsc-faint {
+  margin-inline-start: auto;
+}
+.dsc-skills {
+  margin-block: 6px 10px !important;
+}
+.dsc-skills-row {
+  display: flex;
+  gap: 12px;
+  font: 500 12px/1.3 var(--font);
+  color: var(--v2-on-glass-3);
+}
+.dsc-skills-row .on {
+  color: var(--v2-skill);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.dsc-skills-row .icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
+.dsc-mlist {
+  position: relative;
+  display: grid;
+  gap: 2px;
+}
+.dsc-list:not(.phone) .dsc-mlist::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 21px;
+  top: 26px;
+  bottom: 26px;
+  border-inline-start: 1.5px dashed rgb(255 255 255 / 0.18);
+}
+.dsc-m,
+.dsc-o {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 8px 8px 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--v2-on-glass);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  position: relative;
+}
+.dsc-m:hover,
+.dsc-o:hover {
+  background: var(--v2-fill-1);
+}
+.dsc-m.next {
+  background: var(--v2-fill-1);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+.dsc-node,
+.dsc-onode {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgb(var(--v2-tint) / 0.9);
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.16);
+  color: var(--v2-on-glass-2);
+  position: relative;
+  z-index: 1;
+}
+.dsc-onode {
+  border-radius: 12px;
+  background: var(--v2-fill-1);
+  box-shadow: none;
+}
+.dsc-m.done .dsc-node {
+  background: rgb(255 255 255 / 0.16);
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.55);
+  color: var(--v2-skill);
+}
+.dsc-m.next .dsc-node {
+  box-shadow: inset 0 0 0 1.5px var(--v2-on-glass);
+  color: var(--v2-on-glass);
+}
+.dsc-m[data-mission='planet-x'] .dsc-node {
+  box-shadow: inset 0 0 0 1.5px var(--v2-warn);
+  outline: 1.5px dashed var(--v2-warn);
+  outline-offset: -1.5px;
+  color: var(--v2-warn);
+}
+.dsc-mt {
+  min-width: 0;
+  display: grid;
+}
+.dsc-mt .t {
+  font: 600 16px/1.25 var(--font);
+}
+.dsc-mt .d {
+  font: 400 14px/1.35 var(--font);
+  color: var(--v2-on-glass-2);
+  margin-block-start: 2px;
+}
+.dsc-mt .k {
+  font: 500 12px/1.3 var(--font);
+  color: var(--v2-on-glass-3);
+  margin-block-start: 4px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.dsc-m.done .k {
+  display: none;
+}
+.dsc-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dsc-state-tag {
+  font: 500 12px/1 var(--font);
+  color: var(--v2-on-glass-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.dsc-state-tag .icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
+.dsc-m.done .dsc-state-tag {
+  color: var(--v2-skill);
+}
+.dsc-go {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--v2-fill-2);
+}
+.dsc-go .icon {
+  width: 16px;
+  height: 16px;
+}
+.dsc-m.next .dsc-go {
+  background: var(--v2-action);
+  color: var(--v2-on-action);
+}
+.dsc-sub-hd {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-block-start: 12px;
+  padding-block: 12px 4px;
+  border-block-start: 1px solid var(--v2-rule);
+}
+.dsc-sub-hd .dsc-faint {
+  margin-inline-start: auto;
+}
+.dsc-sub {
+  font: 600 14px/1.3 var(--font);
+}
+.dsc-foot {
+  margin-block-start: 10px !important;
+  padding-block-start: 10px;
+  border-block-start: 1px solid var(--v2-rule);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--v2-on-glass-2);
+}
+.dsc-foot .icon {
+  width: 18px;
+  height: 18px;
+}
+/* Under 820 px tall, rows show one line each and the list scrolls inside itself (5.2). */
+@media (max-height: 819px) {
+  .dsc-list:not(.phone) .dsc-mt .d {
+    display: none;
+  }
+}
+
+/* Phones: the suggested mission first, with Start mission (mockup 02 at 390). */
+.dsc-list.phone {
+  padding: 12px 16px 16px;
+  background: transparent;
+  box-shadow: none;
+}
+.dsc-suggest {
+  margin-block: 10px 12px;
+  padding: 14px;
+  border-radius: var(--v2-r-card);
+  background: var(--v2-fill-1);
+  display: grid;
+  gap: 4px;
+}
+.dsc-suggest .t {
+  font: 600 18px/1.25 var(--font);
+}
+.dsc-suggest .d {
+  color: var(--v2-on-glass-2);
+}
+.dsc-suggest .dsc-btn {
+  margin-block-start: 10px;
+  width: 100%;
+}
+.dsc-list.phone .dsc-sub {
+  margin-block: 8px 4px;
+  color: var(--v2-on-glass-2);
+}
+
+/* ----- The mission card (5.3, mockup 03) ---------------------------------------------------- */
+
+.dsc-mission,
+.dsc-success,
+.dsc-object {
+  padding: 18px 18px 14px;
+}
+.dsc-steps {
+  display: grid;
+  gap: 4px;
+  margin-block-start: 14px !important;
+}
+.dsc-step {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  padding: 10px 10px 10px 8px;
+  border-radius: 14px;
+  outline: none;
+}
+.dsc-n {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font: 600 12px/1 var(--font);
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.22);
+  color: var(--v2-on-glass-3);
+}
+.dsc-step.done .dsc-n {
+  background: rgb(255 255 255 / 0.9);
+  color: #0b0e1c;
+  box-shadow: none;
+}
+.dsc-step.done .dsc-n .icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.2;
+}
+.dsc-st {
+  font: 600 16px/1.3 var(--font);
+  color: var(--v2-on-glass-2);
+  padding-block-start: 3px;
+}
+.dsc-step.done .dsc-st {
+  font-weight: 500;
+}
+.dsc-step.now {
+  background: var(--v2-fill-1);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1);
+}
+.dsc-step.now:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--v2-action);
+}
+.dsc-step.now .dsc-n {
+  background: var(--v2-on-glass);
+  color: #0b0e1c;
+  box-shadow: none;
+}
+.dsc-step.now .dsc-st {
+  color: var(--v2-on-glass);
+}
+.dsc-now {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+.dsc-how {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--v2-on-glass-2);
+}
+.dsc-state {
+  font: 500 14px/1.4 var(--font);
+  color: var(--v2-on-glass-2);
+}
+.dsc-state.miss {
+  color: var(--v2-on-glass);
+}
+.dsc-state.warn {
+  color: var(--v2-warn);
+}
+.dsc-hintbox {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--v2-fill-1);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--v2-on-glass);
+  justify-self: stretch;
+}
+.dsc-hintbox.shown {
+  box-shadow: inset 0 0 0 1px var(--v2-mark);
+}
+.dsc-hint-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-start: 10px;
+}
+.dsc-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--v2-fill-2);
+  margin-block-start: 12px;
+  overflow: hidden;
+}
+.dsc-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--v2-on-glass);
+  transition: width var(--v2-settle) var(--v2-ease);
+}
+.dsc-keys {
+  margin-block-start: 10px !important;
+  padding-block-start: 10px;
+  border-block-start: 1px solid var(--v2-rule);
+  font: 500 12px/1.5 var(--font);
+  color: var(--v2-on-glass-3);
+}
+.dsc-ask {
+  margin-block-start: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--v2-fill-2);
+  display: grid;
+  gap: 10px;
+}
+.dsc-ask p {
+  font: 600 14px/1.4 var(--font);
+}
+.dsc-mission[data-simulated='true'] {
+  outline: 1px dashed rgb(255 198 112 / 0.55);
+  outline-offset: -6px;
+}
+
+/* ----- The success card (5.4, mockup 04) ---------------------------------------------------- */
+
+.dsc-success {
+  gap: 12px;
+}
+.dsc-success > .dsc-scroll {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.dsc-success .dsc-title {
+  margin-block: 2px 0 !important;
+}
+.dsc-result {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 0.05);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+  justify-items: start;
+}
+.dsc-result.sim {
+  box-shadow: none;
+  outline: 1px dashed var(--v2-warn);
+  outline-offset: -1px;
+}
+.dsc-label {
+  font: 500 12px/1.3 var(--font);
+  color: var(--v2-on-glass-2);
+}
+.dsc-big {
+  font: 600 25px/1.2 var(--font);
+  letter-spacing: -0.01em;
+}
+.dsc-big.not,
+.dsc-big.checking {
+  font: 600 16px/1.4 var(--font);
+}
+.dsc-cat {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--v2-on-glass-2);
+}
+.dsc-cat b {
+  color: var(--v2-on-glass);
+  font-weight: 600;
+}
+.dsc-src {
+  font: 500 12px/1.4 var(--font);
+  color: var(--v2-on-glass-3);
+}
+.dsc-skill {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--v2-fill-1);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--v2-on-glass-2);
+}
+.dsc-skill b {
+  color: var(--v2-on-glass);
+}
+.dsc-skill .icon {
+  animation: dsc-fade var(--v2-fade) ease-out both;
+}
+.dsc-success .dsc-actions {
+  flex-direction: column;
+  align-items: stretch;
+}
+.dsc-success .dsc-actions .dsc-btn {
+  justify-content: center;
+}
+@media (min-width: 700px) {
+  .dsc-success .dsc-actions {
+    align-items: flex-start;
+  }
+}
+
+/* ----- The object card (5.5) and the coach (7) ---------------------------------------------- */
+
+.dsc-object {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.dsc-object .dsc-title {
+  margin-block: 0 !important;
+}
+.dsc-coach {
+  display: grid;
+  gap: 8px;
+}
+.dsc-coach .dsc-lead {
+  margin-block-start: 0 !important;
+  font: var(--v2-text-support-discover);
+}
+
+/* ----- Phones (section 11) --------------------------------------------------------------------
+   In lane M's layouts the screens live in the sheet, which is Slate and draws the surface: the
+   cards drop their own. Until lane M lands, narrow windows get a bottom panel with the same rule:
+   never over the picture's top, opaque, 48 px targets. */
+
+#sheet .dsc-card {
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  border-radius: 0;
+}
+html[data-layout^='phone'] .dsc-btn,
+html[data-layout^='phone'] .dsc-icon-btn,
+html[data-layout^='phone'] .dsc-m,
+html[data-layout^='phone'] .dsc-o {
+  min-height: var(--v2-hit-phone);
+}
+html[data-layout^='phone'] .dsc-icon-btn {
+  width: var(--v2-hit-phone);
+}
+#sheet .dsc-success .dsc-actions {
+  position: sticky;
+  bottom: 0;
+  padding-block: 8px;
+  background: rgb(var(--v2-tint) / 0.96);
+}
+
+@media (max-width: 699px) {
+  #discover-list,
+  #mission,
+  #mission-success,
+  #dsc-welcome {
+    inset-inline: 0;
+    top: auto;
+    bottom: 0;
+    transform: none;
+    width: auto;
+    max-height: 50vh;
+    border-radius: var(--v2-r-sheet) var(--v2-r-sheet) 0 0;
+  }
+  #discover-list > .dsc-card,
+  #mission > .dsc-card,
+  #mission-success > .dsc-card,
+  #dsc-welcome {
+    border-radius: var(--v2-r-sheet) var(--v2-r-sheet) 0 0;
+    overflow-y: auto;
+  }
+  #dsc-welcome {
+    padding: 20px 20px 16px;
+  }
+  .dsc-wm {
+    display: none;
+  }
+  .dsc-btn,
+  .dsc-icon-btn,
+  .dsc-m,
+  .dsc-o {
+    min-height: 48px;
+  }
+  .dsc-icon-btn {
+    width: 48px;
+  }
+  .dsc-keys {
+    display: none;
+  }
+  .dsc-mission .dsc-scroll {
+    overflow: visible;
+  }
+}
+
+/* High contrast and forced colours (DESIGN-v2 5): plain borders, system colours. */
+@media (forced-colors: active) {
+  .dsc-card,
+  .dsc-step.now,
+  .dsc-result,
+  .dsc-pill {
+    border: 1px solid CanvasText;
+  }
+  .dsc-pill.sim {
+    border-style: dashed;
+  }
+}
