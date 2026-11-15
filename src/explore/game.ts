@@ -9,6 +9,11 @@
  *
  * The guide may read any part, but only through the functions in SPEC 8.4.
  */
+import { getView, onView } from '../shell/view.ts';
+import { startMission, leaveMission, progress } from './progress.ts';
+import { MISSIONS, isMissionId } from './missions.ts';
+import { setTrial } from '../viewer/motion.ts';
+import { pause, setEpoch } from '../viewer/playback.ts';
 import { S, VIEWS, watch, type Level } from '../viewer/state.ts';
 import { currentView, draw, groupDate, onTap } from '../viewer/render.ts';
 import { targetMeasurements } from '../viewer/load.ts';
@@ -80,8 +85,8 @@ export const STARTERS: Readonly<Record<Exclude<StarterId, 'too-faint'>, Starter>
     simulated: false,
   },
   ghost: {
-    title: 'Too faint to see',
-    line: 'Nothing in any single picture. Add them along its path.',
+    title: 'The ghost',
+    line: 'It is hard to pick out in a single picture. Add pictures along its path.',
     target: 'wise-0855',
     simulated: false,
   },
@@ -98,6 +103,9 @@ export const STARTERS: Readonly<Record<Exclude<StarterId, 'too-faint'>, Starter>
 
 /** The patch the task belongs to; a new patch starts the task over. */
 let patchKey = '';
+/** A mission entry waits for its own pictures before pausing on date A. */
+let missionEntry: import('./missions.ts').MissionId | null = null;
+let startGhostArrow = false;
 /** Help used so far: 0 none, 1 Hint, 2 Another hint, 3 Look closer, 4 Show me. */
 let help = 0;
 let found = false;
@@ -122,19 +130,40 @@ export function startGame(): void {
     if (!starter) return;
     const welcome = document.getElementById('welcome');
     if (welcome) welcome.hidden = true;
-    openTarget(starter.target);
+    const mission = starterOf(id);
+    if (getView() === 'discover' && isMissionId(mission)) {
+      missionEntry = mission;
+      startGhostArrow = mission === 'ghost';
+      startMission(mission);
+      pause();
+      S.mode = 'flip';
+      emit('band', { det: MISSIONS[mission].det! });
+      openTarget(MISSIONS[mission].target!);
+      setEpoch(0);
+    } else {
+      if (getView() === 'discover') leaveMission();
+      openTarget(starter.target);
+    }
   });
-  try {
-    if (localStorage.getItem('b102-level') === 'measure') setLevel('measure');
-  } catch {
-    // Storage can be blocked: start in Explore.
-  }
+  onView(renderTask);
+  watch(['field', 'groups', 'source'], () => {
+    if (!missionEntry || getView() !== 'discover') return;
+    if (progress().current !== missionEntry) {
+      missionEntry = null;
+      return;
+    }
+    const m = MISSIONS[missionEntry];
+    if (S.field?.target?.key !== m.target || !S.groups.length || S.source === 'loading') return;
+    missionEntry = null;
+    pause();
+    setEpoch(0);
+  });
   startCloseup();
   onTap(tapped);
   startKeyPick({
     open: () => {
       const t = task();
-      return !!t && !found && t.kind !== 'faint';
+      return getView() === 'expert' && !!t && !found && t.kind !== 'faint';
     },
     pick: tapped,
     aim: ringNow,
@@ -144,7 +173,17 @@ export function startGame(): void {
   });
   watch(['target', 'field', 'source', 'groups', 'level'], renderTask);
   watch(['mode'], () => {
-    if (task()?.kind === 'faint' && S.mode === 'stack' && !found) markFound();
+    if (
+      getView() === 'discover' &&
+      progress().current === 'ghost' &&
+      S.mode === 'stack' &&
+      startGhostArrow
+    ) {
+      startGhostArrow = false;
+      setTrial({ pmra: 0, pmdec: 0 });
+    }
+    if (getView() === 'expert' && task()?.kind === 'faint' && S.mode === 'stack' && !found)
+      markFound();
   });
   renderTask();
 }
@@ -152,22 +191,32 @@ export function startGame(): void {
 /**
  * Switches between Explore and Measure. Keeps the view if the level has it, else Flip.
  * Measure opens the Measure panel and the frame's picture tools button (lanes E and D draw them
- * from `S.level`). Remembered in `b102-level`.
+ * from `S.level`). The view module owns persistence.
  */
 export function setLevel(level: Level): void {
   S.level = level;
   if (!VIEWS[level].includes(S.mode)) S.mode = 'flip';
   if (level === 'explore') S.tools = false;
-  try {
-    localStorage.setItem('b102-level', level);
-  } catch {
-    // Storage can be blocked; the level then lasts for this visit only.
-  }
 }
 
 /** Opens a starter: loads its target and sets its task (through the bus's `start`). */
 export function openStarter(id: StarterId): void {
   emit('start', { starter: id });
+}
+
+/** Lane K's Show me action: rings only. It never snaps, taps, or records a step.
+ * For the ghost's last step this points to the snap button; the visitor still presses it.
+ */
+export function showMissionStep(id: import('./missions.ts').MissionId, step: string): string {
+  const instruction = MISSIONS[id].instructions?.find((s) => s.id === step);
+  if (!instruction) return '';
+  if (id === 'runaway' && step === 'tap') {
+    setMarks('ring');
+    draw();
+  } else {
+    pointOut({ guide: instruction.showMe.guide });
+  }
+  return instruction.showMe.label;
 }
 
 /**
@@ -183,7 +232,13 @@ export function openTarget(key: string): void {
   const sc = SCENARIOS[key];
   const where = t ?? sc;
   if (!where) return;
-  openPlace({ name: t?.name ?? sc?.title ?? key, ra: where.ra, dec: where.dec, target: key });
+  openPlace({
+    name: t?.name ?? sc?.title ?? key,
+    ra: where.ra,
+    dec: where.dec,
+    target: key,
+    ...(getView() === 'discover' ? { fov: 6 } : {}),
+  });
 }
 
 /**
@@ -281,6 +336,10 @@ function resetIfNewPatch(): void {
 }
 
 function renderTask(): void {
+  if (getView() === 'discover') {
+    document.getElementById('frame-task')?.replaceChildren();
+    return;
+  }
   const box = document.getElementById('frame-task');
   if (!box) return;
   resetIfNewPatch();
@@ -372,6 +431,7 @@ function showResult(box: HTMLElement, t: TaskCopy & { key: string; simulated: bo
 
 /** A tap, or Enter on the keyboard crosshair (keypick.ts): true when it hit the object. */
 function tapped(p: { x: number; y: number; ra: number; dec: number }): boolean {
+  if (getView() === 'discover') return false;
   const t = task();
   const view = currentView();
   if (!t || found || t.kind === 'faint' || !view?.field) return false;

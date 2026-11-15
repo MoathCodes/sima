@@ -58,10 +58,10 @@ const TIPS: readonly Tip[] = [
   {
     id: 'faint',
     title: 'Too faint for one picture',
-    text: 'Measure has a Stack view that adds every date along its path, so it builds up.',
-    at: 'measure',
+    text: 'Stack adds pictures along a path. Compare it with both checks.',
+    at: 'view-stack',
     when: () => explore() && kind() === 'faint',
-    heeded: () => S.level === 'measure',
+    heeded: mode('stack'),
   },
 ];
 
