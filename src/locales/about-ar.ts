@@ -167,7 +167,7 @@ ${ltr('500 AU')} يكون خافتًا بقدر الضجيج تقريبًا (ل�
     Wikipedia (${ltr('CC BY-SA 4.0')}). كل بطاقة مكان تسمّي مصادرها.</li>
   <li><b>مكتبة السماء:</b> ${ltr('Aladin Lite 3.8.2')} من CDS، ${link('https://aladin.cds.unistra.fr/AladinLite/')}، بترخيص
     ${ltr('GPL 3.0')}.</li>
-  <li><b>الخطوط:</b> Archivo وAref Ruqaa وNoto Sans Arabic، بترخيص SIL Open Font License 1.1.</li>
+  <li><b>الخطوط:</b> Archivo وAref Ruqaa وCairo، بترخيص SIL Open Font License 1.1.</li>
   <li><b>التحدي:</b> NASA Space Apps، ${link('https://www.spaceappschallenge.org/')}، و
     ${link('https://www.spaceappschallenge.org/2026/challenges/planet-x-and-spherex/?tab=resources', 'صفحة المصادر')}.</li>
 </ul>`;
