@@ -52,7 +52,7 @@ const TOOLS_MIN = 280;
 /** Left-column cards that lane G's places/room.ts does not already keep apart. */
 const LEFT_COLUMN = ['welcome', 'tools'];
 
-const DEFAULT_BOX: FrameBox = { right: GUTTER, top: FRAME_TOP, width: 500 };
+const DEFAULT_BOX: FrameBox = { right: GUTTER, top: FRAME_TOP, width: 600 };
 
 let box: FrameBox = { ...DEFAULT_BOX };
 /** The frame's horizontal offset while Measure is open (negative: to the left). */
@@ -96,7 +96,10 @@ export function startLayout(): void {
   place();
   requestAnimationFrame(() => (moving = false));
 
-  new MutationObserver(() => {
+  // Only a card showing or hiding moves the cards: a `hidden` change anywhere else (a tooltip, a
+  // row in a list, a label while the sky zooms) is not worth a placement.
+  new MutationObserver((records) => {
+    if (!records.some((r) => r.target instanceof Element && r.target.matches('[data-card]'))) return;
     const open = isShown(byId('measure'));
     if (open !== measureOpen) {
       measureOpen = open;
@@ -445,8 +448,8 @@ function startChips(): void {
 function startLeftColumn(): void {
   const cards = LEFT_COLUMN.map(byId).filter((el): el is HTMLElement => el !== null);
   const was = new Map(cards.map((el) => [el, isShown(el)]));
-  new MutationObserver(() => {
-    if (off()) return;
+  new MutationObserver((records) => {
+    if (off() || !records.some((r) => cards.includes(r.target as HTMLElement))) return;
     for (const el of cards) {
       const now = isShown(el);
       const opened = now && !was.get(el);

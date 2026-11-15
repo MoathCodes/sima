@@ -607,7 +607,11 @@ function freeBox(): { x: number; y: number; w: number; h: number } {
   if (document.documentElement.dataset.view !== 'discover') return { x: 0, y: 0, w: W, h: H };
   if (W >= 700) {
     const left = W - DISCOVER_LEFT >= 560 ? DISCOVER_LEFT : 0;
-    return { x: left, y: 0, w: W - left, h: H };
+    // The open frame at the right: the globe is centred in the room left of it, so the frame
+    // never covers a beacon (lane M). Only when that room is wide enough for a useful globe.
+    const f = frameRect();
+    const right = f && f.left - 16 - left >= 320 ? Math.round(f.left - 16) : W;
+    return { x: left, y: 0, w: right - left, h: H };
   }
   // Under the top row and the sky note (which sits under the top row on phones, sky.css).
   const note = document.getElementById('sky-note');
@@ -677,6 +681,15 @@ function watchBox(): void {
   }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-view'] });
   // The phone layout and the sheet's height (lane M, shell/sheet.ts).
   onLayout(() => updateBox(true));
+  // Discover on a desktop: the frame opening or closing changes the room left of it. Read once
+  // the frame has been placed (layout.ts places it in the same frame of the page).
+  const frame = document.getElementById('frame');
+  if (frame)
+    new MutationObserver(() => requestAnimationFrame(() => updateBox(true))).observe(frame, {
+      attributes: true,
+      attributeFilter: ['hidden'],
+    });
+  addEventListener('resize', () => requestAnimationFrame(() => updateBox(false)));
   const sheet = document.getElementById('sheet');
   if (sheet) {
     new MutationObserver(() => updateBox(true)).observe(sheet, {

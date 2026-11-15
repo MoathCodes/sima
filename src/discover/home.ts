@@ -147,12 +147,15 @@ export function renderObject(el: HTMLElement): void {
   const tip = o ? (/^[^.?!]*[.?!](\s+[^.?!]*\?)?/.exec(o.look)?.[0] ?? o.look) : '';
   const kind = t ? plainKind(t.kind) : '';
   el.className = 'dsc-card dsc-objcard';
+  // The frame's header names it already: the card says what it is and what to try (its name is
+  // the heading for screen readers only).
+  const name = S.label || t?.name || 'This spot';
   el.innerHTML = `
     <div class="dsc-ohd">
-      <h2 class="dsc-title" tabindex="-1" data-k="title">${esc(S.label || t?.name || 'This spot')}</h2>
+      <h2 class="dsc-sr" tabindex="-1" data-k="title">${esc(name)}</h2>
+      <p class="dsc-kind">${esc(kind || 'A spot you chose')}</p>
       <button class="dsc-icon-btn" type="button" data-k="close-frame" data-close data-guide="object-close" aria-label="Close the pictures" data-tip="Close">${icon('close')}</button>
     </div>
-    ${kind ? `<p class="dsc-obj">${esc(kind)}</p>` : ''}
     ${tip ? `<p class="dsc-tip">${icon('bulb')}<span>${esc(tip)}</span></p>` : ''}
-    <span data-peek-end></span>`;
+    <button class="dsc-btn quiet dsc-to-missions" type="button" data-k="close-frame" data-guide="object-missions" data-peek-end>${icon('arrow-right')}Missions</button>`;
 }

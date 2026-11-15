@@ -233,6 +233,20 @@ html[data-layout='phone-fit'] #frame {
   background: var(--v2-st-bg) !important;
   --pic-max: var(--pic) !important;
 }
+/* The frame's surface reaches down to the sheet (phone.ts sets --frame-ext), drawn below the
+   frame so its measured height stays its own. */
+html[data-layout='phone-fit'] #frame::after {
+  content: '';
+  position: absolute;
+  inset: 100% 0 auto;
+  height: var(--frame-ext, 0px);
+  padding: 0;
+  border-radius: 0;
+  background: var(--v2-st-bg);
+  /* frame.css draws the desktop rim with this pseudo-element and a mask: not here. */
+  mask: none;
+  pointer-events: none;
+}
 /* The fit layout has no bar: the frame carries Play and the date chips (11.1). */
 html[data-layout='phone-fit'] #bar {
   display: none !important;
@@ -338,6 +352,17 @@ html[data-layout^='phone'] #phone-menu {
   right: auto !important;
   left: calc(env(safe-area-inset-left, 0px) + var(--v2-gutter-phone, 12px)) !important;
   width: min(240px, calc(100vw - 24px));
+}
+
+/* Find as a phone page: the field's card shows focus; the input draws no second ring inside it
+   (it showed as two white bars), and the "/" key hint has no keyboard to serve. */
+html[data-layout^='phone'] .sheet-body #search .search-input,
+html[data-layout^='phone'] .sheet-body #search .search-input:focus-visible {
+  box-shadow: none;
+  outline: none;
+}
+html[data-layout^='phone'] .sheet-body #search .kbd {
+  display: none;
 }
 
 /* ----- Phone scroll: one column that scrolls (rotation, short screens, 400% zoom, Expert) -------- */

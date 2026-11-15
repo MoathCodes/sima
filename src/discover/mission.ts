@@ -575,17 +575,12 @@ function stateLine(r: Run): string {
     return `<p class="dsc-state checking"><span class="dsc-busy" aria-hidden="true"></span>${esc(MEASURING)}</p>`;
   if (s.state === 'unavailable')
     return `<p class="dsc-state warn">Not measured: ${esc(s.reason.replace(/\.$/, ''))}.</p><button class="dsc-btn" type="button" data-k="continue" data-guide="mission-continue">Continue without it</button>`;
-  const ghostNow = r.id === 'ghost' && step() === 'motion' && r.stack;
-  const numbers = ghostNow
-    ? `<p class="dsc-state">Along the arrow: ${times(r.stack!.result.along.snr)} · not shifted: ${times(r.stack!.result.controls[0].snr)} · opposite: ${times(r.stack!.result.controls[1].snr)}</p>`
-    : '';
+  // The ghost's three numbers are the frame's own readout under the picture (Along, Not shifted,
+  // Opposite): the card does not repeat them (redesign: one thing, one place).
+  const numbers = '';
   // The ghost's "not yet": the stack is checked again as the arrow moves, so no Try again.
   if (s.state === 'failed' && r.id === 'ghost') return `${numbers}<p class="dsc-state">${esc(s.reason)}</p>`;
   if (s.state === 'failed')
     return `<p class="dsc-state warn">That didn't work: ${esc(s.reason.replace(/\.$/, ''))}.</p><button class="dsc-btn" type="button" data-k="retry">Try again</button>`;
   return numbers;
-}
-
-function times(x: number): string {
-  return Number.isFinite(x) ? `${x.toFixed(1)}× the noise` : 'not measured';
 }

@@ -160,6 +160,9 @@ export function startDiscover(link: Link): void {
     openMission(link.mission);
     screen = 'mission';
   } else screen = fresh ? 'welcome' : 'home';
+  // Phones: a link (a QR code, a shared address) that names a place opens on that place: its
+  // card in the sheet (name, kind, what to try), and ✕ back to the globe and the missions.
+  if (phone() && screen === 'welcome' && (link.target || link.ra !== null)) screen = 'home';
   // Phones open on the globe: the frame waits for a mission or an object, unless the link named
   // a place to look at.
   if (phone() && screen !== 'mission' && !link.target && link.ra === null) hideFrame(true);

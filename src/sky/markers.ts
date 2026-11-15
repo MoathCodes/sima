@@ -526,7 +526,7 @@ function paint(): void {
 
   // A phone-sized globe names only a few of the most important places (the beacons name the
   // missions); zooming in names more (lane M, redesign). Dots without a name stay drawn.
-  if (c.width < 700) {
+  if (Math.min(c.width, c.height) < 500 || c.width < 700) {
     const cap = c.fov > 90 ? 5 : c.fov > 40 ? 9 : c.fov > 15 ? 14 : 24;
     let n = 0;
     for (const p of placed) {

@@ -199,8 +199,14 @@ function peekHeight(): number | undefined {
   const el = sheetContent();
   const body = sheet?.querySelector<HTMLElement>('.sheet-body');
   if (!sheet || !el || !body || !shown(sheet)) return undefined;
-  const end = el.querySelector<HTMLElement>('[data-peek-end]');
-  if (!end || !end.checkVisibility()) return undefined;
+  // The content's peek end, or a card another lane put in the flow right after it (Planet X's
+  // sandbox card, shell/sandbox.ts): that card is the step's main control, so peek shows it.
+  const wrap = el.parentElement ?? el;
+  const ends = [...wrap.querySelectorAll<HTMLElement>('[data-peek-end], [data-under="flow"]')].filter(
+    (x) => x.checkVisibility(),
+  );
+  const end = ends[ends.length - 1];
+  if (!end) return undefined;
   const chrome = body.getBoundingClientRect().top - sheet.getBoundingClientRect().top;
   const pad = parseFloat(getComputedStyle(body).paddingTop) || 0;
   return Math.ceil(chrome + pad + end.getBoundingClientRect().bottom - el.getBoundingClientRect().top + 12);
@@ -296,17 +302,29 @@ function apply(): void {
   let sheetH = l.sheetH;
   if (l.kind === 'phone-fit') {
     const vh = h - safe.bottom;
+    // With the frame open, the sheet is as tall as its content (never taller than the room under
+    // the frame); the frame's surface reaches down to it (--frame-ext), so no empty sheet shows.
+    if (frameOpen && height !== 'page') {
+      const want = height === 'peek' || !height ? peekHeight() : contentHeight();
+      if (want) sheetH = Math.min(sheetH, Math.max(want, 64));
+    }
     let top = vh - sheetH;
     // With the frame open, the sheet starts under the frame's real bottom edge, never over the
     // picture (MOB-3).
-    if (frameOpen && frameEl)
-      top = Math.max(top, Math.ceil(frameEl.getBoundingClientRect().bottom) + PHONE.gap);
+    let ext = 0;
+    if (frameOpen && frameEl) {
+      const bottom = Math.ceil(frameEl.getBoundingClientRect().bottom);
+      top = Math.max(top, bottom + PHONE.gap);
+      ext = Math.max(0, top - bottom);
+    }
     sheetH = Math.max(0, Math.floor(vh - top));
     set('--sheet-top', `${top}px`);
     set('--sheet-h', `${sheetH}px`);
+    set('--frame-ext', `${ext}px`);
   } else {
     set('--sheet-top', '');
     set('--sheet-h', '');
+    set('--frame-ext', '');
   }
   const key = `${l.kind} ${l.pic} ${sheetH}`;
   if (key !== last) {
