@@ -258,9 +258,9 @@ class Patch:
                 silent = str(e).startswith(("no answer within", "gave up after"))
                 n = self.snapshot()["searchTry"]
                 self.set(state="failed", searchTimedOut=silent,
-                         error=(f"NASA's search did not answer within {minutes(took)} "
+                         error=(f"NASA’s search did not answer within {minutes(took)} "
                                 f"({n} {'try' if n == 1 else 'tries'})") if silent
-                         else f"NASA's search failed: {e}"[:300])
+                         else f"NASA’s search failed: {e}"[:300])
                 self.finish()
                 return
             self.timings["search"] = time.time() - t0

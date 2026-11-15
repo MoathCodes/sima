@@ -276,7 +276,7 @@ class TestSearchBudget(unittest.TestCase):
         st = p.snapshot()
         self.assertEqual(st["state"], "failed")
         self.assertTrue(st["searchTimedOut"])
-        self.assertIn("NASA's search did not answer within", st["error"])
+        self.assertIn("NASA’s search did not answer within", st["error"])
         self.assertIn("(4 tries)", st["error"])
         # Retry: asked again a few seconds later, the patch starts over (not 30 s later).
         self.assertEqual(self.svc.request(10.0, 10.0, 12)["state"], "failed")
@@ -292,7 +292,7 @@ class TestSearchBudget(unittest.TestCase):
         p.run()
         st = p.snapshot()
         self.assertFalse(st["searchTimedOut"])
-        self.assertTrue(st["error"].startswith("NASA's search failed: TAP error"))
+        self.assertTrue(st["error"].startswith("NASA’s search failed: TAP error"))
 
 
 class TestBusy(unittest.TestCase):

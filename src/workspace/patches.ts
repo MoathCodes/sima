@@ -9,7 +9,7 @@
  * to the worker (`keepPatch`) so its pictures and stacks are made there too.
  */
 import { S, type Fov } from '../viewer/state.ts';
-import { LIVE_API, POLL_MS, TARGET_RADIUS, centreOf, fetchSet, liveFov, releaseName } from '../viewer/load.ts';
+import { LIVE_API, POLL_MS, TARGET_RADIUS, centreOf, fetchSet, liveFov, releaseName, searchNote } from '../viewer/load.ts';
 import { buildField, keepPatch } from '../core/work.ts';
 import { TARGETS } from '../core/targets.ts';
 import { separation } from '../core/astro.ts';
@@ -201,7 +201,7 @@ async function pollLive(
         if (!shown) report(loadingStatus('Waiting for a turn at NASA’s archive…'));
         break;
       case 'searching':
-        if (!shown) report(loadingStatus('Searching NASA’s archive for SPHEREx exposures of this spot…'));
+        if (!shown) report(loadingStatus(`Searching NASA’s archive for SPHEREx exposures of this spot…${searchNote(status)}`));
         break;
       case 'first':
       case 'rest':

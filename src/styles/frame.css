@@ -212,6 +212,50 @@
   stroke: none;
   font: var(--text-scale);
 }
+/* The label of the sky map around the real exposures (surround.ts), top right. */
+.pic-around {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  justify-items: end;
+  gap: 1px;
+  max-width: 46%;
+  text-align: right;
+  pointer-events: none;
+}
+.pic-around b {
+  font-weight: 600;
+}
+.pic-around > span:not(.pic-around-bar) {
+  color: var(--st-ink-2);
+}
+.pic-around-bar {
+  position: relative;
+  width: 104px;
+  height: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+  border-radius: 1px;
+  background: var(--st-line);
+}
+.pic-around-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 30%;
+  background: var(--st-ink-2);
+  animation: cover-run 1.4s var(--ease-out) infinite;
+}
+.pic-around-bar.known > span {
+  width: var(--done);
+  animation: none;
+  transition: width var(--t-slide) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pic-around-bar > span {
+    animation: none;
+  }
+}
 .pic-divider {
   position: absolute;
   top: 0;
@@ -527,8 +571,22 @@
   display: none;
 }
 .sima-bar.waiting .bar-dates {
-  opacity: 0.4;
   pointer-events: none;
+}
+.sima-bar.waiting .bar-dates > :not(.ds-why) {
+  opacity: 0.4;
+}
+/* Why the bar cannot play yet (BAR-6), on the empty date scale. */
+.ds-why {
+  left: 0;
+  right: 0;
+  top: 10px;
+  overflow: hidden;
+  color: var(--ink-2);
+  font: var(--text-label);
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* The date scale (signature). Lettering sits under the line, stops and pass names above. */
