@@ -36,6 +36,7 @@ import {
   setWidening,
   widerPatch,
 } from './surround.ts';
+import { SEED_BASE, seedFor } from './seed.ts';
 import type {
   Det,
   Field,
@@ -228,6 +229,12 @@ export async function aimAt(ra: number, dec: number, fov?: number): Promise<void
     await place({ ra: S.ra, dec: S.dec }, want, null);
     return;
   }
+  // A tour stop or top place fetched ahead of time (the static seed) opens from there.
+  if (SEED_BASE) {
+    startLoading('queued', 'Opening real SPHEREx exposures of this spot…');
+    announce();
+    if ((await showSeed(id, signal)) || !current(id)) return;
+  }
   if (!LIVE_API) {
     clearData('none');
     noPictures = {
@@ -405,6 +412,23 @@ async function showLive(
   } catch (err) {
     if (!current(id) || signal.aborted) return false;
     console.warn(`load: live ${step} set failed`, err);
+    return false;
+  }
+}
+
+/** Shows the seeded patch that holds the field on screen, if the seed has one. */
+async function showSeed(id: number, signal: AbortSignal): Promise<boolean> {
+  try {
+    const hit = await seedFor(S.ra, S.dec, liveFov(S.fov));
+    if (!hit || !current(id)) return false;
+    const set = await fetchSet(hit.folder, hit.id, 'live', signal);
+    if (!current(id)) return false;
+    home = { set, target: null };
+    keep(set);
+    return await show(set, null, { ra: S.ra, dec: S.dec }, S.fov, 'live', null);
+  } catch (err) {
+    if (!current(id) || signal.aborted) return false;
+    console.warn('load: seeded set failed', err);
     return false;
   }
 }

@@ -33,6 +33,7 @@ import { TARGETS } from '../core/targets.ts';
 import { SCENARIOS } from '../core/field.ts';
 import { startStrip } from './strip.ts';
 import { onSurround, widening } from './surround.ts';
+import { liveTip, liveWords } from './seed.ts';
 
 const VIEW_NAMES: Record<Mode, [string, IconName, string]> = {
   flip: ['Flip', 'flip', 'Show the dates one after another'],
@@ -161,7 +162,14 @@ function header(): void {
   if (!head) return;
   const measure = S.level === 'measure';
   // A test target's wider field comes from the live service: say so (H2).
-  const src = SOURCE[S.source === 'real' && S.set?.origin === 'live' ? 'live' : S.source] ?? SOURCE.none;
+  const kind = S.source === 'real' && S.set?.origin === 'live' ? 'live' : S.source;
+  const base = SOURCE[kind] ?? SOURCE.none;
+  // A live patch says when it was fetched: "fetched live" only for this visit (seed.ts).
+  const live = S.set?.data.live;
+  const src =
+    kind === 'live' && base
+      ? { ...base, text: `Real data, ${liveWords(live)}`, tip: liveTip(live) }
+      : base;
   const i = FOVS.indexOf(S.fov);
   // An embedded page shows only the frame, the bar and Measure: hiding the frame would empty it.
   // (main.ts marks <html> before the frame starts; S.embed is set later, by url.ts.)
