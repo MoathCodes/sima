@@ -227,7 +227,7 @@ html[data-layout='phone-fit'] #frame {
   width: auto !important;
   max-height: none !important;
   translate: none !important;
-  padding: 8px 12px 10px !important;
+  padding: 6px 12px 8px !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   background: var(--v2-st-bg) !important;
@@ -282,7 +282,7 @@ html[data-layout^='phone'][data-view='discover'] #frame-load:not(:has(.load-text
   display: none;
 }
 html[data-layout^='phone'][data-view='discover'] #frame-pic {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 /* Dates, then Play and the views. */
 html[data-layout^='phone'][data-view='discover'] #frame-play.fp {
@@ -291,8 +291,8 @@ html[data-layout^='phone'][data-view='discover'] #frame-play.fp {
   grid-template-areas:
     'chips chips'
     'play views';
-  gap: 8px;
-  margin-top: 8px;
+  gap: 6px;
+  margin-top: 6px;
 }
 html[data-layout^='phone'][data-view='discover'] .fp-controls {
   grid-area: play;
@@ -314,8 +314,8 @@ html[data-layout^='phone'][data-view='discover'] .fp-chips {
 html[data-layout^='phone'][data-view='discover'] #frame-views {
   position: absolute;
   right: 12px;
-  bottom: 10px;
-  left: calc(12px + 48px + 8px);
+  bottom: 8px;
+  left: calc(12px + 48px + 6px);
   margin: 0;
   flex-wrap: nowrap;
 }
@@ -343,6 +343,11 @@ html[data-layout^='phone'][data-view='discover'] #frame-views > button > span {
   border-radius: 0;
   background: none;
   box-shadow: none;
+}
+
+/* The place card brings its own ✕: no second Back row above it. */
+.sheet:has(.sheet-item:not([hidden]) > #place-card) .sheet-head {
+  display: none;
 }
 
 /* ----- Phone scroll: one column that scrolls (rotation, short screens, 400% zoom, Expert) -------- */
