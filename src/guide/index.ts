@@ -15,7 +15,7 @@ import { explainScreen } from './explain.ts';
 import { onTried, startTried, THINGS } from './tried.ts';
 import { readStore } from './store.ts';
 
-const FIRST: readonly StarterId[] = ['runaway', 'made-of', 'too-faint'];
+const FIRST = ['runaway', 'made-of', 'ghost'] as const;
 
 /** "What changes look like": what each kind of change looks like in the frame. */
 const CHANGES: readonly { name: string; text: string; target: string | null }[] = [

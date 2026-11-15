@@ -11,6 +11,12 @@ interface ImportMetaEnv {
    * (FRM-11) instead of asking.
    */
   readonly VITE_LIVE_API?: string;
+  /**
+   * Where the static seed is served (scripts/seed_live.py `--export`, uploaded to a bucket), such
+   * as `https://storage.googleapis.com/<bucket>/seed`. Empty or missing means no seed: every spot
+   * goes to the live service.
+   */
+  readonly VITE_SEED_BASE?: string;
 }
 
 interface ImportMeta {

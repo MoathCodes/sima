@@ -14,6 +14,7 @@ import { buildField, keepPatch } from '../core/work.ts';
 import { TARGETS } from '../core/targets.ts';
 import { separation } from '../core/astro.ts';
 import { covers, nominal, pinCentre, widerPatch } from '../viewer/surround.ts';
+import { seedFor } from '../viewer/seed.ts';
 import { targetAt } from '../core/real.ts';
 import type { Field, LiveStatus, RealSet, Target } from '../core/types.ts';
 
@@ -141,6 +142,21 @@ export async function openPatch(
         await pollLive(id, at, fov, report, signal, { ask, target, own: set, centre });
       }
       return;
+    }
+    // A spot fetched ahead of time (the static seed, as in the main frame) opens from there.
+    const seeded = await seedFor(at.ra, at.dec, liveFov(fov));
+    if (signal.aborted) return;
+    if (seeded) {
+      try {
+        report(loadingStatus('Opening real SPHEREx exposures of this spot…'));
+        const set = await liveSet(seeded.folder, seeded.id, signal);
+        const field = await fieldFor(id, set, null, at, fov, signal);
+        report({ ...loadingStatus(''), source: 'live', set, field });
+        return;
+      } catch (err) {
+        if (signal.aborted || (err as DOMException)?.name === 'AbortError') return;
+        console.warn('workspace: a seeded set failed', err);
+      }
     }
     if (!LIVE_API) {
       report({ ...loadingStatus(''), source: 'none', why: NO_SERVICE });

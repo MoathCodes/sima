@@ -50,7 +50,7 @@ test('S starts in the documented state', () => {
 
 test('field sizes, views and speeds are the ones the spec lists', () => {
   assert.deepEqual([...FOVS], [3, 6, 12, 24, 48]); // FRM-6
-  assert.deepEqual(VIEWS.explore, ['flip', 'two', 'diff']); // FRM-7
+  assert.deepEqual(VIEWS.explore, ['flip', 'two', 'diff', 'stack']); // FRM-7; Stack added in v2.0 (contract 4)
   assert.deepEqual(VIEWS.measure, ['flip', 'swipe', 'two', 'diff', 'stack', 'trail']);
   for (const view of VIEWS.explore) assert.ok(VIEWS.measure.includes(view));
   assert.deepEqual([...SPEEDS], [0.6, 1, 1.5]); // BAR-3

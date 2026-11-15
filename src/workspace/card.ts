@@ -23,6 +23,7 @@ import { S } from '../viewer/state.ts';
 import { targetMeasurements, releaseName } from '../viewer/load.ts';
 import { icon, type IconName } from '../shell/icons.ts';
 import { NO_SERVICE } from './patches.ts';
+import { liveWords } from '../viewer/seed.ts';
 import { TYPE_WORDS, type FrameType } from './schema.ts';
 import { groupLetter, groupOf, isPlaying, mates, numberOf, setAnchor, stepFrame, togglePlay, closeFrame, type Live } from './frames.ts';
 import { openCompare, openMenu } from './menu.ts';
@@ -164,7 +165,7 @@ export function footLine(f: Live): string {
   const groups = shownGroups(f);
   const frames = framesOf(st.field, groups);
   const releases = [...new Set(frames.map((x) => releaseName(x.release)))].join(' + ');
-  const parts = [`Real SPHEREx data${st.source === 'live' || st.set?.origin === 'live' ? ', fetched live' : ''}${releases ? `, ${releases}` : ''}`];
+  const parts = [`Real SPHEREx data${st.source === 'live' || st.set?.origin === 'live' ? `, ${liveWords(st.set?.data.live)}` : ''}${releases ? `, ${releases}` : ''}`];
   const mjds = frames.map((x) => x.mjd).filter(Number.isFinite);
   if (!mjds.length) parts.push(`no D${f.s.det} exposure on this date`);
   else {

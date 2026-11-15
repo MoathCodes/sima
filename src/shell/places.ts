@@ -17,7 +17,7 @@ import { onDotClick, onPinClick, setDots, setPins, type Dot } from '../sky/marke
 import { camera, flyTo } from '../sky/sky.ts';
 import { openPlace } from './shell.ts';
 import { icon, type IconName } from './icons.ts';
-import { openStarter, STARTERS, type StarterId } from '../explore/game.ts';
+import { openStarter, STARTERS } from '../explore/game.ts';
 import { TARGETS } from '../core/targets.ts';
 import type { Place, PlacesCatalogue } from '../data/schema.ts';
 import { hasCommonName, nameOf, rowLine, tidy } from './objects.ts';
@@ -223,13 +223,13 @@ function fillMenu(): void {
     return b;
   };
   const label = (text: string) => el('p.group-label.pl-menu-label', {}, text);
-  const starters = (['runaway', 'made-of', 'too-faint'] as StarterId[]).map((id) =>
+  const starters = (['runaway', 'made-of', 'ghost'] as const).map((id) =>
     item(STARTERS[id].title, STARTERS[id].line, () => openStarter(id)),
   );
   const targets = TARGETS.map((t) =>
     item(t.name, t.line, () => openPlace({ name: t.name, ra: t.ra, dec: t.dec, target: t.key })),
   );
-  const practice = (['warm-up', 'planet-x'] as StarterId[]).map((id) =>
+  const practice = (['warm-up', 'planet-x'] as const).map((id) =>
     item(STARTERS[id].title, STARTERS[id].line, () => openStarter(id), 'Simulated'),
   );
 

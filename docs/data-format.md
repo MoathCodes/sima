@@ -5,6 +5,8 @@ SPHEREx Level 2 images from NASA's IRSA archive, downloaded ahead of time by `sc
 stored under `public/data/`. Anything else the viewer shows (a typed coordinate, the practice star,
 Planet X) is simulated, and the picture says so, unless the live service fetches real frames for a
 typed coordinate in this same format (`docs/live-service.md`).
+A live patch's `frames.json` adds a `live` block (`id`, `step`, `fetched`, `found`, `windows`, and
+`ahead` when the seed job fetched it ahead of time); `docs/live-service.md` describes it.
 
 The TypeScript types for everything below are in `src/core/types.ts` (`DataIndex`, `TargetData`,
 `FrameMeta`, `Wcs`). The decoder is `decodeFrames` in `src/core/real.ts`.

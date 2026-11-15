@@ -229,9 +229,99 @@ def tan_deproject(xi, eta, ra0, dec0):
 # Network: every outside request goes through fetch(), at most MAX_CONCURRENT at a time
 # ---------------------------------------------------------------------------------------------
 
-_sem = threading.BoundedSemaphore(MAX_CONCURRENT)
+# Priority classes for the shared request slots (docs/research/prediction.md, option 1). Lower
+# goes first: a patch a page is watching, then predicted work, then the seed job (and patches
+# nobody watches any more, which only finish what they started).
+WATCHED, PREDICTED, SEED = 0, 1, 2
+LOW_SLOTS = 4             # slots that work nobody is waiting for may hold at once
+LOW_HOLD_AFTER_BUSY = 5   # seconds such work waits after any busy reply before it starts a request
+
 _local = threading.local()
 _last_retry = 0.0  # time.time() of the last retry wait, any request
+
+
+class _Gate:
+    """MAX_CONCURRENT request slots for the whole process, given out by priority (then by arrival).
+    A priority may be a number or a function, asked again while waiting, so a patch a page starts
+    watching moves up at once. Work below WATCHED holds at most LOW_SLOTS slots, and starts nothing
+    for LOW_HOLD_AFTER_BUSY seconds after a busy reply."""
+
+    def __init__(self):
+        self.cv = threading.Condition()
+        self.used = 0
+        self.low = 0
+        self.waiting: dict[int, object] = {}
+        self.seq = 0
+
+    @staticmethod
+    def _level(prio) -> int:
+        return int(prio() if callable(prio) else prio)
+
+    def _may_go(self, me: int, level: int) -> bool:
+        if self.used >= MAX_CONCURRENT:
+            return False
+        best = min(self.waiting, key=lambda k: (self._level(self.waiting[k]), k))
+        if best != me:
+            return False
+        return level == WATCHED or (self.low < LOW_SLOTS and not retrying(LOW_HOLD_AFTER_BUSY))
+
+    def acquire(self, prio) -> int:
+        with self.cv:
+            self.seq += 1
+            me = self.seq
+            self.waiting[me] = prio
+            try:
+                while True:
+                    level = self._level(prio)
+                    if self._may_go(me, level):
+                        break
+                    self.cv.wait(0.25)  # priorities may change while waiting
+            finally:
+                del self.waiting[me]
+            self.used += 1
+            if level != WATCHED:
+                self.low += 1
+            self.cv.notify_all()
+            return level
+
+    def release(self, level: int):
+        with self.cv:
+            self.used -= 1
+            if level != WATCHED:
+                self.low -= 1
+            self.cv.notify_all()
+
+
+_gate = _Gate()
+
+
+def current_priority():
+    """The priority of this thread's requests (a number or a function); WATCHED unless set."""
+    return getattr(_local, "priority", WATCHED)
+
+
+class priority:
+    """`with priority(p):` requests from this thread use priority `p` (number or function)."""
+
+    def __init__(self, prio):
+        self.prio = prio
+
+    def __enter__(self):
+        self.saved = current_priority()
+        _local.priority = self.prio
+
+    def __exit__(self, *exc):
+        _local.priority = self.saved
+
+
+def carry(fn):
+    """`fn` wrapped to run with this thread's priority (for work handed to a thread pool)."""
+    prio = current_priority()
+
+    def run(*a, **kw):
+        with priority(prio):
+            return fn(*a, **kw)
+    return run
 
 
 def retrying(within: float = 20.0) -> bool:
@@ -254,19 +344,21 @@ def _session() -> requests.Session:
 
 def fetch(url: str, *, params=None, data=None, headers=None, stop=None, what: str = "",
           waits: list[float] | None = None, timeout=None, deadline: float | None = None,
-          on_try=None) -> tuple[int, bytes]:
+          on_try=None, prio=None) -> tuple[int, bytes]:
     """GET (or POST when `data` is given). Busy replies and dropped connections are retried after
     each wait in `waits` (default RETRY_WAITS). `stop(buffer)` may end a download early once enough
     bytes have arrived. `timeout` is (connect, read) seconds for one try (default TIMEOUT).
     `deadline` (a time.time() value) ends the retries: no try starts after it and none reads past
-    it. `on_try(n, tries)` hears the start of each try. Returns (status, body). Raises FetchError
-    for any other failure, and when the deadline passes."""
+    it. `on_try(n, tries)` hears the start of each try. `prio` is the priority for the shared slots
+    (default: the thread's, see `priority`). Returns (status, body). Raises FetchError for any other
+    failure, and when the deadline passes."""
     global _last_retry
     waits = RETRY_WAITS if waits is None else waits
     connect, read = timeout or TIMEOUT
     tries = len(waits) + 1
     last = ""
     cut = False  # the deadline ended the tries
+    prio = current_priority() if prio is None else prio
     for attempt in range(tries):
         if attempt:
             wait = waits[attempt - 1] * (1 + 0.25 * random.random())
@@ -276,7 +368,8 @@ def fetch(url: str, *, params=None, data=None, headers=None, stop=None, what: st
             log(f"  retry {attempt} in {wait:.0f}s ({last}) {what or url[:100]}")
             _last_retry = time.time()
             time.sleep(wait)
-        with _sem:
+        level = _gate.acquire(prio)
+        try:
             left = None if deadline is None else deadline - time.time()
             if left is not None and left <= 0.05:
                 cut = True
@@ -302,6 +395,8 @@ def fetch(url: str, *, params=None, data=None, headers=None, stop=None, what: st
             except (requests.ConnectionError, requests.Timeout, requests.exceptions.ChunkedEncodingError) as e:
                 last = type(e).__name__
                 continue
+        finally:
+            _gate.release(level)
     if cut:
         raise FetchError(f"no answer within the time allowed ({last or 'no reply'}): {what or url[:120]}")
     raise FetchError(f"gave up after {tries} tries ({last}): {what or url[:120]}")
@@ -426,7 +521,7 @@ def search(ra: float, dec: float, releases: list[str], ttl: float | None = SEARC
     timeout, deadline, on_try) goes to every query's fetch()."""
     found: dict[str, list[dict]] = {}
     with ThreadPoolExecutor(max_workers=len(releases)) as pool:
-        futs = {pool.submit(search_release, ra, dec, r, ttl, **retry): r for r in releases}
+        futs = {pool.submit(carry(search_release), ra, dec, r, ttl, **retry): r for r in releases}
         for f in as_completed(futs):
             found[futs[f]] = f.result()
     seen, exps = set(), []
@@ -611,7 +706,7 @@ def load_plan_tables(exps: list[dict]):
     for e in exps:
         first.setdefault((e["det"], e["release"]), e)
     with ThreadPoolExecutor(max_workers=MAX_CONCURRENT) as pool:
-        list(pool.map(lambda e: wave_table(e["url"], e["det"], "plan-" + e["release"]), first.values()))
+        list(pool.map(carry(lambda e: wave_table(e["url"], e["det"], "plan-" + e["release"])), first.values()))
 
 
 # ---------------------------------------------------------------------------------------------
@@ -927,20 +1022,33 @@ def make_frame(exp: dict, body: bytes, cat: dict, cutout: str):
 # ---------------------------------------------------------------------------------------------
 
 def fetch_plan(p: dict, cat: dict, size: float, *, limit: int | None = None, groups=None,
-               on_progress=None, waits: list[float] | None = None, ahead=None, on_frame=None):
+               on_progress=None, waits: list[float] | None = None, ahead=None, on_frame=None,
+               keep_going=None, report: dict | None = None):
     """Download frames for the plan `p`. Returns (list of frame tuples, list of skip notes).
     `groups` limits which (win, det) groups are filled, `limit` overrides perDet and `waits` the
     retry schedule of the cutout downloads. `ahead` lists groups whose first exposure is asked
     before all others, in that order. `on_frame(got)` hears every kept frame, with the frames kept
-    so far by group."""
+    so far by group. `keep_going()` is asked before each cutout starts and between batches: once
+    it says False, cutouts already under way finish and no new one starts, and the plan returns
+    what it has, with `report["stopped"] = True`. Requests use the calling thread's priority."""
     want = limit if limit is not None else p["perDet"]
     todo = {g: list(c) for g, c in p["groups"].items() if groups is None or g in groups}
     got: dict[tuple, list] = {g: [] for g in todo}
     skipped = []
     total = sum(min(want, len(c)) for c in todo.values())
     done = [0]
+    stopped = [False]
+    if report is not None:
+        report["stopped"] = False
+
+    def go() -> bool:
+        if keep_going is not None and not stopped[0] and not keep_going():
+            stopped[0] = True
+        return not stopped[0]
 
     def one(e):
+        if not go():
+            return e, None, None
         tra, tdec = target_at(cat, e["t"])
         url = cutout_url(e, tra, tdec, size)
         try:
@@ -951,7 +1059,7 @@ def fetch_plan(p: dict, cat: dict, size: float, *, limit: int | None = None, gro
         return e, res, why
 
     with ThreadPoolExecutor(max_workers=MAX_CONCURRENT) as pool:
-        while True:
+        while go():
             batch = []
             for g, cands in todo.items():
                 need = want - len(got[g])
@@ -968,10 +1076,12 @@ def fetch_plan(p: dict, cat: dict, size: float, *, limit: int | None = None, gro
                         seen.add(g)
                         lead.append(item)
                 batch = lead + [x for x in batch if not any(x is y for y in lead)]
-            futs = {pool.submit(one, e): g for g, e in batch}
+            futs = {pool.submit(carry(one), e): g for g, e in batch}
             for f in as_completed(futs):
                 g = futs[f]
                 e, res, why = f.result()
+                if res is None and why is None:  # not asked: the plan was stopped
+                    continue
                 if res is None:
                     skipped.append(f"{e['id']}: {why}")
                     log(f"  skip {e['id']}: {why}")
@@ -984,6 +1094,8 @@ def fetch_plan(p: dict, cat: dict, size: float, *, limit: int | None = None, gro
                     on_frame(got)
     frames = [r for g in got.values() for r in g]
     frames.sort(key=lambda r: (r[0]["mjd"], r[0]["det"]))
+    if report is not None:
+        report["stopped"] = stopped[0]
     return frames, skipped
 
 
