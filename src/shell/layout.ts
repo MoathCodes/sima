@@ -52,7 +52,7 @@ const TOOLS_MIN = 280;
 /** Left-column cards that lane G's places/room.ts does not already keep apart. */
 const LEFT_COLUMN = ['welcome', 'tools'];
 
-const DEFAULT_BOX: FrameBox = { right: GUTTER, top: FRAME_TOP, width: 500 };
+const DEFAULT_BOX: FrameBox = { right: GUTTER, top: FRAME_TOP, width: 600 };
 
 let box: FrameBox = { ...DEFAULT_BOX };
 /** The frame's horizontal offset while Measure is open (negative: to the left). */
