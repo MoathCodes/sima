@@ -134,3 +134,26 @@ test('the ring fades in from when its first picture is ready, never popping in h
   const span = T.ringIn[1] - T.ringIn[0];
   assert.ok(Math.abs(sceneAt(plan, 1.2 + span, w, h, has, 1.2).ring - 1) < 1e-9, 'full after the fade');
 });
+
+test("on a phone the disc rests where Discover's globe will, and lands without sliding", async () => {
+  const { sceneAt, phoneBox, phoneDisc, T } = await import('../src/intro/scene.ts');
+  const { lookAt } = await import('../src/intro/sphere.ts');
+  const [w, h] = [390, 844];
+  // The sky's box (sky.ts freeBox): under the top row and its note, above the sheet's third.
+  assert.deepEqual(phoneBox(w, h), { x: 0, y: 91, w: 390, h: 472 });
+  assert.equal(phoneBox(w, h, 47).y, 138, 'under a notch, the note and the box sit lower');
+  const home = phoneDisc(phoneBox(w, h));
+  assert.deepEqual(home, { x: 195, y: 327, r: 171 });
+  // Discover's globe at exactly that place: the disc never moves or grows on the way there.
+  const land = { q: lookAt(269.45, 4.69), fov: 60, x: home.x, y: home.y, from: 60, fromScale: home.r };
+  const plan = { reduced: false, skyChannel: 42, revealAt: 4.1, handAt: null, land, home };
+  const has = () => true;
+  for (const t of [0.5, 3, 4.1 + T.turn[0], 4.1 + T.turn[1] - 0.1]) {
+    const s = sceneAt(plan, t, w, h, has);
+    assert.deepEqual([s.cx, s.cy, Math.round(s.radius)], [home.x, home.y, home.r], `at ${t} s`);
+  }
+  // A short window (a phone held sideways) keeps room under the disc for the two lines.
+  const { globeRadius } = await import('../src/intro/scene.ts');
+  assert.ok(390 / 2 + globeRadius(844, 390) < 390 - 85, "the disc ends 85 px above the bottom");
+  assert.equal(globeRadius(1366, 650), 195, 'desktop unchanged');
+});

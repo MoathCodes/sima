@@ -20,7 +20,7 @@
  * Owner: the intro (src/intro/, src/styles/intro.css). index.html carries a tiny script that
  * decides before the first paint whether the intro plays (wanted.ts, `html[data-intro]`).
  */
-import { camera, globeCircle, introZoom, toScreen } from '../sky/sky.ts';
+import { camera, globeCircle, introZoom, mapBox, toScreen } from '../sky/sky.ts';
 import { globeHome } from '../sky/globe.ts';
 import { fovOf } from '../sky/project.ts';
 import { on } from '../shell/bus.ts';
@@ -34,8 +34,11 @@ import {
   flareDir,
   globeRadius,
   handFov,
+  phoneBox,
+  phoneDisc,
   sceneAt,
   mapScale,
+  type Disc,
   type Landing,
   type Plan,
 } from './scene.ts';
@@ -97,12 +100,15 @@ interface Run {
   /** The sky map's own width (degrees) before the intro moved it: where the landing ends. */
   finalFov: number | null;
   land: Landing | null;
+  /** On a phone in Discover: where the disc sits in shadow (the page's globe); else null. */
+  home: Disc | null;
   reduced: boolean;
   skyChannel: number;
   /** The frame's patch, and its name when it is a target: the flare names it if we land on it. */
   patch: { ra: number; dec: number; name: string } | null;
   sent: string;
   size: string;
+  homeSize: string;
   raf: number;
   off: (() => void)[];
 }
@@ -142,11 +148,13 @@ function play(replay: boolean): void {
     movedAt: 0,
     finalFov: null,
     land: null,
+    home: null,
     reduced,
     skyChannel: channelFor(DEFAULT_LAM),
     patch: null,
     sent: '',
     size: '',
+    homeSize: '',
     raf: 0,
     off: [],
   };
@@ -167,8 +175,6 @@ function play(replay: boolean): void {
       { replay: true },
     ),
   );
-  showWords(run, lead);
-
   const skip = (e: Event) => {
     e.preventDefault();
     e.stopImmediatePropagation();
@@ -184,12 +190,29 @@ function play(replay: boolean): void {
   el.addEventListener('pointerdown', skip);
   el.addEventListener('click', swallow);
   el.addEventListener('wheel', swallow, { passive: false });
-  // The painter starts in the next frame, not while the page's parts start: the first WebGL
-  // context of a page can take a couple of hundred ms to make.
+  // The words start in the next frame, once the page has laid out its parts (the phone's disc
+  // sits where the page's globe will). The intro's clock and its painter start when the words'
+  // animations really begin: the page's parts start meanwhile, which on a phone can hold the
+  // first painted frame back a second or more, and a clock started earlier would run the picture
+  // ahead of the words (Sima late). The first WebGL context of a page can also take a couple of
+  // hundred ms to make, best not while the page's parts start.
   run.raf = requestAnimationFrame(() => {
     if (running !== run) return;
-    run.painter = paint(run, el.querySelector('canvas')!);
-    run.raf = requestAnimationFrame(() => frame(run));
+    run.home = home();
+    run.start = nowAbs() + lead;
+    showWords(run, lead);
+    const go = () => {
+      if (running !== run) return;
+      run.painter = paint(run, el.querySelector('canvas')!);
+      run.raf = requestAnimationFrame(() => frame(run));
+    };
+    const words = el.querySelector('.intro-name')?.getAnimations({ subtree: true })[0];
+    if (!words) return go();
+    words.ready.then(() => {
+      if (words.startTime !== null)
+        run.start = performance.timeOrigin + Number(words.startTime) + lead;
+      go();
+    }, go);
   });
 }
 
@@ -251,7 +274,26 @@ function plan(run: Run): Plan {
     revealAt: run.revealAt,
     handAt: run.handAt,
     land: run.land ?? landing(w, h, run.finalFov ?? camera().fov),
+    ...(run.home && { home: run.home }),
   };
+}
+
+/**
+ * On a phone in Discover, the disc's place: where the page's globe will rest (the map's box, or
+ * its rule while the sky is still starting). Elsewhere null: the window's middle.
+ */
+function home(): Disc | null {
+  if (innerWidth >= 700 || !discover()) return null;
+  const b = mapBox();
+  return phoneDisc(
+    b.width > 0 && b.height > 0
+      ? { x: b.x, y: b.y, w: b.width, h: b.height }
+      : phoneBox(
+          innerWidth,
+          innerHeight,
+          parseFloat(getComputedStyle(running?.el ?? document.body).paddingTop) || 0,
+        ),
+  );
 }
 
 /** Decides what happens next, once a frame; the painter draws on its own clock. */
@@ -266,6 +308,16 @@ function frame(run: Run): void {
   if (size !== run.size) {
     run.size = size;
     run.painter?.size(w, h, dpr);
+  }
+  // The phone's disc follows the map's box until the pen starts (the box settles as the page
+  // starts, or when the phone turns); then it stays.
+  if (run.revealAt === null && (t < T.pen[0] || size !== run.homeSize)) {
+    const d = home();
+    if (JSON.stringify(d) !== JSON.stringify(run.home)) {
+      run.home = d;
+      placeName(run);
+    }
+    run.homeSize = size;
   }
   const live = !!document.getElementById('sky')?.dataset.view;
   const globe = run.loaded.has(run.skyChannel);
@@ -417,8 +469,8 @@ function skyIsIn(): boolean {
 function showWords(run: Run, lead: number): void {
   const name = run.el.querySelector<HTMLElement>('.intro-name');
   if (!name) return;
-  const r0 = globeRadius(innerWidth, innerHeight);
-  name.style.setProperty('--r0', `${r0}px`);
+  const r0 = run.home?.r ?? globeRadius(innerWidth, innerHeight);
+  placeName(run);
   const [ar, la, line] = [...name.children] as HTMLElement[];
   showMark(ar!, la!, r0, lead, run.reduced);
   [la, line].forEach((el, i) => {
@@ -439,6 +491,21 @@ function showWords(run: Run, lead: number): void {
     );
   });
   if (run.reduced) showStar(run, [{ opacity: 0 }, { opacity: 1 }], 0, 400);
+}
+
+/** The name sits at the disc's centre (the window's middle unless the phone's disc is set). */
+function placeName(run: Run): void {
+  const name = run.el.querySelector<HTMLElement>('.intro-name');
+  if (!name) return;
+  const d = run.home;
+  name.style.setProperty('--r0', `${d?.r ?? globeRadius(innerWidth, innerHeight)}px`);
+  for (const [k, v] of [
+    ['--cx', d?.x],
+    ['--cy', d?.y],
+  ] as const) {
+    if (v === undefined) name.style.removeProperty(k);
+    else name.style.setProperty(k, `${v.toFixed(1)}px`);
+  }
 }
 
 /** At the reveal's decision: the name leaves, and the flare's name comes and goes with it. */
@@ -471,9 +538,12 @@ function showStar(run: Run, frames: Keyframe[], delay: number, duration: number)
   const w = innerWidth;
   const h = innerHeight;
   const flare = flareDir(w);
-  const gap = globeRadius(w, h) + 26;
+  const d = run.home ?? { x: w / 2, y: h / 2, r: globeRadius(w, h) };
+  const gap = d.r + 26;
   star.textContent = flareName(run, run.land ?? landing(w, h, run.finalFov ?? camera().fov));
-  star.style.transform = `translate(${(w / 2 + flare[0] * gap).toFixed(1)}px, ${(h / 2 - flare[1] * gap).toFixed(1)}px) translate(0, -50%)`;
+  // Beside the flare, but never closer than the gutter to the window's edge.
+  const x = Math.min(d.x + flare[0] * gap, w - 16 - star.offsetWidth);
+  star.style.transform = `translate(${x.toFixed(1)}px, ${(d.y - flare[1] * gap).toFixed(1)}px) translate(0, -50%)`;
   star.animate(frames, { delay, duration, easing: 'ease-in-out', fill: 'both' });
 }
 
