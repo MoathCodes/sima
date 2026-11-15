@@ -420,7 +420,15 @@ export function flyTo(
     requestDraw();
     return;
   }
-  glide = { from: { ...cam }, to: target, start: performance.now(), ms: 650 };
+  // A far trip zooms out until both ends show, turns, then zooms in, so the eye can follow it and
+  // the middle is drawn from the wide (shipped, sharp) map instead of half-loaded tiles
+  // (ux-audit #6). A near one is the plain 0.65 s glide.
+  const sep = separation(cam.ra, cam.dec, target.ra, target.dec);
+  const top = Math.max(cam.fov, target.fov);
+  const mid = clampFov(Math.max(top, sep * 2.4));
+  const arc = mid > top * 1.5 ? Math.log(zoomOf(mid)) - Math.log(zoomOf(top)) : 0;
+  const ms = arc ? Math.min(2200, 1100 + 260 * arc) : 650;
+  glide = { from: { ...cam }, to: target, start: performance.now(), ms, arc };
 }
 
 /** The view now (a copy). */
@@ -945,15 +953,47 @@ function ready(shown: Shown): Promise<void> {
   if (!shown.key.startsWith('spherex/')) return new Promise((r) => setTimeout(r, 1200));
   return new Promise((resolve) => {
     const started = performance.now();
+    // In once every tile at the depth the view needs has come (from the cache, the shipped seed
+    // or NASA). The coarse tiles asked for first, which the worker fills at once from the shipped
+    // soft sky, do not count: counting them faded a grey map in over the sharp one (ux-audit #2).
+    // There is no time limit: until then the old map stays and the loading card says so.
     const check = () => {
-      const t = tracks.get(shown.key);
-      const pending = t ? t.started.size - t.done.size - t.failed.size : 1;
+      const c = depthCount(tracks.get(shown.key));
       const waited = performance.now() - started;
-      if ((t && t.started.size > 0 && pending <= 0 && waited > 150) || waited > 4000) resolve();
+      const deepEnough = c.depth >= neededOrder() - 1 || waited > 1500;
+      if (c.total > 0 && c.loaded >= c.total && deepEnough && waited > 150) resolve();
       else setTimeout(check, 80);
     };
     check();
   });
+}
+
+/**
+ * The tiles that say whether a map is in: those at the deepest order asked for (Allsky images only
+ * when nothing else was asked). Coarser tiles stand in while the deep ones load, so they never
+ * make the map "in" on their own.
+ */
+function depthCount(t: Track | undefined): { total: number; loaded: number; failed: number; depth: number } {
+  if (!t || !t.started.size) return { total: 0, loaded: 0, failed: 0, depth: -1 };
+  const tiles = [...t.started].map((id) => {
+    const [k, n] = id.split('/').map(Number);
+    return { id, k: k ?? 0, n: n ?? 0 };
+  });
+  const real = tiles.filter((x) => x.n >= 0);
+  const use = real.length ? real : tiles;
+  const depth = Math.max(...use.map((x) => x.k));
+  const at = use.filter((x) => x.k === depth);
+  const failed = at.filter((x) => t.failed.has(x.id)).length;
+  const loaded = at.filter((x) => t.done.has(x.id) || t.failed.has(x.id)).length;
+  return { total: at.length, loaded, failed, depth };
+}
+
+/** The HiPS order the view needs: map pixels (512 a tile) about as fine as screen pixels. */
+function neededOrder(): number {
+  if (!view) return 0;
+  const degPerPx = 180 / Math.PI / view.scale;
+  const k = Math.ceil(Math.log2(58.63 / (512 * degPerPx)));
+  return Math.max(0, Math.min(5, k));
 }
 
 // ----- Loading, reported to the shell's card (GEN-4, SKY-7, O-I15) --------------------------------
@@ -1008,7 +1048,8 @@ function onTile(e: TileEvent): void {
 
 function report(): void {
   reportTimer = 0;
-  const shown = current;
+  // While a new channel loads under the old one, the card speaks for the new one (ux-audit #2).
+  const shown = incoming ?? current;
   if (!shown) return;
   if (!shown.key.startsWith('spherex/')) {
     firstDone = true;
@@ -1017,13 +1058,12 @@ function report(): void {
     skyReady({ layer: LAYER_NAMES[layer], loaded: 1, total: 1, failed: 0, first: false });
     return;
   }
-  const t = tracks.get(shown.key);
-  const total = t?.started.size ?? 0;
-  const loaded = (t?.done.size ?? 0) + (t?.failed.size ?? 0);
-  const failed = t?.failed.size ?? 0;
+  const c = depthCount(tracks.get(shown.key));
+  const { total, loaded, failed } = c;
   const done = total > 0 && loaded >= total;
+  const l = shown.channel !== null ? CHANNEL_LAM[shown.channel] : undefined;
   const load: SkyLoad = {
-    layer: LAYER_NAMES.spherex,
+    layer: l !== undefined ? `${LAYER_NAMES.spherex} ${l.toFixed(2)} µm` : LAYER_NAMES.spherex,
     loaded: total ? loaded : 0,
     total: total || 1,
     failed,
@@ -1054,16 +1094,11 @@ function report(): void {
   if (roundDone || doneTimer) return;
   doneTimer = window.setTimeout(() => {
     doneTimer = 0;
-    const now = tracks.get(shown.key);
-    if (current !== shown || !now || now.done.size + now.failed.size < now.started.size) return;
+    const now = depthCount(tracks.get(shown.key));
+    if ((incoming ?? current) !== shown || now.loaded < now.total) return;
     roundDone = true;
     firstDone = true;
-    skyReady({
-      ...load,
-      loaded: now.started.size,
-      total: now.started.size,
-      failed: now.failed.size,
-    });
+    skyReady({ ...load, loaded: now.total, total: now.total, failed: now.failed });
   }, 500);
 }
 
@@ -1101,6 +1136,11 @@ function note(): void {
         : '') +
       `AllWISE all-sky map, ${wanted === 'wise-w1' ? 'W1, 3.4 µm' : 'W2, 4.6 µm'} (WISE, 2010 to 2011), from NASA IRSA. Nothing is filled in.`;
   }
+  // Zoomed in past the map's pixels, it is blur: say why, and where the sharp pictures are.
+  const coarse =
+    fine && channel !== null
+      ? ` · <span>The map's pixels are 13″; the frame shows the sharper single pictures</span>`
+      : '';
   // The globe's limb glow takes the hue of the detector the map shows (sky.css).
   const det = channel !== null ? detectorOf(channel) : null;
   if (skyEl && skyEl.dataset.det !== String(det ?? '')) skyEl.dataset.det = String(det ?? '');
@@ -1110,10 +1150,10 @@ function note(): void {
       const l = CHANNEL_LAM[channel] ?? lam;
       fact = `SPHEREx D${det}, ${bandWords(det)}, ${l.toFixed(2)} µm`;
     }
-    el.innerHTML = `<b>${H1_DISCOVER}</b> moving things blur here · <span class="sky-note-more" tabindex="0" data-tip="${esc(more)}" data-tip-pos="above">${esc(fact)}</span>`;
+    el.innerHTML = `<b>${H1_DISCOVER}</b> moving things blur here · <span class="sky-note-more" tabindex="0" data-tip="${esc(more)}" data-tip-pos="above">${esc(fact)}</span>${coarse}`;
     return;
   }
-  el.innerHTML = `<span>${H1}</span> · <span class="sky-note-more" tabindex="0" data-tip="${esc(more)}" data-tip-pos="above">${esc(fact)}</span>`;
+  el.innerHTML = `<span>${H1}</span> · <span class="sky-note-more" tabindex="0" data-tip="${esc(more)}" data-tip-pos="above">${esc(fact)}</span>${coarse}`;
 }
 
 /**
@@ -1142,6 +1182,8 @@ let glide: {
   to: { ra: number; dec: number; fov: number };
   start: number;
   ms: number;
+  /** How far out (log zoom) the trip goes past its wider end; 0 for a straight glide. */
+  arc?: number;
 } | null = null;
 /** Zooming toward a screen point: the wheel, double-click (SKY-3). */
 let zoomTo: { fov: number; x: number; y: number; ra: number; dec: number } | null = null;
@@ -1168,13 +1210,24 @@ function animate(now: number): void {
   removeLeaving();
   if (glide) {
     const t = Math.min(1, (now - glide.start) / glide.ms);
-    const e = 1 - (1 - t) ** 3;
     const { from, to } = glide;
-    const dRa = ((to.ra - from.ra + 540) % 360) - 180;
     // In the globe's size on screen (its zoom factor), so the speed looks the same at every zoom.
     const z0 = Math.log(zoomOf(from.fov));
-    al.setFoV(fovOf(Math.exp(z0 + (Math.log(zoomOf(to.fov)) - z0) * e)));
-    al.gotoRaDec(wrapRa(from.ra + dRa * e), from.dec + (to.dec - from.dec) * e);
+    const z1 = Math.log(zoomOf(to.fov));
+    if (glide.arc) {
+      // Out, turn, in: the zoom rises and falls; the turn happens mostly while zoomed out.
+      const e = t * t * (3 - 2 * t);
+      const p = Math.max(0, Math.min(1, (t - 0.2) / 0.6));
+      const turn = p * p * (3 - 2 * p);
+      al.setFoV(clampFov(fovOf(Math.exp(z0 + (z1 - z0) * e + glide.arc * Math.sin(Math.PI * t)))));
+      const at = along(from, to, turn);
+      al.gotoRaDec(at.ra, at.dec);
+    } else {
+      const e = 1 - (1 - t) ** 3;
+      const dRa = ((to.ra - from.ra + 540) % 360) - 180;
+      al.setFoV(fovOf(Math.exp(z0 + (z1 - z0) * e)));
+      al.gotoRaDec(wrapRa(from.ra + dRa * e), from.dec + (to.dec - from.dec) * e);
+    }
     if (t >= 1) glide = null;
   }
   if (zoomTo) {
@@ -1185,6 +1238,31 @@ function animate(now: number): void {
     keepUnder(zoomTo.ra, zoomTo.dec, zoomTo.x, zoomTo.y);
     if (close) zoomTo = null;
   }
+}
+
+/** The point a fraction `f` of the way from `a` to `b` along the great circle. */
+function along(
+  a: { ra: number; dec: number },
+  b: { ra: number; dec: number },
+  f: number,
+): { ra: number; dec: number } {
+  const R = Math.PI / 180;
+  const v = (p: { ra: number; dec: number }) => [
+    Math.cos(p.dec * R) * Math.cos(p.ra * R),
+    Math.cos(p.dec * R) * Math.sin(p.ra * R),
+    Math.sin(p.dec * R),
+  ];
+  const p = v(a);
+  const q = v(b);
+  const dot = Math.max(-1, Math.min(1, p[0]! * q[0]! + p[1]! * q[1]! + p[2]! * q[2]!));
+  const w = Math.acos(dot);
+  if (w < 1e-9) return { ra: wrapRa(b.ra), dec: b.dec };
+  const s0 = Math.sin((1 - f) * w) / Math.sin(w);
+  const s1 = Math.sin(f * w) / Math.sin(w);
+  const x = s0 * p[0]! + s1 * q[0]!;
+  const y = s0 * p[1]! + s1 * q[1]!;
+  const z = s0 * p[2]! + s1 * q[2]!;
+  return { ra: wrapRa(Math.atan2(y, x) / R), dec: Math.asin(Math.max(-1, Math.min(1, z))) / R };
 }
 
 /**
@@ -1284,7 +1362,36 @@ function draw(): void {
       : '';
   }
   placeClickCard();
+  showCoords();
+  // Zoomed past the map's own sharpness: the note says so (ux-audit #11, #13).
+  const px = view ? ((MAP_PIXEL / 3600) * Math.PI * view.scale) / 180 : 0;
+  if (px > 4 !== fine) {
+    fine = px > 4;
+    note();
+  }
   for (const fn of zoomFns) fn({ ...cam });
+}
+
+/** The pointer's coordinates, shown with the view's width (ux-audit #11). */
+let pointerAt = '';
+/** One map pixel (13″) spans several screen pixels: the note says the map is that coarse. */
+let fine = false;
+/** SPHEREx's map pixel: HiPS order 5 with 512-pixel tiles, 58.63° / 16384, in arcseconds. */
+const MAP_PIXEL = 12.9;
+
+/** The pointer's coordinates (when over the sky) and how wide the view is, bottom right. */
+function showCoords(): void {
+  const el = document.getElementById('sky-coords');
+  if (!el) return;
+  const f = cam.fov;
+  const size =
+    skyEl?.dataset.globe === '1'
+      ? 'Whole sky'
+      : f >= 1
+        ? `${f.toFixed(f >= 10 ? 0 : 1)}° wide`
+        : `${(f * 60).toFixed(f * 60 >= 10 ? 0 : 1)}′ wide`;
+  const text = pointerAt ? `${pointerAt} · ${size}` : size;
+  if (el.textContent !== text) el.textContent = text;
 }
 
 function sizeCanvas(c: HTMLCanvasElement | null): void {
@@ -1624,8 +1731,8 @@ function watchPointer(el: HTMLElement): void {
           coordsQueued = false;
           if (!last) return;
           const world = toWorld(last.x, last.y);
-          const coords = document.getElementById('sky-coords');
-          if (coords) coords.textContent = world ? formatCoords(world.ra, world.dec) : '';
+          pointerAt = world ? formatCoords(world.ra, world.dec) : '';
+          showCoords();
           for (const fn of pointerFns) fn(world ? { ...world, x: last.x, y: last.y } : null);
         });
       }
@@ -1709,8 +1816,8 @@ function watchPointer(el: HTMLElement): void {
 
   el.addEventListener('pointerleave', () => {
     last = null;
-    const coords = document.getElementById('sky-coords');
-    if (coords) coords.textContent = '';
+    pointerAt = '';
+    showCoords();
     dotHooks?.hover(null);
     for (const fn of pointerFns) fn(null);
   });

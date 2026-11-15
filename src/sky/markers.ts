@@ -407,7 +407,10 @@ function refreshAlways(): void {
   for (let i = 0; i < dots.length; i++) {
     const d = dots[i] as Dot;
     const input = inputs[i] as LayoutInput;
-    input.always = !!groups?.has(d.kind) || d.id === hover || d.id === chosen || d.id === skyHover;
+    const ringed = d.id === hover || d.id === chosen || d.id === skyHover;
+    input.always = !!groups?.has(d.kind) || ringed;
+    // A ringed dot (8 px ring) puts its label further out, clear of the ring (ux-audit #7).
+    input.gap = ringed ? 11 : undefined;
   }
 }
 

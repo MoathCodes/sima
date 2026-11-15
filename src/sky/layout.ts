@@ -54,6 +54,8 @@ export function maxTier(fov: number): number {
 
 export const LABEL_HEIGHT = 16;
 const DOT_GAP = 7;
+/** Half the box a drawn dot keeps clear of labels, CSS px (its glyph is at most 10 px wide). */
+const DOT_HALF = 5;
 const MAX_LABELS = 80;
 
 function hits(a: Box, b: Box): boolean {
@@ -93,6 +95,11 @@ export function layout(
     if (!projectInto(view, d.ra, d.dec, p)) continue;
     if (p.x < -4 || p.y < -4 || p.x > width + 4 || p.y > height + 4) continue;
     out.push({ index: i, x: p.x, y: p.y, label: null, side: -1 });
+  }
+  // Every drawn mark keeps its own small box clear, so no label runs through another place's
+  // dot (ux-audit #7).
+  for (const o of out) {
+    taken.push({ left: o.x - DOT_HALF, top: o.y - DOT_HALF, right: o.x + DOT_HALF, bottom: o.y + DOT_HALF });
   }
   // Labels: last time's first, on their old side if it is still free (while the view moves, only
   // there: a label never flips side mid-zoom); then, once it has stopped, new ones.
