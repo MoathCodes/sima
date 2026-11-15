@@ -369,6 +369,46 @@ export function exif(): string {
   return parts.join(' · ');
 }
 
+/**
+ * The data line under the frame's name in Discover and on phones (v2.0, H2, BEGINNER-AND-MOBILE
+ * 5.3 and 11.4): release, the date or dates on screen, detector and wavelength range, e.g.
+ * "DR1 · 23 Mar 2026 to 25 Mar 2026 · D3 1.67–1.79 µm". Two dates says "Two dates combined:
+ * {date A} (red) · {date B} (cyan)"; Stack says how many pictures. Source ("Real data · NASA
+ * SPHEREx", "Simulated") is said just before it, by the header's source line.
+ */
+export function dataLine(): string {
+  const f = S.field;
+  if (!f || !S.groups.length) return S.source === 'loading' ? 'Loading real SPHEREx exposures…' : '';
+  const groups = shownGroups();
+  const frames = framesOf(f, groups);
+  const parts: string[] = [];
+  const releases = [...new Set(frames.map((x) => release(x.release)))].join(' + ');
+  if (f.simulated) parts.push('made-up pictures for practice, not real data');
+  else if (releases) parts.push(releases);
+  const mjds = frames.map((x) => x.mjd).filter(Number.isFinite);
+  if (S.mode === 'two' && groups.length === 2) {
+    const [a, b] = groups.map((g) => {
+      const m = framesOf(f, [g]).map((x) => x.mjd).filter(Number.isFinite);
+      return m.length ? dayRange(Math.min(...m), Math.max(...m)) : formatDate(g.mjd, 'month');
+    });
+    parts.push(`Two dates combined: ${a} (red) · ${b} (cyan)`);
+  } else if (S.mode === 'stack') {
+    const n = stackShown()?.frames ?? frames.length;
+    parts.push(
+      mjds.length
+        ? `Stack of ${n} picture${n === 1 ? '' : 's'}, ${dayRange(Math.min(...mjds), Math.max(...mjds))}`
+        : `Stack of ${n} pictures`,
+    );
+  } else if (mjds.length) parts.push(dayRange(Math.min(...mjds), Math.max(...mjds)));
+  else parts.push(`no D${S.det} exposure on this date`);
+  const lams = lamRange(frames.map((x) => x.lam));
+  parts.push(S.color ? 'D1–D6' : lams ? `D${S.det} ${lams}` : `D${S.det}`);
+  // Where the real exposures end, as the data line under the views says (H1).
+  const covered = (f.n * f.scale) / 60;
+  if (covered < S.fov - 0.05) parts.push(`real pictures cover the middle ${covered.toFixed(1)}′`);
+  return parts.join(' · ');
+}
+
 // ----- Painting ---------------------------------------------------------------------------------
 
 interface Parts {

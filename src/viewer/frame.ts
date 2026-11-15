@@ -7,7 +7,7 @@
  * It answers the bus: `aim` loads a spot, `band` shows a detector.
  */
 import { FOVS, S, VIEWS, watch, type Mode } from './state.ts';
-import { draw, exif, nextFov, setPointerActions } from './render.ts';
+import { dataLine, draw, exif, nextFov, setPointerActions } from './render.ts';
 import {
   aimAt,
   lamInBand,
@@ -183,7 +183,8 @@ function header(): void {
   const html = `
     <div class="frame-name">
       <h2 class="frame-title"></h2>
-      <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span></p>
+      <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span>${src?.cls === 'real' ? '<span class="frame-agency"> · NASA SPHEREx</span>' : ''}</p>
+      <p class="frame-prov" data-guide="data-line"></p>
     </div>
     <div class="frame-actions">
       <button class="icon-btn sm" data-fov="-1" aria-label="Smaller field" data-tip="Smaller field (${FOVS[Math.max(0, i - 1)]}′)" data-guide="fov-smaller" ${i <= 0 ? 'disabled' : ''}>${icon('minus')}</button>
@@ -197,6 +198,7 @@ function header(): void {
   if (head.dataset.html === html + S.label) return;
   head.dataset.html = html + S.label;
   head.innerHTML = html;
+  lines();
   const title = head.querySelector<HTMLElement>('.frame-title');
   if (title) {
     title.textContent = S.label;
@@ -238,6 +240,9 @@ function views(): void {
 // ----- Lines ------------------------------------------------------------------------------------
 
 function lines(): void {
+  // Discover and phones: the full data line under the name (H2; BEGINNER-AND-MOBILE 5.3, 11.4).
+  const prov = document.querySelector<HTMLElement>('#frame-head .frame-prov');
+  if (prov) prov.textContent = dataLine();
   const ex = document.getElementById('frame-exif');
   if (ex) {
     ex.className = 'frame-exif';

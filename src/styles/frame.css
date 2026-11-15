@@ -937,3 +937,260 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
     width: auto;
   }
 }
+
+/* ----- v2.0: the Discover frame and phones (BEGINNER-AND-MOBILE 5.3, 7, 11.4, 11.5) ----------- */
+
+/* The data line under the name: in Discover and on phones (H2). Elsewhere the line under the
+   views says it. */
+.frame-agency,
+.frame-prov {
+  display: none;
+}
+:is(html[data-view='discover'], html[data-layout^='phone']) .frame-agency {
+  display: inline;
+}
+:is(html[data-view='discover'], html[data-layout^='phone']) .frame-prov {
+  display: block;
+  margin: 2px 0 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+  overflow-wrap: anywhere;
+}
+:is(html[data-view='discover'], html[data-layout^='phone']) .frame-head {
+  align-items: flex-start;
+  padding-top: 10px;
+}
+
+/* Discover: picture min(560px, 100vh − 330px); no bar (the frame plays itself); no field size. */
+html[data-view='discover'] {
+  --frame-picture: min(560px, calc(100vh - 330px));
+}
+html[data-view='discover'] #bar,
+html[data-view='discover'] #frame-exif,
+html[data-view='discover'] .frame-head :is([data-fov], .frame-fov) {
+  display: none;
+}
+html[data-view='discover'] .frame-title {
+  font-size: 17px;
+}
+
+/* The play row (chips.ts). */
+.fp[hidden] {
+  display: none;
+}
+.fp {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.fp-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.fp-step {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--v2-fill-1);
+}
+.fp-step:hover {
+  background: var(--v2-fill-2);
+}
+.fp-play {
+  width: 56px;
+  height: 56px;
+}
+.fp-play > .icon {
+  width: 24px;
+  height: 24px;
+}
+.fp-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fp-chips[hidden] {
+  display: none;
+}
+.fp-chip {
+  display: inline-flex;
+  flex: 1 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 96px;
+  min-height: 48px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--v2-r-control);
+  background: var(--v2-fill-1);
+  color: var(--ink);
+  font: 600 14px/1.2 var(--font);
+  white-space: nowrap;
+}
+.fp-chip:hover {
+  background: var(--v2-fill-2);
+}
+.fp-chip[aria-pressed='true'] {
+  box-shadow: inset 0 0 0 2px var(--v2-mark);
+}
+.fp-letter {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--tint);
+  color: #0b0e1c;
+  font: 700 12px/1 var(--font);
+}
+/* A date with no exposure in this detector stays visible as missing (H6). */
+.fp-chip.missing {
+  background: transparent;
+  outline: 1.5px dotted var(--ink-3);
+  outline-offset: -1.5px;
+  color: var(--ink-3);
+}
+.fp-chip.missing[aria-pressed='true'] {
+  outline-color: var(--v2-mark);
+}
+.fp-why {
+  margin: 0;
+  padding: 14px 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+html[data-view='discover'] .frame-views > button {
+  min-height: 40px;
+}
+
+/* The phone's compact bar: previous, Play, next, a date scale for display, the counter. */
+.fp[data-form='phone'] .fp-controls {
+  justify-content: flex-start;
+  gap: 6px;
+}
+.fp[data-form='phone'] .fp-play {
+  width: 48px;
+  height: 48px;
+}
+.fp-scale {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 60px;
+  height: 34px;
+  margin: 0 8px;
+}
+.fp-scale[hidden],
+.fp-count[hidden],
+.fp-wl[hidden] {
+  display: none;
+}
+.fp-line {
+  position: absolute;
+  top: 9px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--v2-fill-2);
+}
+.fp-dot {
+  position: absolute;
+  top: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  translate: -50% 0;
+}
+.fp-dot.on {
+  top: 5px;
+  width: 10px;
+  height: 10px;
+  background: var(--v2-mark);
+  z-index: 1;
+}
+.fp-end {
+  position: absolute;
+  top: 19px;
+  color: var(--ink-3);
+  font: 500 11px/1.2 var(--font);
+  white-space: nowrap;
+}
+.fp-end.first {
+  left: 0;
+}
+.fp-end.last {
+  right: 0;
+}
+.fp-count {
+  flex: none;
+  color: var(--ink-2);
+  font: var(--text-label);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.fp-wl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 8px;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.fp-wl-value {
+  color: var(--ink);
+  font-weight: 600;
+}
+.fp-wl input {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  accent-color: var(--v2-mark);
+}
+
+/* Phones (lane M sets html[data-layout] and --pic). No bar: the frame's own row plays; every
+   target is at least 48 px; the picture is the side lane M computes. Picture tools, Measure's
+   button and hiding the frame are not offered on a phone (Measure is in the column, 11.5). */
+html[data-layout^='phone'] #bar,
+html[data-layout^='phone'] .frame-head :is([data-tools], [data-measure], [data-hide]) {
+  display: none;
+}
+html[data-layout^='phone'] #frame-pic {
+  width: min(100%, var(--pic, 100%));
+}
+html[data-layout^='phone'] .frame-head {
+  cursor: default;
+}
+html[data-layout^='phone'] .frame-head :is(.icon-btn, .btn) {
+  min-width: 48px;
+  min-height: 48px;
+}
+html[data-layout^='phone'] .frame-title {
+  white-space: normal;
+}
+html[data-layout^='phone'] .frame-views > button {
+  min-height: 48px;
+}
+html[data-layout^='phone'] .frame-views {
+  flex-wrap: wrap;
+}
+/* The scroll layout: the frame and Measure are in the page's column (11.1, 11.5). */
+html[data-layout='phone-scroll'] :is(#frame, #measure) {
+  position: relative;
+  inset: auto;
+  translate: none;
+  width: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0 var(--v2-gutter-phone) var(--v2-gutter-phone);
+}
+/* Discover's four views are words only, so all four fit the frame at any width. */
+html[data-view='discover'] .frame-views > button > .icon {
+  display: none;
+}
