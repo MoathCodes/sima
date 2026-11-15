@@ -12,8 +12,9 @@ export function esc(s: string): string {
 }
 
 const EXTRA = {
-  // Show me: an eye. Discover: a small sun. Expert: a line chart is the shell's `chart`.
+  // Show me: an eye. The keys: a keyboard. Discover: a small sun. Expert: a line chart is the shell's `chart`.
   eye: '<path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/>',
+  keyboard: '<rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7.5 14h9"/>',
   sun: '<circle cx="12" cy="12" r="3.6"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M5.6 18.4l1.6-1.6M16.8 7.2l1.6-1.6"/>',
 } as const;
 
