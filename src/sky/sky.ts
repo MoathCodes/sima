@@ -1517,7 +1517,8 @@ function drawPatch(): void {
   ctx.strokeRect(box.x, box.y, box.width, box.height);
   ctx.restore();
   // The patch label: only when nothing else names the patch (DESIGN.md Marks on the sky).
-  if (loading || !f) {
+  // In Discover a closed frame's patch is named by its beacon already: one name, not two.
+  if (loading || (!f && document.documentElement.dataset.view !== 'discover')) {
     const text = loading ? `${moving ? 'Moving here' : patch.label} · loading` : patch.label;
     tag(ctx, box, text, style.stroke, true);
   }
