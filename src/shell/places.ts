@@ -13,6 +13,7 @@
  * places/room.ts (keeping clear of other cards), places/state.ts (shared), src/data/tours.ts.
  */
 import { addSearchSource, type SearchHit } from '../viewer/omnibox.ts';
+import { localName } from './i18n.ts';
 import { onDotClick, onPinClick, setDots, setPins, type Dot } from '../sky/markers.ts';
 import { camera, flyTo } from '../sky/sky.ts';
 import { openPlace } from './shell.ts';
@@ -52,7 +53,7 @@ export async function startPlaces(): Promise<void> {
       id: p.id,
       ra: p.ra,
       dec: p.dec,
-      name: nameOf(p),
+      name: localName(nameOf(p), p.names.arabic),
       tier: p.tier,
       kind: p.kind,
     })),

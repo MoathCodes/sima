@@ -23,6 +23,21 @@ export const en = {
   // The language switch (Settings). The choices name each language in its own words (lang.*).
   'lang.group': 'Language',
 
+  // The top row and the rail.
+  'top.view': 'View',
+  'top.guide': 'Guide',
+  'top.places': 'Places',
+  'top.shareTip': 'Share this view',
+  'top.menu': 'Menu',
+  'rail.zoomIn': 'Zoom in (+)',
+  'rail.zoomInLabel': 'Zoom the sky in',
+  'rail.zoomOut': 'Zoom out (−)',
+  'rail.zoomOutLabel': 'Zoom the sky out',
+  'rail.skyMap': 'Sky map',
+  'rail.grid': 'Coordinate grid',
+  'rail.frames': 'Add a frame · workspaces',
+  'rail.framesLabel': 'Add a frame, workspaces',
+
   // Toasts any part may show.
   'toast.close': 'Close the message',
   'link.notUnderstood': 'Not understood in the link, so left out: {notes}.',
@@ -31,7 +46,8 @@ export const en = {
   'ws.unreadLink': 'The workspace link could not be read.',
   'ws.usualView': '{note} The usual view opened instead.',
   'ws.saved': 'Saved “{name}” in this browser.',
-  'ws.notSaved': 'This browser does not allow saving here, so it was not saved. Export it as a file instead.',
+  'ws.notSaved':
+    'This browser does not allow saving here, so it was not saved. Export it as a file instead.',
   'ws.unread': '“{name}” could not be read.',
   'ws.notJson': '“{name}” is not a workspace file (it is not JSON).',
   'ws.opened': 'Opened “{name}”.',

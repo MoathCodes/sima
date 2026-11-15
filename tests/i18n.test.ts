@@ -9,7 +9,8 @@ import { fmtDate, fmtNum, linkLangOf, pickLocale, t, useLocale } from '../src/sh
 import { readLink } from '../src/viewer/link.ts';
 
 const vars = (s: string) => new Set([...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
-const forms = (v: unknown): string[] => (typeof v === 'string' ? [v] : Object.values(v as Record<string, string>));
+const forms = (v: unknown): string[] =>
+  typeof v === 'string' ? [v] : Object.values(v as Record<string, string>);
 const AR_FORMS = ['zero', 'one', 'two', 'few', 'many', 'other'];
 
 test('every English key has an Arabic value, and Arabic has no extra keys', () => {
@@ -28,10 +29,19 @@ test('Arabic strings use the same variable names as English', () => {
       assert.equal(typeof a, 'string', `${k}: English is a string`);
       assert.deepEqual(vars(a as string), vars(e), k);
     } else {
-      assert.deepEqual(Object.keys(a as object).sort(), [...AR_FORMS].sort(), `${k}: all six Arabic plural forms`);
+      assert.deepEqual(
+        Object.keys(a as object).sort(),
+        [...AR_FORMS].sort(),
+        `${k}: all six Arabic plural forms`,
+      );
       const known = new Set(forms(e).flatMap((s) => [...vars(s)]));
-      for (const s of forms(a)) for (const v of vars(s)) assert.ok(known.has(v), `${k}: {${v}} is not an English variable`);
-      assert.deepEqual(vars((a as Record<string, string>).other), vars(e.other), `${k}: the other form`);
+      for (const s of forms(a))
+        for (const v of vars(s)) assert.ok(known.has(v), `${k}: {${v}} is not an English variable`);
+      assert.deepEqual(
+        vars((a as Record<string, string>).other),
+        vars(e.other),
+        `${k}: the other form`,
+      );
     }
   }
 });

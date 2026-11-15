@@ -16,6 +16,7 @@ import { S, VIEWS } from '../viewer/state.ts';
 import { pause, setEpoch } from '../viewer/playback.ts';
 import { emit, on } from '../shell/bus.ts';
 import { toast } from '../shell/toast.ts';
+import { t } from '../shell/i18n.ts';
 import { setLevel } from '../explore/game.ts';
 import { setMeasureOpen } from '../viewer/detail.ts';
 import { camera, flyTo } from '../sky/sky.ts';
@@ -105,7 +106,7 @@ export async function startStore(plain: boolean): Promise<void> {
     // The link has been read: later reloads show the user's own changes, not the link again.
     history.replaceState(null, '', location.pathname + location.search);
     if (!ws) {
-      toast(`${note ?? 'The workspace link could not be read.'} The usual view opened instead.`, { ms: 12000 });
+      toast(t('ws.usualView', { note: note ?? t('ws.unreadLink') }), { ms: 12000 });
       return;
     }
     name = ws.name;
@@ -183,7 +184,7 @@ export function saveAs(newName: string): boolean {
   const ok = write(NAMED, list);
   write(CURRENT, now());
   tell();
-  toast(ok ? `Saved “${n}” in this browser.` : 'This browser does not allow saving here, so it was not saved. Export it as a file instead.');
+  toast(ok ? t('ws.saved', { name: n }) : t('ws.notSaved'));
   return ok;
 }
 
@@ -193,7 +194,7 @@ export function openNamed(n: string): void {
   if (!item) return;
   const { ws, note } = migrate(item.ws);
   if (!ws) {
-    toast(note ?? `“${n}” could not be read.`);
+    toast(note ?? t('ws.unread', { name: n }));
     return;
   }
   name = item.name;
@@ -237,17 +238,17 @@ export async function importFile(file: File): Promise<void> {
   try {
     raw = JSON.parse(await file.text());
   } catch {
-    toast(`“${file.name}” is not a workspace file (it is not JSON).`);
+    toast(t('ws.notJson', { name: file.name }));
     return;
   }
   const { ws, note } = migrate(raw);
   if (!ws) {
-    toast(note ?? `“${file.name}” could not be read.`);
+    toast(note ?? t('ws.unread', { name: file.name }));
     return;
   }
   name = ws.name;
   apply(ws, { main: true, camera: true });
-  toast(note ?? `Opened “${ws.name}”.`, { ms: note ? 10000 : 4000 });
+  toast(note ?? t('ws.opened', { name: ws.name }), { ms: note ? 10000 : 4000 });
 }
 
 /**

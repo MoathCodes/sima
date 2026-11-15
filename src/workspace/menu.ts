@@ -10,6 +10,7 @@ import { FOVS, S, type Fov } from '../viewer/state.ts';
 import { formatCoords } from '../core/astro.ts';
 import { icon } from '../shell/icons.ts';
 import { toast } from '../shell/toast.ts';
+import { ltrText, t } from '../shell/i18n.ts';
 import { FRAME_TYPES, TYPE_WORDS } from './schema.ts';
 import {
   closeFrame,
@@ -143,9 +144,9 @@ function sourceUrl(f: Live): string | null {
 async function copyText(text: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
-    toast(`Copied ${text}`);
+    toast(t('copy.done', { text: ltrText(text) }));
   } catch {
-    toast(`Could not copy. The coordinates are ${text}`);
+    toast(t('copy.failed', { text: ltrText(text) }));
   }
 }
 

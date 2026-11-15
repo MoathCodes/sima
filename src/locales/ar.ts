@@ -29,6 +29,20 @@ export const ar: ArMessages = {
 
   'lang.group': 'اللغة',
 
+  'top.view': 'العرض',
+  'top.guide': 'الدليل',
+  'top.places': 'الأماكن',
+  'top.shareTip': 'مشاركة هذا العرض',
+  'top.menu': 'القائمة',
+  'rail.zoomIn': 'تكبير (+)',
+  'rail.zoomInLabel': 'تكبير السماء',
+  'rail.zoomOut': 'تصغير (−)',
+  'rail.zoomOutLabel': 'تصغير السماء',
+  'rail.skyMap': 'خريطة السماء',
+  'rail.grid': 'شبكة الإحداثيات',
+  'rail.frames': 'إضافة إطار · مساحات العمل',
+  'rail.framesLabel': 'إضافة إطار، مساحات العمل',
+
   'toast.close': 'إغلاق الرسالة',
   'link.notUnderstood': 'لم يُفهم من الرابط، فتُرك: {notes}.',
   'copy.done': 'نُسخ {text}',

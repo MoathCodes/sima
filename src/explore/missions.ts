@@ -3,6 +3,7 @@ import type { Motion } from '../core/motion.ts';
 import type { StackResult } from '../core/stack.ts';
 import type { DetectorNoise, PretendPlanet, Verdict } from '../core/sandbox.ts';
 import { hits } from './track.ts';
+import { t } from '../shell/i18n.ts';
 
 /**
  * Discover's missions (v2.0, BEGINNER-AND-MOBILE.md section 6): their ids, steps and the shape of
@@ -102,7 +103,7 @@ export const MISSIONS: Readonly<Record<MissionId, Mission>> = Object.freeze({
     skill: 'Blink',
     simulated: false,
     steps: ['play', 'tap'],
-    title: 'The runaway',
+    title: t('mission.runaway'),
     target: 'barnard',
     det: 3,
     band: 'Near infrared · 1.67–1.79 µm',
@@ -131,7 +132,7 @@ export const MISSIONS: Readonly<Record<MissionId, Mission>> = Object.freeze({
     skill: 'Stack',
     simulated: false,
     steps: ['play', 'stack', 'motion'],
-    title: 'The ghost',
+    title: t('mission.ghost'),
     target: 'wise-0855',
     det: 5,
     band: 'Deep infrared · 3.83–4.41 µm',
@@ -172,7 +173,7 @@ export const MISSIONS: Readonly<Record<MissionId, Mission>> = Object.freeze({
     skill: 'What-if',
     simulated: true,
     steps: ['check', 'closer', 'bigger'],
-    title: 'Simulated: Planet X',
+    title: t('mission.planetX'),
     target: 'barnard',
     det: 3,
     band: 'Model against measured patch noise',
