@@ -250,6 +250,12 @@ function startDrag(handle: HTMLElement): void {
     start = { y: e.clientY, id: e.pointerId, t: performance.now() };
     dy = 0;
     dragged = false;
+    // Captured at once: the finger leaves the small handle with its first move.
+    try {
+      handle.setPointerCapture(e.pointerId);
+    } catch {
+      // A synthetic pointer cannot be captured.
+    }
   });
   handle.addEventListener('pointermove', (e) => {
     if (!start || e.pointerId !== start.id) return;
@@ -257,7 +263,6 @@ function startDrag(handle: HTMLElement): void {
     if (!dragged && Math.abs(dy) < 6) return;
     if (!dragged) {
       dragged = true;
-      handle.setPointerCapture(e.pointerId);
       root()?.setAttribute('data-dragging', '');
     }
     // Past the top it resists (a third of the finger's travel).
