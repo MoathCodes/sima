@@ -109,11 +109,14 @@ export function decide(input: LayoutInput): Layout {
           : peek;
     return { kind: 'phone-fit', pic: Math.max(0, atPeek), sheetH: Math.floor(Math.min(room, want)) };
   }
-  if (atPeek < PHONE.picMin || input.expert) {
+  // The scroll layout only when the picture cannot keep 240 px even beside the spec's 120 px
+  // peek. A taller measured peek (a hint opened) holds the picture at 240 and scrolls inside.
+  const atSpecPeek = Math.floor(Math.min(maxW, h - fixed - PHONE.peek));
+  if (atSpecPeek < PHONE.picMin || input.expert) {
     const pic = Math.floor(Math.min(maxW, Math.max(PHONE.picMin, h - PHONE.scrollRoom)));
     return { kind: 'phone-scroll', pic: Math.max(0, pic), sheetH: 0 };
   }
-  let pic = atPeek;
+  let pic = Math.max(PHONE.picMin, atPeek);
   if (input.height === 'half' || input.height === 'full') {
     const want = Math.min(Math.max(input.content ?? 0, peek), h / 2);
     pic = Math.max(PHONE.picMin, Math.floor(Math.min(maxW, h - fixed - want)));
@@ -200,7 +203,7 @@ function peekHeight(): number | undefined {
   if (!end || !end.checkVisibility()) return undefined;
   const chrome = body.getBoundingClientRect().top - sheet.getBoundingClientRect().top;
   const pad = parseFloat(getComputedStyle(body).paddingTop) || 0;
-  return Math.ceil(chrome + pad + end.getBoundingClientRect().bottom - el.getBoundingClientRect().top + 16);
+  return Math.ceil(chrome + pad + end.getBoundingClientRect().bottom - el.getBoundingClientRect().top + 12);
 }
 
 // ----- Motion: the sheet snaps, the frame rises, the picture resizes without a jump ----------

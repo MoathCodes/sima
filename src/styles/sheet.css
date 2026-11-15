@@ -216,8 +216,8 @@ html[data-layout^='phone'] .sheet-item:not([hidden]) {
 }
 
 /* ----- Phone fit, frame open: the frame is the screen under the top row ---------------------
-   The picture as wide as the screen allows; under it the dates (lane E's control, its own row),
-   then Play and the views. Previous and next: the dates control steps itself. */
+   The picture as wide as the screen allows; under it Play and the dates (lane E's row), then the
+   views. */
 
 html[data-layout='phone-fit'] #frame {
   position: fixed !important;
@@ -227,7 +227,7 @@ html[data-layout='phone-fit'] #frame {
   width: auto !important;
   max-height: none !important;
   translate: none !important;
-  padding: 8px 12px 10px !important;
+  padding: 6px 12px 8px !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   background: var(--v2-st-bg) !important;
@@ -282,41 +282,14 @@ html[data-layout^='phone'][data-view='discover'] #frame-load:not(:has(.load-text
   display: none;
 }
 html[data-layout^='phone'][data-view='discover'] #frame-pic {
-  margin-top: 8px;
+  margin-top: 6px;
 }
-/* Dates, then Play and the views. */
+/* Play and the dates (lane E's row, chips.ts: styled there), then the views, each full width. */
 html[data-layout^='phone'][data-view='discover'] #frame-play.fp {
-  display: grid;
-  grid-template-columns: 48px 1fr;
-  grid-template-areas:
-    'chips chips'
-    'play views';
-  gap: 8px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
-html[data-layout^='phone'][data-view='discover'] .fp-controls {
-  grid-area: play;
-  display: block;
-}
-html[data-layout^='phone'][data-view='discover'] .fp-step {
-  display: none;
-}
-html[data-layout^='phone'][data-view='discover'] .fp-play {
-  width: 48px;
-  height: 48px;
-}
-/* The dates (lane E's sequence control, chips.ts): placed here, styled there. */
-html[data-layout^='phone'][data-view='discover'] .fp-chips {
-  grid-area: chips;
-  min-width: 0;
-}
-/* The views sit beside Play, in the row under the dates. */
 html[data-layout^='phone'][data-view='discover'] #frame-views {
-  position: absolute;
-  right: 12px;
-  bottom: 10px;
-  left: calc(12px + 48px + 8px);
-  margin: 0;
+  margin: 6px 0 0;
   flex-wrap: nowrap;
 }
 html[data-layout^='phone'][data-view='discover'] #frame-views > button {
@@ -343,6 +316,28 @@ html[data-layout^='phone'][data-view='discover'] #frame-views > button > span {
   border-radius: 0;
   background: none;
   box-shadow: none;
+}
+
+/* The place card brings its own ✕: no second Back row above it. */
+.sheet:has(.sheet-item:not([hidden]) > #place-card) .sheet-head {
+  display: none;
+}
+
+/* Discover's welcome lives only in the sheet on a phone (it never floats on the page). */
+html[data-layout^='phone'] body > #dsc-welcome {
+  display: none;
+}
+/* The top row at 360 px: the wordmark keeps clear of the menu button. */
+html[data-layout^='phone'] #wordmark {
+  padding: 0 8px;
+}
+
+/* The phone menu opens inside the screen under the top row (right-aligned to its button it would
+   start left of the screen). */
+html[data-layout^='phone'] #phone-menu {
+  right: auto !important;
+  left: calc(env(safe-area-inset-left, 0px) + var(--v2-gutter-phone, 12px)) !important;
+  width: min(240px, calc(100vw - 24px));
 }
 
 /* ----- Phone scroll: one column that scrolls (rotation, short screens, 400% zoom, Expert) -------- */

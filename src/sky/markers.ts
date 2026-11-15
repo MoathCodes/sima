@@ -97,7 +97,7 @@ let avoidCache: { at: number; boxes: Box[] } | null = null;
 const paintTimes: number[] = [];
 
 /** Spots drawn by globe.ts (beacons, objects to try): their place dots are not drawn twice. */
-let taken: readonly { ra: number; dec: number }[] = [];
+let taken: readonly { ra: number; dec: number; name?: string }[] = [];
 /** Linear brightness of the map above which a label sits on a Thin chip (DESIGN-v2 9). */
 const BRIGHT = 0.4;
 
@@ -275,13 +275,15 @@ export function setChosen(id: string | null): void {
  * one of them (within 0.01°) is neither drawn nor picked, so its name does not show twice.
  * @param spots Degrees; an empty list gives the dots back.
  */
-export function setTaken(spots: readonly { ra: number; dec: number }[]): void {
-  taken = spots.map((x) => ({ ra: x.ra, dec: x.dec }));
+export function setTaken(spots: readonly { ra: number; dec: number; name?: string }[]): void {
+  taken = spots.map((x) => ({ ra: x.ra, dec: x.dec, name: x.name }));
   soon();
 }
 
-function isTaken(d: { ra: number; dec: number }): boolean {
+function isTaken(d: { ra: number; dec: number; name?: string }): boolean {
   for (const t of taken) {
+    // The same object by name (catalogue and target positions can differ by their epochs).
+    if (t.name && t.name === d.name) return true;
     if (Math.abs(t.dec - d.dec) < 0.01 && Math.abs(((t.ra - d.ra + 540) % 360) - 180) * Math.cos((d.dec * Math.PI) / 180) < 0.01) return true;
   }
   return false;
@@ -522,6 +524,20 @@ function paint(): void {
     ? all.filter((p) => p.index >= pins.length).map((p) => ({ ...p, index: p.index - pins.length }))
     : all;
 
+  // A phone-sized globe names only a few of the most important places (the beacons name the
+  // missions); zooming in names more (lane M, redesign). Dots without a name stay drawn.
+  if (c.width < 700) {
+    const cap = c.fov > 90 ? 5 : c.fov > 40 ? 9 : c.fov > 15 ? 14 : 24;
+    let n = 0;
+    for (const p of placed) {
+      if (!p.label) continue;
+      const d = dots[p.index] as Dot;
+      if (taken.length && isTaken(d)) continue;
+      const keep = n < cap || d.id === chosen || d.id === hover;
+      if (keep) n++;
+      else p.label = null;
+    }
+  }
   ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
   ctx.clearRect(0, 0, c.width, c.height);
   const { ink, amber, mark, halo } = palette();

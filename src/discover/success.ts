@@ -104,9 +104,10 @@ function render(): void {
       ${
         m.simulated
           ? ''
-          : `<button class="dsc-link" type="button" data-k="expert" data-guide="success-expert">${icon('chart')}How was this measured? Open Expert view</button>`
+          : `<button class="dsc-link" type="button" data-k="expert" data-guide="success-expert">${icon('chart')}How it was measured (Expert)</button>`
       }
       <p class="dsc-skill">${icon('check')}<span><b>Skill learned: ${esc(m.skill)}.</b> ${esc(m.lesson ?? '')}</span></p>
+      ${o.id === 'runaway' ? `<button class="dsc-btn" type="button" data-k="object" data-object="rw-aur" data-guide="object-rw-aur">${icon('arrow-right')}Try Blink on RW Aurigae</button>` : ''}
     </div>
     <div class="dsc-actions">
       ${
@@ -114,7 +115,6 @@ function render(): void {
           ? `<button class="dsc-btn primary lg" type="button" data-k="next" data-next="${next}" data-guide="success-next">Next: ${esc(MISSION_COPY[next].name)}${icon('arrow-right')}</button>`
           : `<button class="dsc-btn primary lg" type="button" data-k="close" data-guide="success-next">Back to the missions</button>`
       }
-      ${o.id === 'runaway' ? `<button class="dsc-btn lg" type="button" data-k="object" data-object="rw-aur" data-guide="object-rw-aur">Try Blink on RW Aurigae</button>` : ''}
     </div>`, '.dsc-title');
   body.append(live);
 }
