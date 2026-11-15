@@ -369,6 +369,32 @@ export const en = {
   "hl.fitFrom": "The motion is from a",
   "hl.fit": "straight-line fit",
   "hl.fitTip": "A weighted straight line through the positions against time, east and north. Points that scatter more than their errors widen the error.",
+
+  // Places: lists and the place card (shell/places/panels.ts).
+  "pl.closeEsc": "Close (Esc)",
+  "pl.show": "Show",
+  "pl.where": "Where",
+  "pl.wholeSky": "Whole sky",
+  "pl.inView": "In this view",
+  "pl.loading": "The catalogue is still loading.",
+  "pl.noneInView": "None in this view. Zoom out, or choose Whole sky.",
+  "pl.noneAtAll": "None of these in the catalogue.",
+  "pl.countInView": "{count} in this view, best known first.",
+  "pl.countOnMap": "{count} {noun} on the map, best known first. Every one shows as a dot.",
+  "pl.showMore": "Show {n} more of {of}",
+  "pl.playTour": "Play the tour",
+  "pl.onMap": "{name} on the SPHEREx sky map",
+  "pl.look": "Look with the frame",
+  "pl.openCard": "Open its card",
+  "pl.noPicture": "No picture",
+  "pl.catName": "Known by its catalogue name, {name}",
+  "pl.lookPictures": "Look at its pictures",
+  "pl.zoom": "Zoom to it",
+  "pl.from": "From ",
+  "pl.moreFacts": "More facts",
+  "pl.inSpherex": "In SPHEREx",
+  "pl.whatToTry": "In SPHEREx: what to try",
+  "pl.facts": "Facts: ",
 } as const satisfies Record<string, string | EnPlural>;
 
 /** A message key. */

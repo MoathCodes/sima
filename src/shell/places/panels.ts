@@ -35,6 +35,7 @@ import type { KindChip } from './kinds.ts';
 import { makeRoom, watchRoom } from './room.ts';
 import { arabicSpan, catalogue, el, iconNode, kindIcon, type Loaded } from './state.ts';
 import { getView } from '../view.ts';
+import { t as tr } from '../i18n.ts';
 
 /** How many rows a list shows before "Show more". */
 const PAGE = 60;
@@ -100,7 +101,7 @@ function frame(
 ): HTMLElement {
   const close = el(
     'button.icon-btn.sm',
-    { 'data-close': true, 'aria-label': 'Close', 'data-tip': 'Close (Esc)' },
+    { 'data-close': true, 'aria-label': tr('word.close'), 'data-tip': tr('pl.closeEsc') },
     iconNode(icon('close')),
   );
   close.addEventListener('click', closeAll);
@@ -151,7 +152,7 @@ function drawKind(scrollTop = 0): void {
   const body = frame(l, v.chip.name, null);
   const data = catalogue();
 
-  const filters = el('div.pl-filters', { role: 'group', 'aria-label': 'Show' });
+  const filters = el('div.pl-filters', { role: 'group', 'aria-label': tr('pl.show') });
   v.chip.filters.forEach((f, i) => {
     const b = el(
       'button.btn.text.pl-filter',
@@ -166,10 +167,10 @@ function drawKind(scrollTop = 0): void {
     filters.append(b);
   });
 
-  const where = el('div.seg.pl-where', { role: 'group', 'aria-label': 'Where' });
+  const where = el('div.seg.pl-where', { role: 'group', 'aria-label': tr('pl.where') });
   for (const [label, inside] of [
-    ['Whole sky', false],
-    ['In this view', true],
+    [tr('pl.wholeSky'), false],
+    [tr('pl.inView'), true],
   ] as const) {
     const b = el(
       'button',
@@ -195,7 +196,7 @@ function drawKind(scrollTop = 0): void {
   body.append(rows);
 
   if (!data) {
-    note.textContent = 'The catalogue is still loading.';
+    note.textContent = tr('pl.loading');
     return;
   }
   const filter = v.chip.filters[v.filter] ?? v.chip.filters[0];
@@ -206,18 +207,18 @@ function drawKind(scrollTop = 0): void {
   const count = places.length.toLocaleString('en-US');
   note.textContent = !places.length
     ? v.inView
-      ? 'None in this view. Zoom out, or choose Whole sky.'
-      : 'None of these in the catalogue.'
+      ? tr('pl.noneInView')
+      : tr('pl.noneAtAll')
     : v.inView
-      ? `${count} in this view, best known first.`
-      : `${count} ${v.chip.noun} on the map, best known first. Every one shows as a dot.`;
+      ? tr('pl.countInView', { count })
+      : tr('pl.countOnMap', { count, noun: v.chip.noun });
   for (const p of places.slice(0, v.shown))
     rows.append(placeRow(data, p, () => openCard(p, backToList(v))));
   if (places.length > v.shown) {
     const more = el(
       'button.btn.text.pl-more-rows',
       {},
-      `Show ${Math.min(PAGE, places.length - v.shown)} more of ${(places.length - v.shown).toLocaleString('en-US')}`,
+      tr('pl.showMore', { n: String(Math.min(PAGE, places.length - v.shown)), of: (places.length - v.shown).toLocaleString('en-US') }),
     );
     more.addEventListener('click', () => {
       v.shown += PAGE;
@@ -341,7 +342,7 @@ function drawTour(): void {
     'button.btn.primary.pl-play',
     { 'data-guide': 'tour-play' },
     iconNode(icon(v.playing ? 'pause' : 'play')),
-    v.playing ? 'Pause' : v.at < 0 ? 'Play the tour' : 'Play',
+    v.playing ? tr('word.pause') : v.at < 0 ? tr('pl.playTour') : tr('word.play'),
   );
   play.addEventListener('click', () => (v.playing ? pauseTour() : playTour()));
   const where = el(
@@ -362,7 +363,7 @@ function drawTour(): void {
       width: '112',
       height: '112',
       role: 'img',
-      'aria-label': `${nameOf(p)} on the SPHEREx sky map`,
+      'aria-label': tr('pl.onMap', { name: nameOf(p) }),
     });
     pictures.push({ canvas, p });
     const text = el(
@@ -379,9 +380,9 @@ function drawTour(): void {
     );
     if (i === v.at) {
       if (stop.look) text.append(el('span.pl-stop-look', {}, stop.look));
-      const look = el('button.btn.text', {}, 'Look with the frame');
+      const look = el('button.btn.text', {}, tr('pl.look'));
       look.addEventListener('click', () => lookWithFrame(p));
-      const open = el('button.btn.text', {}, 'Open its card');
+      const open = el('button.btn.text', {}, tr('pl.openCard'));
       open.addEventListener('click', () => {
         pauseTour();
         openCard(p, backToList(v), false);
@@ -426,7 +427,7 @@ function drawPictures(
         const { p, canvas } = item;
         const fov = Math.min(4, Math.max(0.5, p.size ? (p.size.major * 1.6) / 60 : 0.5));
         drawCutout(canvas, p.ra, p.dec, fov).catch(() => {
-          canvas.replaceWith(el('span.pl-cut-none', {}, 'No picture'));
+          canvas.replaceWith(el('span.pl-cut-none', {}, tr('pl.noPicture')));
         });
       }
     },
@@ -514,7 +515,7 @@ export function openCard(
     'div.pl-title-box',
     {},
     el('h2.pl-title', {}, common ? nameOf(p) : kindOf(cat, p)),
-    el('p.pl-kind', {}, common ? kindOf(cat, p) : `Known by its catalogue name, ${nameOf(p)}`),
+    el('p.pl-kind', {}, common ? kindOf(cat, p) : tr('pl.catName', { name: nameOf(p) })),
   );
   const body = frame(c, '', back, titleBox);
 
@@ -538,10 +539,10 @@ export function openCard(
   const look = el(
     'button.btn.primary',
     { 'data-guide': 'card-look' },
-    discover ? 'Look at its pictures' : 'Look with the frame',
+    discover ? tr('pl.lookPictures') : tr('pl.look'),
   );
   look.addEventListener('click', () => lookWithFrame(p));
-  const zoom = el('button.btn', { 'data-guide': 'card-zoom' }, 'Zoom to it');
+  const zoom = el('button.btn', { 'data-guide': 'card-zoom' }, tr('pl.zoom'));
   zoom.addEventListener('click', () => flyFree(p.ra, p.dec, zoomFov(p)));
   body.append(el('div.pl-actions', {}, look, zoom));
 
@@ -556,7 +557,7 @@ export function openCard(
           ? el(
               'p.pl-from',
               {},
-              'From ',
+              tr('pl.from'),
               el('a.link', { href: src.url, target: '_blank', rel: 'noopener' }, shortSource(src)),
               src.name.includes('CC BY-SA') ? ' (CC BY-SA 4.0)' : '',
             )
@@ -585,7 +586,7 @@ export function openCard(
     }
     if (first.length) body.append(dl);
     if (more.length) {
-      body.append(el('details.pl-more', {}, el('summary.pl-more-summary', {}, 'More facts'), moreDl));
+      body.append(el('details.pl-more', {}, el('summary.pl-more-summary', {}, tr('pl.moreFacts')), moreDl));
     }
   }
 
@@ -607,14 +608,14 @@ export function openCard(
       el(
         'div.pl-spherex',
         {},
-        el('p.group-label', {}, note.fromCatalogue ? 'In SPHEREx' : 'In SPHEREx: what to try'),
+        el('p.group-label', {}, note.fromCatalogue ? tr('pl.inSpherex') : tr('pl.whatToTry')),
         text,
       ),
     );
   }
 
   const sources = allSources(cat, p);
-  const foot = el('p.pl-sources', {}, 'Facts: ');
+  const foot = el('p.pl-sources', {}, tr('pl.facts'));
   sources.forEach((s, i) => {
     if (i) foot.append(' · ');
     foot.append(el('a.link', { href: s.url, target: '_blank', rel: 'noopener' }, shortSource(s)));
