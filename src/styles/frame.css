@@ -2,6 +2,104 @@
    controls, date scale, wavelength scale, detector strip). Style only lane D's own classes here.
    Tokens and shared components are in app.css. */
 
+/* ----- Night Glass materials (v2.0, DESIGN-v2 §4) -------------------------------------------
+   Lane DE's panels: the frame, Measure and the picture tools are Slate (opaque, no blur: they
+   hold science, D-3); the bar is Regular glass. The blur itself comes from lane F's `.glass`
+   class in app.css (GLS-1: no backdrop-filter outside app.css); here the bar gets its tint, so
+   without that class it reads as Solid. Inside these panels v1's tokens take their Night values,
+   so the shared components (buttons, segments, links, pills) read on the dark surface. */
+:is(#frame, #frame-show, #bar, #measure, #tools) {
+  --card: rgb(var(--v2-tint));
+  --card-2: var(--v2-fill-1);
+  --card-3: var(--v2-fill-2);
+  --rule: var(--v2-rule);
+  --ink: var(--v2-on-glass);
+  --ink-2: var(--v2-on-glass-2);
+  --ink-3: var(--v2-on-glass-3);
+  --action: var(--v2-action);
+  --action-hi: var(--v2-action-hi);
+  --action-soft: var(--v2-action-soft);
+  --mark-ink: var(--v2-mark);
+  --good: var(--v2-good);
+  --good-soft: var(--v2-good-soft);
+  --warn: var(--v2-warn);
+  --warn-soft: var(--v2-warn-soft);
+  --bad: var(--v2-bad);
+  --bad-soft: var(--v2-bad-soft);
+  --badge-bg: var(--v2-badge-bg);
+  --shadow-chosen: 0 1px 3px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.12);
+  isolation: isolate;
+  color: var(--ink);
+  color-scheme: dark;
+}
+/* Slate: tint 96%, a 4% white sheen at the top, lift-2. */
+:is(#frame, #frame-show, #measure, #tools) {
+  background: var(--v2-slate-sheen), var(--v2-slate-tint);
+  box-shadow: var(--v2-lift-2);
+}
+#frame,
+#measure,
+#tools {
+  border-radius: var(--v2-r-frame);
+}
+/* Regular (the bar): its tint and lift-1; Solid when glass is off. */
+#bar {
+  background: var(--v2-regular-tint);
+  box-shadow: var(--v2-lift-1);
+  border-radius: var(--v2-r-bar);
+}
+[data-glass='solid'] #bar {
+  background: var(--v2-solid-tint);
+}
+/* Grain (3.5% noise, behind the content) and the specular rim (1px, light on the top edge). */
+:is(#frame, #frame-show, #bar, #measure, #tools)::before,
+:is(#frame, #frame-show, #bar, #measure, #tools)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+:is(#frame, #frame-show, #bar, #measure, #tools)::before {
+  z-index: -1;
+  opacity: var(--v2-grain);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+:is(#frame, #frame-show, #bar, #measure, #tools)::after {
+  padding: 1px;
+  background: var(--v2-rim);
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+/* In the page flow (embed) the panels are not positioned: no grain or rim there. */
+html[data-embed] :is(#frame, #bar, #measure)::before,
+html[data-embed] :is(#frame, #bar, #measure)::after {
+  display: none;
+}
+/* On glass, text is never ultramarine: links are ink with an underline, a pressed control's
+   text is the wash's own ink (DESIGN-v2 §9). */
+:is(#frame, #bar, #measure, #tools) .link {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: rgb(255 255 255 / 0.35);
+  text-underline-offset: 4px;
+}
+:is(#frame, #bar, #measure, #tools)
+  :is(.btn, .icon-btn):is([aria-pressed='true'], [aria-expanded='true'], .on) {
+  color: var(--v2-on-action-soft);
+}
+:is(#frame, #bar, #measure, #tools) .seg > button:is([aria-pressed='true'], [aria-checked='true']) {
+  background: var(--v2-fill-3);
+}
+:is(#frame, #bar, #measure, #tools) .btn.primary,
+:is(#frame, #bar) .play-btn {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    0 6px 18px -6px rgb(63 92 245 / 0.7);
+}
+
 /* ----- The frame card ------------------------------------------------------------------------ */
 
 #frame {
@@ -14,6 +112,31 @@
 }
 #frame-task:not(:empty) {
   margin-bottom: 4px;
+}
+/* The task's help line keeps two lines' height while the task is open, so a miss note
+   ("Not that one…") appears without moving the picture (UX audit #1; as O-I5 for the loading
+   line). */
+#frame-task .task:not(.done) .task-help {
+  display: block;
+  min-height: 2lh;
+}
+#frame-task .task:not(.done) .task-help[hidden] {
+  visibility: hidden;
+}
+
+/* The title takes its own row when the frame is narrow (UX audit #9): the buttons wrap under it
+   instead of cutting the name to "Bar…". */
+#frame-head.frame-head {
+  flex-wrap: wrap;
+}
+#frame-head .frame-name {
+  flex: 1 1 180px;
+}
+.frame-coords {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .frame-head {
@@ -201,7 +324,7 @@
   height: 18px;
   border-radius: var(--r-stop);
   background: var(--tint);
-  color: var(--ink);
+  color: rgb(var(--v2-tint)); /* dark letters on the pale pass tints */
   font: var(--text-label);
   font-weight: 600;
 }
@@ -503,6 +626,23 @@
 .det-name {
   font-weight: 600;
 }
+/* No exposure in this detector on this date: dotted and empty, and it says so (H6). */
+.det-none {
+  display: none;
+  font: var(--text-scale);
+  color: var(--ink-3);
+}
+.det-thumb.none canvas {
+  background: transparent;
+  outline: 1.5px dotted var(--ink-3);
+  outline-offset: -1.5px;
+}
+.det-thumb.none .det-band {
+  display: none;
+}
+.det-thumb.none .det-none {
+  display: inline;
+}
 .det-band {
   font: var(--text-scale);
   color: var(--ink-3);
@@ -569,6 +709,8 @@
   flex: none;
   color: var(--ink-2);
   font: var(--text-label);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
   white-space: nowrap;
 }
 .bar-count[hidden] {
@@ -659,7 +801,7 @@
   border: 0;
   border-radius: var(--r-stop);
   background: var(--tint);
-  color: var(--ink);
+  color: rgb(var(--v2-tint)); /* dark letters on the pale pass tints */
   font: var(--text-label);
   font-weight: 600;
 }
@@ -836,4 +978,270 @@
     flex: 1 1 100%;
     width: auto;
   }
+}
+
+/* ----- v2.0: the Discover frame and phones (BEGINNER-AND-MOBILE 5.3, 7, 11.4, 11.5) ----------- */
+
+/* The data line under the name: in Discover and on phones (H2). Elsewhere the line under the
+   views says it. */
+.frame-agency,
+.frame-prov {
+  display: none;
+}
+:is(html[data-view='discover'], html[data-layout^='phone']) .frame-agency {
+  display: inline;
+}
+:is(html[data-view='discover'], html[data-layout^='phone']) .frame-prov {
+  display: block;
+  margin: 2px 0 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+  overflow-wrap: anywhere;
+}
+:is(html[data-view='discover'], html[data-layout^='phone']) .frame-head {
+  align-items: flex-start;
+  padding-top: 10px;
+}
+
+/* Discover: picture min(560px, 100vh − 330px); no bar (the frame plays itself); no field size. */
+html[data-view='discover'] {
+  --frame-picture: min(560px, calc(100vh - 330px));
+}
+/* The bar collapses to nothing at its place, not display: none, so the frame's placement
+   (layout.ts measures the bar's top) lets the frame reach down to it. */
+html[data-view='discover']:not([data-layout^='phone']) #bar {
+  height: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  visibility: hidden;
+  box-shadow: none;
+}
+html[data-view='discover'] #frame-exif,
+html[data-view='discover'] .frame-head :is([data-fov], .frame-fov) {
+  display: none;
+}
+html[data-view='discover'] .frame-title {
+  font-size: 17px;
+}
+
+/* The play row (chips.ts). */
+.fp[hidden] {
+  display: none;
+}
+.fp {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.fp-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.fp-step {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--v2-fill-1);
+}
+.fp-step:hover {
+  background: var(--v2-fill-2);
+}
+.fp-play {
+  width: 56px;
+  height: 56px;
+}
+.fp-play > .icon {
+  width: 24px;
+  height: 24px;
+}
+.fp-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fp-chips[hidden] {
+  display: none;
+}
+.fp-chip {
+  display: inline-flex;
+  flex: 1 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 96px;
+  min-height: 48px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--v2-r-control);
+  background: var(--v2-fill-1);
+  color: var(--ink);
+  font: 600 14px/1.2 var(--font);
+  white-space: nowrap;
+}
+.fp-chip:hover {
+  background: var(--v2-fill-2);
+}
+.fp-chip[aria-pressed='true'] {
+  box-shadow: inset 0 0 0 2px var(--v2-mark);
+}
+.fp-letter {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--tint);
+  color: #0b0e1c;
+  font: 700 12px/1 var(--font);
+}
+/* A date with no exposure in this detector stays visible as missing (H6). */
+.fp-chip.missing {
+  background: transparent;
+  outline: 1.5px dotted var(--ink-3);
+  outline-offset: -1.5px;
+  color: var(--ink-3);
+}
+.fp-chip.missing[aria-pressed='true'] {
+  outline-color: var(--v2-mark);
+}
+.fp-why {
+  margin: 0;
+  padding: 14px 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+html[data-view='discover'] .frame-views > button {
+  min-height: 40px;
+}
+
+/* The phone's compact bar: previous, Play, next, a date scale for display, the counter. */
+.fp[data-form='phone'] .fp-controls {
+  justify-content: flex-start;
+  gap: 6px;
+}
+.fp[data-form='phone'] .fp-play {
+  width: 48px;
+  height: 48px;
+}
+.fp-scale {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 60px;
+  height: 34px;
+  margin: 0 8px;
+}
+.fp-scale[hidden],
+.fp-count[hidden],
+.fp-wl[hidden] {
+  display: none;
+}
+.fp-line {
+  position: absolute;
+  top: 9px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--v2-fill-2);
+}
+.fp-dot {
+  position: absolute;
+  top: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  translate: -50% 0;
+}
+.fp-dot.on {
+  top: 5px;
+  width: 10px;
+  height: 10px;
+  background: var(--v2-mark);
+  z-index: 1;
+}
+.fp-end {
+  position: absolute;
+  top: 19px;
+  color: var(--ink-3);
+  font: 500 11px/1.2 var(--font);
+  white-space: nowrap;
+}
+.fp-end.first {
+  left: 0;
+}
+.fp-end.last {
+  right: 0;
+}
+.fp-count {
+  flex: none;
+  color: var(--ink-2);
+  font: var(--text-label);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.fp-wl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 8px;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.fp-wl-value {
+  color: var(--ink);
+  font-weight: 600;
+}
+.fp-wl input {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  accent-color: var(--v2-mark);
+}
+
+/* Phones (lane M sets html[data-layout], places the cards and sizes the picture through
+   --pic-max). No bar in either phone layout: the frame's own row plays (chips.ts); every
+   target is at least 48 px. Picture tools, Measure's
+   button and hiding the frame are not offered on a phone (Measure is in the column, 11.5). */
+html[data-layout^='phone'] #bar,
+html[data-layout^='phone'] .frame-head :is([data-tools], [data-measure], [data-hide]) {
+  display: none;
+}
+html[data-layout^='phone'] .frame-head {
+  cursor: default;
+}
+html[data-layout^='phone'] .frame-head :is(.icon-btn, .btn) {
+  min-width: 48px;
+  min-height: 48px;
+}
+html[data-layout^='phone'] .frame-title {
+  white-space: normal;
+}
+html[data-layout^='phone'] .frame-views > button {
+  min-height: 48px;
+}
+html[data-layout^='phone'] .frame-views {
+  flex-wrap: wrap;
+}
+/* Discover's four views are words only, so all four fit the frame at any width. */
+html[data-view='discover'] .frame-views > button > .icon {
+  display: none;
+}
+
+/* The wavelength scale shrinks with the bar, down to 320 px wide (MOB-1): its head wraps. */
+.wl {
+  min-width: 0;
+  max-width: 100%;
+}
+.wl-head {
+  flex-wrap: wrap;
+  row-gap: 2px;
+  height: auto;
+  min-height: 22px;
 }

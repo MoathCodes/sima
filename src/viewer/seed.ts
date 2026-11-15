@@ -87,3 +87,20 @@ export function liveTip(live: LiveBlock | undefined, now = Date.now()): string {
   if (words === 'fetched live') return 'Real exposures fetched from NASA’s archive (IRSA) for this spot just now';
   return `Real exposures from NASA’s archive (IRSA), ${words}${live?.ahead ? ', ahead of time for this spot' : ''}`;
 }
+
+/**
+ * A folder the live service names in its status (`/api/patch/<id>/full/`), as an address to
+ * fetch: resolved against the service's own address, so a service on another host works (its
+ * paths start with `/api/`, which would otherwise go to the page's host). Ends with '/'. Pure.
+ *
+ * @param folder The status's `first` or `full`.
+ * @param api The service's address (LIVE_API), absolute or relative to `page`.
+ * @param page The page's address (location.href).
+ */
+export function resolveFolder(folder: string, api: string, page: string): string {
+  const f = folder.endsWith('/') ? folder : `${folder}/`;
+  if (!api) return f;
+  const out = new URL(f, new URL(api, page));
+  // Same host as the page: keep the path as the service wrote it.
+  return out.origin === new URL(page).origin ? out.pathname + out.search : out.href;
+}

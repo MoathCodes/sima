@@ -9,7 +9,7 @@
  * to the worker (`keepPatch`) so its pictures and stacks are made there too.
  */
 import { S, type Fov } from '../viewer/state.ts';
-import { LIVE_API, POLL_MS, TARGET_RADIUS, centreOf, fetchSet, liveFov, releaseName, searchNote } from '../viewer/load.ts';
+import { LIVE_API, POLL_MS, liveFolder, TARGET_RADIUS, centreOf, fetchSet, liveFov, releaseName, searchNote } from '../viewer/load.ts';
 import { buildField, keepPatch } from '../core/work.ts';
 import { TARGETS } from '../core/targets.ts';
 import { separation } from '../core/astro.ts';
@@ -219,7 +219,7 @@ async function pollLive(
     const folder = step === 'full' ? status.full : step === 'first' ? status.first : null;
     if (step && folder) {
       try {
-        const raw = await liveSet(folder, status.id, signal);
+        const raw = await liveSet(liveFolder(folder), status.id, signal);
         const set = wider ? withTarget(raw, wider.own) : raw;
         const field = await fieldFor(id, set, wider?.target ?? null, at, fov, signal);
         shown = step;
