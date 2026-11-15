@@ -15,8 +15,10 @@
  *   - `phone-scroll`: one scrolling column (rotated phones, short windows, 400% zoom). No sheet:
  *     its content sits in the page's flow under the frame and the bar; `sheetH` is 0.
  * - `openSheet(el, { height, label, back })` shows `el` in the sheet (the `#sheet` mount point).
- *   - `height` is `peek` (one line and one button) or `half`. A tap on the grabber toggles them;
- *     the choice is kept with that content, so Back restores it. There is no drag in v2.0.
+ *   - `height` is `peek` (one line and one button), `half` or `full`. A tap on the grabber steps
+ *     up (and from the top back to peek); a drag on the grabber or the Back row moves one step
+ *     in its direction. The choice is kept with that content, so Back restores it. The content
+ *     marks where its peek part ends with a `[data-peek-end]` element (phone.ts measures it).
  *   - Without `back`, `el` replaces what the sheet showed and the Back history is cleared. With
  *     `back: true` (a place card from the sky, the hint box), the current content, its height
  *     and the control that opened the new content are kept for `back()`.
@@ -37,8 +39,13 @@
  */
 import { closable, RANK } from './escape.ts';
 
-/** The sheet's two heights (no drag and no full height in v2.0). */
-export type SheetHeight = 'peek' | 'half';
+/**
+ * The sheet's heights. `peek`: the content's first part only (down to its `[data-peek-end]`
+ * element: one line and one button); `half`: up to about half the screen; `full`: up to the top
+ * row. Full is offered only while the frame is closed (the globe behind); with the frame open,
+ * full is laid out as half.
+ */
+export type SheetHeight = 'peek' | 'half' | 'full';
 
 /** The page's layout, chosen by the visual viewport (11.1). */
 export type LayoutKind = 'desktop' | 'phone-fit' | 'phone-scroll';
@@ -121,12 +128,25 @@ export class SheetStack<T, O = unknown> {
     return this.items.pop();
   }
 
-  /** Switches the shown content between peek and half. @returns The new height. */
-  toggle(): SheetHeight | undefined {
+  /**
+   * Moves the shown content one height up or down among `levels` (lowest first). Up from the
+   * highest goes back to the lowest (a tap on the grabber); down from the lowest stays.
+   * @returns The new height.
+   */
+  step(dir: 1 | -1, levels: readonly SheetHeight[] = ['peek', 'half']): SheetHeight | undefined {
     const t = this.top();
     if (!t || t.height === 'page') return undefined;
-    t.height = t.height === 'peek' ? 'half' : 'peek';
+    // A height that is not offered now (full while the frame is open) counts as the highest.
+    let i = levels.indexOf(t.height);
+    if (i < 0) i = levels.length - 1;
+    const j = i + dir;
+    t.height = j >= levels.length ? levels[0]! : levels[Math.max(0, j)]!;
     return t.height;
+  }
+
+  /** Switches the shown content between peek and half. @returns The new height. */
+  toggle(): SheetHeight | undefined {
+    return this.step(1);
   }
 
   /** Empties it. @returns Everything that was kept. */
