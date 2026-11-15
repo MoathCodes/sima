@@ -82,7 +82,16 @@ export function say(region: HTMLElement, text: string): void {
   window.setTimeout(() => (region.textContent = text), 30);
 }
 
-/** True when the visitor asked for less motion. */
-export function lessMotion(): boolean {
-  return matchMedia('(prefers-reduced-motion: reduce)').matches;
+/**
+ * Replaces `body`'s content and keeps keyboard focus on the same control (`data-k`). When that
+ * control is gone (it finished the step), focus moves to `fallback` (section 10: focus moves only
+ * when it was on the control that finished the step).
+ */
+export function rerender(body: HTMLElement, html: string, fallback: string): void {
+  const a = document.activeElement;
+  const k = a instanceof HTMLElement && body.contains(a) ? (a.dataset.k ?? null) : null;
+  body.innerHTML = html;
+  if (!k) return;
+  const same = body.querySelector<HTMLElement>(`[data-k="${k}"]`);
+  (same ?? body.querySelector<HTMLElement>(fallback))?.focus({ preventScroll: true });
 }

@@ -17,7 +17,7 @@ import { targetMeasurements } from '../viewer/load.ts';
 import type { TrialResult } from '../viewer/motion.ts';
 import type { SandboxReading } from '../shell/sandbox.ts';
 import { MEASURING, MISSION_COPY, plainKind } from './copy.ts';
-import { esc, icon, liveRegion, say } from './ui.ts';
+import { esc, icon, liveRegion, rerender, say } from './ui.ts';
 
 /** What the mission left for its result. */
 export interface Outcome {
@@ -92,12 +92,12 @@ function render(): void {
   const n = MISSION_IDS.indexOf(o.id) + 1;
   const next = nextMission(o.id);
   body.dataset.simulated = String(m.simulated);
-  body.innerHTML = `
+  rerender(body, `
     <div class="dsc-hd">
       <p class="dsc-pill ${m.simulated ? 'sim' : 'done'}">${m.simulated ? 'Simulated · ' : icon('check')}Mission ${n} complete</p>
       <button class="dsc-icon-btn" type="button" data-k="close" data-close aria-label="Back to the missions" data-tip="Back to the missions">${icon('close')}</button>
     </div>
-    <h2 class="dsc-title" tabindex="-1">${esc(c.win)}</h2>
+    <h2 class="dsc-title" tabindex="-1" data-k="title">${esc(c.win)}</h2>
     <div class="dsc-scroll" data-scroll>
       <div class="dsc-result${m.simulated ? ' sim' : ''}">${result(o)}</div>
       ${
@@ -114,7 +114,7 @@ function render(): void {
           : `<button class="dsc-btn primary lg" type="button" data-k="close" data-guide="success-next">Back to the missions</button>`
       }
       ${o.id === 'runaway' ? `<button class="dsc-btn lg" type="button" data-k="object" data-object="rw-aur" data-guide="object-rw-aur">Try Blink on RW Aurigae</button>` : ''}
-    </div>`;
+    </div>`, '.dsc-title');
   body.append(live);
 }
 

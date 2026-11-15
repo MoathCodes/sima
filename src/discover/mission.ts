@@ -30,7 +30,7 @@ import { hideFrame, openPlace } from '../shell/shell.ts';
 import { closeSandbox, onSandbox, openSandbox, sandboxState, type SandboxReading } from '../shell/sandbox.ts';
 import { targetByKey } from '../core/targets.ts';
 import { KEYS, LEAVE_ASK, MEASURING, MISSION_COPY, MISS, SHOWN, plainKind } from './copy.ts';
-import { esc, icon, liveRegion, say } from './ui.ts';
+import { esc, icon, liveRegion, rerender, say } from './ui.ts';
 
 /** A mission as it runs on this page. */
 interface Run {
@@ -197,9 +197,9 @@ function step(): string | null {
   return run ? (MISSIONS[run.id].steps[index()] ?? null) : null;
 }
 
-function stepCopy(k = step()): { say: string; how: string; done?: string } {
+function stepCopy(k = step()): { say: string; how: string; label: string; done?: string } {
   const c = run ? MISSION_COPY[run.id] : null;
-  return (k && c?.steps[k]) || { say: k ?? '', how: '' };
+  return (k && c?.steps[k]) || { say: k ?? '', how: '', label: k ?? '' };
 }
 
 /** True when the mission's patch is on screen with real pictures. */
@@ -404,9 +404,6 @@ export function render(): void {
     body.replaceChildren();
     return;
   }
-  const active = document.activeElement instanceof HTMLElement && body.contains(document.activeElement)
-    ? document.activeElement.dataset.k ?? null
-    : null;
   const r = run;
   const m = MISSIONS[r.id];
   const c = MISSION_COPY[r.id];
@@ -426,10 +423,10 @@ export function render(): void {
       if (how) {
         const mark = how === 'done' ? icon('check') : '–';
         const tail = how === 'unavailable' ? ' <span class="dsc-faint">(not available)</span>' : '';
-        return `<li class="dsc-step done"><span class="dsc-n" aria-hidden="true">${mark}</span><span class="dsc-st">${esc(short(sc.say))}${tail}<span class="dsc-sr"> ${how === 'done' ? 'done' : 'not available'}</span></span></li>`;
+        return `<li class="dsc-step done"><span class="dsc-n" aria-hidden="true">${mark}</span><span class="dsc-st">${esc(sc.label)}${tail}<span class="dsc-sr"> ${how === 'done' ? 'done' : 'not available'}</span></span></li>`;
       }
       if (j !== i) {
-        return `<li class="dsc-step next"><span class="dsc-n" aria-hidden="true">${j + 1}</span><span class="dsc-st">${esc(short(sc.say))}</span></li>`;
+        return `<li class="dsc-step next"><span class="dsc-n" aria-hidden="true">${j + 1}</span><span class="dsc-st">${esc(sc.label)}</span></li>`;
       }
       return `<li class="dsc-step now" data-guide="mission-step" tabindex="-1" data-k="step">
         <span class="dsc-n" aria-hidden="true">${j + 1}</span>
@@ -449,12 +446,13 @@ export function render(): void {
   const nextLabel = labels[r.help] ?? null;
   const pct = Math.round((r.did.size / m.steps.length) * 100);
   body.dataset.simulated = String(m.simulated);
-  body.innerHTML = `
+  rerender(body, `
     <div class="dsc-hd">
-      <p class="dsc-eyebrow">Mission ${n} of ${MISSION_IDS.length} · Skill: ${esc(m.skill)} · about ${c.minutes} minute${c.minutes > 1 ? 's' : ''}</p>
+      <p class="dsc-eyebrow dsc-wide">Mission ${n} of ${MISSION_IDS.length} · Skill: ${esc(m.skill)} · about ${c.minutes} minute${c.minutes > 1 ? 's' : ''}</p>
+      <p class="dsc-eyebrow dsc-ph">${m.simulated ? 'Simulated · ' : ''}${esc(c.title)} · step ${Math.min(i + 1, m.steps.length)} of ${m.steps.length}</p>
       <button class="dsc-icon-btn" type="button" data-k="leave-x" data-close data-guide="mission-leave" aria-label="Leave the mission" data-tip="Leave the mission">${icon('close')}</button>
     </div>
-    <h2 class="dsc-title" tabindex="-1">${m.simulated ? '<span class="dsc-pill sim">Simulated</span> ' : ''}${esc(c.title)}</h2>
+    <h2 class="dsc-title" tabindex="-1" data-k="title">${m.simulated ? '<span class="dsc-pill sim">Simulated</span> ' : ''}${esc(c.title)}</h2>
     <p class="dsc-obj">${obj}</p>
     <div class="dsc-scroll" data-scroll>
       <ol class="dsc-steps">${steps}</ol>
@@ -470,15 +468,8 @@ export function render(): void {
       r.asking
         ? `<div class="dsc-ask" role="group" aria-label="${esc(LEAVE_ASK)}"><p>${esc(LEAVE_ASK)}</p><div class="dsc-row"><button class="dsc-btn primary" type="button" data-k="leave">Leave</button><button class="dsc-btn" type="button" data-k="stay">Stay</button></div></div>`
         : ''
-    }`;
+    }`, '[data-k="step"], .dsc-title');
   body.append(live);
-  if (active) {
-    const same = body.querySelector<HTMLElement>(`[data-k="${active}"]`);
-    // Focus moves to the step only when the control that finished it is gone (section 10).
-    (same ?? body.querySelector<HTMLElement>('[data-k="step"]') ?? body.querySelector<HTMLElement>('.dsc-title'))?.focus({
-      preventScroll: true,
-    });
-  }
 }
 
 function stateLine(r: Run): string {
@@ -500,11 +491,6 @@ function stateLine(r: Run): string {
 
 function times(x: number): string {
   return Number.isFinite(x) ? `${x.toFixed(1)}× the noise` : 'not measured';
-}
-
-/** The step's first sentence, for the done and next rows. */
-function short(s: string): string {
-  return s.replace(/^Simulated: /, '').replace(/\.$/, '');
 }
 
 /** The spectral type inside the shipped kind ("Red dwarf (M4V)" → "M4V"). */

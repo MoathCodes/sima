@@ -282,7 +282,7 @@
   text-decoration-color: rgb(255 255 255 / 0.35);
   cursor: pointer;
 }
-.dsc-card :is(button, [tabindex]):focus-visible {
+.dsc-card button:focus-visible {
   outline: 2px solid var(--v2-action);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px rgb(255 255 255 / 0.9);
@@ -898,6 +898,40 @@ html[data-layout^='phone'] .dsc-o {
 html[data-layout^='phone'] .dsc-icon-btn {
   width: var(--v2-hit-phone);
 }
+/* The welcome card in the sheet at half (11.6): no fixed place, no wordmark (the top row has it). */
+#sheet > #dsc-welcome {
+  position: static;
+  transform: none;
+  width: auto;
+  max-height: none;
+  padding: 20px 20px 16px;
+  animation: none;
+}
+#sheet .dsc-wm {
+  display: none;
+}
+/* The mission card at peek (mockup 03 at 390): the step now, its state and its buttons only. */
+.dsc-ph {
+  display: none;
+}
+#sheet .dsc-mission .dsc-ph {
+  display: block;
+}
+#sheet .dsc-mission :is(.dsc-wide, .dsc-title, .dsc-obj, .dsc-step:not(.now), .dsc-keys, .dsc-step.now > .dsc-n) {
+  display: none;
+}
+#sheet .dsc-mission .dsc-steps {
+  margin-block-start: 4px !important;
+}
+#sheet .dsc-mission .dsc-step.now {
+  grid-template-columns: 1fr;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+#sheet .dsc-mission .dsc-st {
+  font-size: 18px;
+}
 #sheet .dsc-success .dsc-actions {
   position: sticky;
   bottom: 0;
@@ -960,3 +994,4 @@ html[data-layout^='phone'] .dsc-icon-btn {
     border-style: dashed;
   }
 }
+#sheet [data-k="picture"] { display: none; }

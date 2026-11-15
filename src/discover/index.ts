@@ -67,7 +67,11 @@ export function startDiscover(link: Link): void {
   welcome.dataset.guide = 'discover-welcome';
   welcome.setAttribute('aria-label', 'Welcome');
   welcome.hidden = true;
-  document.body.append(welcome);
+  // Focus order (section 10): the top row, then the card that says what to do, then the picture.
+  // The mount points are last in index.html; they are moved in front of the frame.
+  const frame = document.getElementById('frame');
+  if (frame?.parentElement === document.body) frame.before(welcome, listMount, missionMount, successMount);
+  else document.body.append(welcome);
   renderWelcome(welcome);
 
   startMissions({
@@ -176,7 +180,7 @@ function sync(): void {
     if (phone()) present(stub, welcome, { height: 'half', label: 'Welcome' });
     else {
       dismiss(stub, welcome);
-      if (welcome.parentElement !== document.body) document.body.append(welcome);
+      if (welcome.parentElement !== document.body) (listMount.parentElement ?? document.body).insertBefore(welcome, listMount);
     }
     shown = welcome;
   } else if (want === 'home') {

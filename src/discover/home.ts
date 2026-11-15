@@ -37,7 +37,7 @@ export function renderWelcome(el: HTMLElement): void {
   el.dataset.material = 'raised';
   el.innerHTML = `
     <p class="dsc-wm" aria-hidden="true"><span class="ar" lang="ar">سيما</span><span class="la">Sima</span></p>
-    <h2 class="dsc-title" tabindex="-1">${esc(WELCOME.heading)}</h2>
+    <h2 class="dsc-title" tabindex="-1" data-k="title">${esc(WELCOME.heading)}</h2>
     <p class="dsc-lead">${esc(WELCOME.body)}</p>
     <button class="dsc-btn primary dsc-start" type="button" data-k="start" data-guide="mission-start">
       <span><span class="s1">${esc(WELCOME.start)}</span><span class="s2">${esc(WELCOME.startLine)}</span></span>${icon('arrow-right')}
@@ -120,7 +120,7 @@ export function renderList(el: HTMLElement, phone: boolean): void {
     const m = MISSIONS[suggested];
     const n = MISSION_IDS.indexOf(suggested) + 1;
     el.innerHTML = `
-      <div class="dsc-list-hd"><h2 class="dsc-h">Suggested next · Mission ${n} of ${MISSION_IDS.length}</h2><span class="dsc-faint">${done} of ${MISSION_IDS.length} done</span></div>
+      <div class="dsc-list-hd"><h2 class="dsc-h" tabindex="-1" data-k="title">Suggested next · Mission ${n} of ${MISSION_IDS.length}</h2><span class="dsc-faint">${done} of ${MISSION_IDS.length} done</span></div>
       <div class="dsc-suggest">
         <p class="t">${m.simulated ? '<span class="dsc-pill sim">Simulated</span> ' : ''}${esc(c.title)}</p>
         <p class="d">${esc(c.line)} · ${c.minutes} min</p>
@@ -134,7 +134,7 @@ export function renderList(el: HTMLElement, phone: boolean): void {
     return;
   }
   el.innerHTML = `
-    <div class="dsc-list-hd"><h2 class="dsc-h">Missions</h2><span class="dsc-faint">${done} of ${MISSION_IDS.length} done</span></div>
+    <div class="dsc-list-hd"><h2 class="dsc-h" tabindex="-1" data-k="title">Missions</h2><span class="dsc-faint">${done} of ${MISSION_IDS.length} done</span></div>
     ${skills()}
     <div class="dsc-scroll" data-scroll>
       <ul class="dsc-mlist">${MISSION_IDS.map((id) => missionRow(id, suggested)).join('')}</ul>
@@ -167,7 +167,7 @@ export function renderObject(el: HTMLElement, key: string): void {
       <p class="dsc-eyebrow">Try another object · no mission</p>
       <button class="dsc-icon-btn" type="button" data-k="close" data-close aria-label="Back to the missions" data-tip="Back to the missions">${icon('close')}</button>
     </div>
-    <h2 class="dsc-title" tabindex="-1">${esc(o.name)}</h2>
+    <h2 class="dsc-title" tabindex="-1" data-k="title">${esc(o.name)}</h2>
     <p class="dsc-obj">${esc(line)}</p>
     <p class="dsc-lead">${esc(o.look)}</p>
     ${band}

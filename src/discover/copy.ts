@@ -22,7 +22,7 @@ export interface MissionCopy {
   /** The detector it opens on, and the field size (arcminutes). */
   det: 3 | 5;
   /** Per step id: the step's sentence and its "how" line. */
-  steps: Readonly<Record<string, { say: string; how: string; done?: string }>>;
+  steps: Readonly<Record<string, { say: string; how: string; label: string; done?: string }>>;
   /** The two written hints (Hint, Another hint), then Look closer and Show me. */
   hints: readonly [string, string];
   /** Success heading. */
@@ -40,8 +40,8 @@ export const MISSION_COPY: Readonly<Record<MissionId, MissionCopy>> = {
     target: 'barnard',
     det: 3,
     steps: {
-      play: { say: 'Press Play.', how: 'These pictures were taken months apart.' },
-      tap: { say: 'One star jumps. Tap it.', how: "Stars stay put. Look for the one that doesn't." },
+      play: { say: 'Press Play.', how: 'These pictures were taken months apart.', label: 'Press Play' },
+      tap: { say: 'One star jumps. Tap it.', how: "Stars stay put. Look for the one that doesn't.", label: 'Tap the star that jumps' },
     },
     hints: ['Look near the middle.', 'Step from A to C with the arrow keys and watch closely.'],
     win: 'You caught a runaway star.',
@@ -58,12 +58,14 @@ export const MISSION_COPY: Readonly<Record<MissionId, MissionCopy>> = {
       play: {
         say: 'Press Play and look inside the circle.',
         how: 'The dashed circle is where the catalogue says it is.',
+        label: 'Press Play and look inside the circle',
         done: 'It is hard to pick out in a single picture. Adding pictures up can help.',
       },
-      stack: { say: 'Press Stack.', how: 'Stack adds all the pictures into one.' },
+      stack: { say: 'Press Stack.', how: 'Stack adds all the pictures into one.', label: 'Press Stack' },
       motion: {
         say: 'It moves. Turn and stretch the arrow until the stack beats both checks.',
         how: 'The arrow starts at no motion. Two checks sit beside the stack: not shifted, and the opposite motion.',
+        label: 'Turn and stretch the arrow',
       },
     },
     hints: [
@@ -83,19 +85,22 @@ export const MISSION_COPY: Readonly<Record<MissionId, MissionCopy>> = {
     steps: {
       check: {
         say: 'Simulated: could SPHEREx see a Neptune-sized planet 500 times farther from the Sun than Earth?',
-        how: 'Press Check on the sandbox card.',
+        how: "The sandbox card works it out from this patch's measured noise.",
+        label: 'Could SPHEREx see it at 500 AU?',
       },
       closer: {
         say: 'Bring it closer until one picture would show it.',
-        how: 'Use the distance slider on the sandbox card.',
+        how: 'Change the distance on the sandbox card.',
+        label: 'Bring it closer',
       },
       bigger: {
         say: 'Or keep it at 500 AU and make it bigger.',
-        how: 'Use the size slider on the sandbox card.',
+        how: 'Change the size on the sandbox card.',
+        label: 'Or make it bigger at 500 AU',
       },
     },
     hints: [
-      'Closer planets look brighter: move the distance slider to the left.',
+      'Closer planets look brighter: make the distance smaller.',
       'Watch the verdict on the sandbox card. "One picture" means it would show without stacking.',
     ],
     win: 'Simulated: you tested a pretend Planet X.',
