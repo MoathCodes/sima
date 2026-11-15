@@ -1475,13 +1475,13 @@ html[data-view='discover'] #top-left {
   z-index: var(--z-card);
   width: 360px; /* lane G's places/room.ts narrows it to keep clear of the frame */
 }
-#places-list {
-  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-room) - 14px);
-}
+/* At most 60% of the window's height, so the column's Raised glass keeps a short screen within
+   its blurred-area budget (GLS-5: 30% at 1366 × 768); the body scrolls inside. */
+#places-list,
 #place-card,
 #finds,
 #sandbox {
-  max-height: calc(100vh - 112px - var(--bar-bottom) - var(--bar-room) - 14px);
+  max-height: min(60vh, calc(100vh - 112px - var(--bar-bottom) - var(--bar-room) - 14px));
 }
 #places-menu {
   top: calc(var(--top) + var(--h-top) + 6px);

@@ -7,7 +7,7 @@
  * link keeping the view (VIEW-4). Owner: lane F.
  */
 import type { CDPSession, Page } from 'playwright-core';
-import { guide, openPage, press, settle, type Flow, type Size, type Step } from '../smoke.ts';
+import { guide, openPage, press, settle, type Flow, type Step } from '../smoke.ts';
 
 function expect(ok: boolean, what: string): void {
   if (!ok) throw new Error(`expected ${what}`);
@@ -141,21 +141,27 @@ const wellStep: Step = {
   },
 };
 
-/** The text colours each surface carries (token names), and the fill under them. */
-// Thin carries only short labels on the sky (chips, sky labels): bare text, and the pressed chip.
-const THIN_SWATCHES = new Set([0, 4]);
-const SWATCHES: { fill: string; texts: string[] }[] = [
-  { fill: 'transparent', texts: ['--ink', '--ink-2', '--ink-3'] },
-  { fill: 'var(--card-2)', texts: ['--ink', '--ink-2', '--ink-3'] }, // quiet buttons, troughs, fields
-  { fill: 'var(--card-3)', texts: ['--ink', '--ink-2'] }, // hover, filled rows
-  { fill: 'var(--card-4)', texts: ['--ink'] }, // the chosen segment
-  { fill: 'var(--action-soft)', texts: ['--on-action-soft'] }, // on or open
-  { fill: 'var(--good-soft)', texts: ['--good'] },
-  { fill: 'var(--warn-soft)', texts: ['--warn'] },
-  { fill: 'var(--bad-soft)', texts: ['--bad'] },
-  { fill: 'rgb(255 255 255 / 0.14)', texts: ['--skill'] }, // the skill pill
+/**
+ * The text colours each surface carries (token names) on each fill, as the design uses them
+ * (docs/lanes.md "Night Glass materials"): Thin carries only short labels (bare, or a pressed
+ * chip); on Regular a fill takes only --ink (and --ink-2 on --card-2); status and skill pills sit
+ * on Raised, Slate or Solid.
+ */
+type Mat = 'glass-thin' | 'glass' | 'glass-raised' | 'slate' | 'solid';
+const ALL: Mat[] = ['glass-thin', 'glass', 'glass-raised', 'slate', 'solid'];
+const OPENED: Mat[] = ['glass-raised', 'slate', 'solid'];
+const SWATCHES: { fill: string; texts: string[]; on: Mat[]; regular?: string[] }[] = [
+  { fill: 'transparent', texts: ['--ink', '--ink-2', '--ink-3'], on: ALL },
+  { fill: 'var(--card-2)', texts: ['--ink', '--ink-2', '--ink-3'], regular: ['--ink', '--ink-2'], on: ALL.slice(1) },
+  { fill: 'var(--card-3)', texts: ['--ink', '--ink-2'], regular: ['--ink'], on: ALL.slice(1) },
+  { fill: 'var(--card-4)', texts: ['--ink'], on: ALL.slice(1) },
+  { fill: 'var(--action-soft)', texts: ['--on-action-soft'], on: ALL },
+  { fill: 'var(--good-soft)', texts: ['--good'], on: OPENED },
+  { fill: 'var(--warn-soft)', texts: ['--warn'], on: OPENED },
+  { fill: 'var(--bad-soft)', texts: ['--bad'], on: OPENED },
+  { fill: 'rgb(255 255 255 / 0.14)', texts: ['--skill'], on: OPENED },
 ];
-const MATERIALS = ['glass-thin', 'glass', 'glass-raised', 'slate', 'solid'] as const;
+const MATERIALS = ALL;
 const BACKDROPS = {
   white: 'background:#fff',
   sky: 'background:#05070d',
@@ -263,7 +269,9 @@ const contrastStep: Step = {
         { b64: png.toString('base64'), swatches: SWATCHES, names: Object.keys(BACKDROPS) },
       );
       for (const r of res) {
-        if (mat === 'glass-thin' && !THIN_SWATCHES.has(r.sw)) continue;
+        const sw = SWATCHES[r.sw]!;
+        if (!sw.on.includes(mat)) continue;
+        if (mat === 'glass' && sw.regular && !sw.regular.includes(r.text)) continue;
         worst = Math.min(worst, r.ratio);
         if (r.ratio < 4.5) fails.push(`${mat} ${SWATCHES[r.sw]!.fill} ${r.text} over ${r.bk}: ${r.ratio.toFixed(2)}`);
       }
@@ -345,21 +353,22 @@ const solidSteps: Step[] = [
   },
   {
     name: 'Phones start Solid with nothing blurred (GLS-5, GLS-7)',
-    async run(page, size: Size) {
-      const cdp = await page.context().newCDPSession(page);
-      await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
-      await page.setViewportSize({ width: 390, height: 844 });
-      await panels(page, null);
-      const coarse = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
-      const solid = (await glassAttr(page)) === 'solid';
-      const share = await blurredShare(page);
-      await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
-      await cdp.detach();
-      await page.setViewportSize(size);
-      await openPage(page);
-      expect(coarse, 'the emulated phone to have a coarse pointer');
-      expect(solid, 'Solid on a phone');
-      expect(share === 0, `0% blurred on a phone by default, got ${(share * 100).toFixed(1)}%`);
+    async run(page) {
+      // A phone of its own (touch, 390 × 844), so the flow's page keeps its size.
+      const browser = page.context().browser()!;
+      const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+      try {
+        await phone.addInitScript(() => localStorage.setItem('sima-intro', '1'));
+        const p = await phone.newPage();
+        await openPage(p, page.url().replace(/[?#].*$/, ''));
+        const coarse = await p.evaluate(() => matchMedia('(pointer: coarse)').matches);
+        expect(coarse, 'the emulated phone to have a coarse pointer');
+        expect((await glassAttr(p)) === 'solid', 'Solid on a phone');
+        const share = await blurredShare(p);
+        expect(share === 0, `0% blurred on a phone by default, got ${(share * 100).toFixed(1)}%`);
+      } finally {
+        await phone.close();
+      }
     },
   },
 ];
