@@ -230,9 +230,7 @@
 .dsc-btn.primary {
   background: var(--v2-action);
   color: var(--v2-on-action);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.22),
-    0 6px 18px -6px rgb(63 92 245 / 0.7);
+  box-shadow: var(--shadow-primary);
 }
 .dsc-btn.primary:hover {
   background: var(--v2-action-hi);
@@ -658,7 +656,7 @@
 }
 .dsc-step.done .dsc-n {
   background: rgb(255 255 255 / 0.9);
-  color: #0b0e1c;
+  color: var(--v2-on-action);
   box-shadow: none;
 }
 .dsc-step.done .dsc-n .icon {
@@ -683,7 +681,7 @@
 }
 .dsc-step.now .dsc-n {
   background: var(--v2-on-glass);
-  color: #0b0e1c;
+  color: var(--v2-on-action);
   box-shadow: none;
 }
 .dsc-step.now .dsc-st {

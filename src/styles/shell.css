@@ -345,6 +345,9 @@
   color: var(--ink-2);
   font: var(--text-control);
   white-space: nowrap;
+  transition:
+    color var(--dur-2) var(--ease-out),
+    background-color var(--dur-1) var(--ease-out);
 }
 .vs-seg:hover {
   background: var(--card-2);
