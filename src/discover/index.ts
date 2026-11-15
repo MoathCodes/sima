@@ -117,6 +117,10 @@ export function startDiscover(link: Link): void {
   closable(missionMount, 30, () => (screen === 'mission' ? askLeave() : go('home', true)));
   closable(successMount, 30, () => go('home', true));
   closable(welcome, 30, lookAround);
+  // On phones the screens sit in the sheet (their mounts are hidden): Escape reaches them there.
+  closable(missionBody(), 30, () => (screen === 'mission' ? askLeave() : go('home', true)));
+  closable(successBody(), 30, () => go('home', true));
+  closable(objectCard, 30);
 
   for (const el of [welcome, listMount, missionMount, successMount, list, successBody(), objectCard])
     el.addEventListener('click', onClick);
@@ -245,7 +249,8 @@ function sync(): void {
     // In the sheet, the sheet is the card (its content scrolls inside it).
     if (phone()) delete welcome.dataset.card;
     else welcome.dataset.card = 'dsc-welcome';
-    if (phone()) present(stub, welcome, { height: 'half', label: 'Welcome' });
+    // Short phones: the welcome peeks (heading and Start), so the globe stays large.
+    if (phone()) present(stub, welcome, { height: innerHeight < 720 ? 'peek' : 'half', label: 'Welcome' });
     else {
       dismiss(stub, welcome);
       if (welcome.parentElement !== document.body) (listMount.parentElement ?? document.body).insertBefore(welcome, listMount);
