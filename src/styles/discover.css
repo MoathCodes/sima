@@ -410,6 +410,11 @@
 .dsc-list-hd .dsc-faint {
   margin-inline-start: auto;
 }
+/* Room for the rows' highlight, which reaches 8 px past their content (the scroll clips). */
+.dsc-list > .dsc-scroll {
+  margin-inline: -8px;
+  padding-inline: 8px;
+}
 .dsc-mlist {
   position: relative;
   display: grid;
@@ -425,12 +430,15 @@
 }
 .dsc-m,
 .dsc-o {
-  width: 100%;
+  /* The highlight reaches 8 px past the icon and the button on each side; the content stays
+     on the card's edge. */
+  width: calc(100% + 16px);
+  margin-inline: -8px;
   display: grid;
   grid-template-columns: 44px 1fr auto;
   gap: 12px;
   align-items: center;
-  padding: 8px 8px 8px 0;
+  padding: 8px;
   border: 0;
   border-radius: 14px;
   background: transparent;
