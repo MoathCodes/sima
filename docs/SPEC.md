@@ -475,7 +475,7 @@ that last setting the encoder's loop filter draws visible lines along tile borde
 `scripts/live.py`, defined in `docs/live-service.md`.
 
 ```
-GET /api/patch?ra=<deg>&dec=<deg>&fov=<3|6|12>
+GET /api/patch?ra=<deg>&dec=<deg>&fov=<3|6|12|24|48>
   200 { id, state: queued|searching|first|rest|done|failed, found, ready, total, … }
 GET /api/patch/<id>/<first|full>/frames.json
 GET /api/patch/<id>/<first|full>/frames.bin.gz
