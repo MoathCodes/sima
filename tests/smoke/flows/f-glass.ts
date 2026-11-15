@@ -142,6 +142,8 @@ const wellStep: Step = {
 };
 
 /** The text colours each surface carries (token names), and the fill under them. */
+// Thin carries only short labels on the sky (chips, sky labels): bare text, and the pressed chip.
+const THIN_SWATCHES = new Set([0, 4]);
 const SWATCHES: { fill: string; texts: string[] }[] = [
   { fill: 'transparent', texts: ['--ink', '--ink-2', '--ink-3'] },
   { fill: 'var(--card-2)', texts: ['--ink', '--ink-2', '--ink-3'] }, // quiet buttons, troughs, fields
@@ -261,6 +263,7 @@ const contrastStep: Step = {
         { b64: png.toString('base64'), swatches: SWATCHES, names: Object.keys(BACKDROPS) },
       );
       for (const r of res) {
+        if (mat === 'glass-thin' && !THIN_SWATCHES.has(r.sw)) continue;
         worst = Math.min(worst, r.ratio);
         if (r.ratio < 4.5) fails.push(`${mat} ${SWATCHES[r.sw]!.fill} ${r.text} over ${r.bk}: ${r.ratio.toFixed(2)}`);
       }

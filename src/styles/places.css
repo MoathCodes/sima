@@ -14,11 +14,9 @@
 .btn.pl-chip:hover {
   background: var(--mat-bg); /* the Thin material, not .btn's fill */
 }
-.pl-chip:hover {
-  --mat-tint: rgb(30 36 64 / 0.92);
-}
+/* Hover darkens the tint (never lightens it), so the text keeps its contrast over bright sky. */
 html[data-glass='glass'] .pl-chip:hover {
-  --mat-tint: rgb(30 36 64 / 0.62);
+  --mat-tint: rgb(var(--v2-tint) / 0.78);
 }
 .pl-chip:is([aria-pressed='true'], [aria-expanded='true']) {
   --mat-tint: var(--v2-action-soft);

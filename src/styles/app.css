@@ -375,8 +375,9 @@
    3.5% grain; a 1px specular rim (bright at the top edge); a two-part shadow.
    ------------------------------------------------------------------------------------------ */
 :root {
-  /* Grain: white fractal noise baked at a low alpha, one 160px tile (4.2 step 3). */
-  --v2-grain-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* Grain: white fractal noise baked at a low alpha (3% at most), one 160px tile (4.2 step 3).
+     Kept this low so it never lifts the brightest pixels behind text below 4.5:1 (GLS-2). */
+  --v2-grain-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .03 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   /* The specular rim as inset lines: 30% white on the top edge, 5% round the sides, 9% at the
      bottom. Drawn with box-shadow, so no lane loses its ::before or ::after. */
   --v2-rim-shadow:
@@ -407,6 +408,12 @@
   --mat-filter: var(--v2-regular-filter);
   --mat-tint: var(--v2-regular-tint);
   --mat-lift: var(--v2-lift-1);
+}
+/* The sky's loading card is Solid: it shows while the sky behind it is still empty, so glass
+   there would cost blurred area (GLS-5) and show nothing. */
+:where(#sky-loading) {
+  --mat-filter: none;
+  --mat-tint: var(--v2-solid-tint);
 }
 /* Raised: what opens. Popovers, menus, tooltips, toasts and the cards that open on the sky. */
 :where(
