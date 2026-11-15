@@ -336,17 +336,22 @@ html[data-layout^='phone'] #sky-note {
   bottom: auto;
   left: calc(env(safe-area-inset-left, 0px) + var(--v2-gutter-phone, 12px));
   max-width: none;
-  padding: 4px 10px;
+  padding: 2px 8px;
   border-radius: var(--v2-r-control);
-  background: rgb(var(--v2-tint) / 0.82);
-  color: var(--v2-on-glass);
-  line-height: 16px;
+  /* Quiet: small text straight on the sky, no chip (lane M, redesign). */
+  background: none;
+  box-shadow: none;
+  color: var(--v2-on-glass-3);
+  font-size: 11px;
+  line-height: 15px;
   text-align: center;
+  text-shadow: 0 1px 3px var(--v2-st-bg);
   white-space: normal;
   text-wrap: balance;
 }
-html[data-layout^='phone'][data-glass='solid'] #sky-note {
-  background: var(--v2-solid-tint);
+html[data-layout^='phone'] #sky-note b {
+  color: var(--v2-on-glass-2);
+  font-weight: 600;
 }
 /* On a phone the open frame sits right under the top row and carries its own data line: the sky
    note would show through its header, so it waits until the frame is closed. */

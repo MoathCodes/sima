@@ -231,3 +231,39 @@ test('toggle switches peek and half', () => {
     ['home'],
   );
 });
+
+// ----- Globe first (redesign): the frame closed, the sheet over the globe ------------------------
+
+test('with the frame closed the sheet is its peek, half or full height over the globe', () => {
+  const at = (height: 'peek' | 'half' | 'full', content = 900) =>
+    decide({ w: 390, h: 844, frame: false, peek: 150, height, content });
+  assert.equal(at('peek').kind, 'phone-fit');
+  assert.equal(at('peek').sheetH, 150);
+  assert.equal(at('half').sheetH, 422);
+  assert.equal(at('half', 300).sheetH, 300);
+  assert.equal(at('full').sheetH, 844 - PHONE.topRow - PHONE.gap);
+  // A short phone on its side still shows the globe (no scroll layout without a frame).
+  assert.equal(decide({ w: 844, h: 390, frame: false, height: 'peek' }).kind, 'phone-fit');
+});
+
+test('a tall measured peek holds the picture at 240 instead of scrolling the page', () => {
+  const l = decide({ w: 360, h: 640, peek: 200, fixed: 250 });
+  assert.equal(l.kind, 'phone-fit');
+  assert.equal(l.pic, 240);
+  // Too short even for the spec's 120 px peek: the scroll layout.
+  assert.equal(decide({ w: 360, h: 560, peek: 200, fixed: 250 }).kind, 'phone-scroll');
+});
+
+test('the grabber steps up and wraps; a drag stays at the top', () => {
+  const s = new SheetStack<string>();
+  s.open({ content: 'a', height: 'peek', label: 'A', opener: null }, false);
+  const levels = ['peek', 'half', 'full'] as const;
+  assert.equal(s.step(1, levels), 'half');
+  assert.equal(s.step(1, levels), 'full');
+  assert.equal(s.step(1, levels, false), 'full');
+  assert.equal(s.step(1, levels), 'peek');
+  assert.equal(s.step(-1, levels), 'peek');
+  // Full while the frame is open counts as the highest of peek and half.
+  s.open({ content: 'b', height: 'full', label: 'B', opener: null }, false);
+  assert.equal(s.step(-1, ['peek', 'half']), 'peek');
+});
