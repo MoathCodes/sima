@@ -353,7 +353,7 @@ export function searchNote(status: LiveStatus): string {
   const n = status.searchTry ?? 0;
   if (status.state !== 'searching' || (t < 20 && n < 2)) return '';
   const m = Math.floor(t / 60);
-  const s = Math.round(t % 60);
+  const s = Math.floor(t % 60);
   const time = m ? `${m} min ${s} s` : `${s} s`;
   const of = n && status.searchTries ? ` (try ${n} of ${status.searchTries})` : '';
   return ` NASA’s search has not answered for ${time}${of}.`;
