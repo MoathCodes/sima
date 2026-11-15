@@ -33,7 +33,8 @@ export type Level = 'explore' | 'measure';
 
 /** The views each level offers, in the order they are shown. The link's `view=` uses these names. */
 export const VIEWS: { readonly [L in Level]: readonly Mode[] } = {
-  explore: ['flip', 'two', 'diff'],
+  // Stack is in Explore for Discover's ghost mission (v2.0 contract 4).
+  explore: ['flip', 'two', 'diff', 'stack'],
   measure: ['flip', 'swipe', 'two', 'diff', 'stack', 'trail'],
 };
 
@@ -153,6 +154,12 @@ export interface State {
   measureTab: MeasureTab | null;
   /** "Show all the numbers" is on. Lane H keeps it in `sima-guide` and restores it at start. */
   allNumbers: boolean;
+  /**
+   * v2.0 (contract 2): the Measure panel is open, so in Expert the Measure button can open and
+   * close it without leaving the Measure level. Written by lane E. Undefined until lane E uses
+   * it: then the panel follows `level` as before.
+   */
+  measureOpen?: boolean;
 
   // ----- The page. Written by lane F's url.ts at start.
 
@@ -195,6 +202,8 @@ function initialState(): State {
     toolsTab: 'picture',
     measureTab: null,
     allNumbers: false,
+    // Present (as undefined) so that S accepts writes to it.
+    measureOpen: undefined,
     embed: false,
   };
 }

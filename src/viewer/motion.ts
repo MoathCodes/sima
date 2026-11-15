@@ -18,7 +18,7 @@
  */
 import { S, pic, watch } from './state.ts';
 import { currentView, draw, drawHooks, stackShown, type PictureView } from './render.ts';
-import { lookFor, type StackView } from './paint.ts';
+import { lookFor, stackPicture, type StackView } from './paint.ts';
 import { stack } from '../core/work.ts';
 import { toRgba } from '../core/display.ts';
 import {
@@ -75,9 +75,12 @@ function reset(): void {
   shownField = S.field;
 }
 
-/** True when the handle shows: Measure's Stack view on a patch with pictures. */
+/**
+ * True when the handle shows: the Stack view on a patch with pictures, at either level (v2.0
+ * contract 4: Discover's ghost mission uses it in Explore).
+ */
 function active(): boolean {
-  return !!S.field && S.level === 'measure' && S.mode === 'stack' && !S.color && S.groups.length > 0;
+  return !!S.field && S.mode === 'stack' && !S.color && S.groups.length > 0;
 }
 
 function catalogue(): CatalogueTrack | null {
@@ -126,6 +129,70 @@ export function trialView(): StackView | null {
 /** The trial motion on screen, for tests and the guide; null at the catalogue motion. */
 export function trialMotion(): Motion | null {
   return trial ? { ...trial } : null;
+}
+
+/** The stack on screen along a motion, for a mission's check (v2.0 contract 4). */
+export interface TrialResult {
+  /** What it was made for: patch, detector and how frames are combined (`keyNow()`). */
+  key: string;
+  /** The motion it was stacked along, ″/yr. */
+  motion: Motion;
+  /** True when this is the ordinary stack along the catalogue motion. */
+  atCatalogue: boolean;
+  /** The stack and its two controls; read `along.snr` and `controls[i].snr`. */
+  result: StackResult;
+}
+
+/**
+ * The stack result for the arrow's motion right now, for Discover's ghost mission (v2.0
+ * contract 4). Null when the Stack view is not on, while the newest stack is still being made, or
+ * when the one on hand was made for an older key (another patch, detector or way of combining).
+ * At the catalogue motion it is the ordinary stack's result (render.ts `stackShown()`).
+ */
+export function trialResult(): TrialResult | null {
+  if (!active()) return null;
+  const key = keyNow();
+  const c = catalogue();
+  let ordinary: { key: string; result: StackResult | null } | null = null;
+  if (!trial && c && S.field) {
+    const onScreen = stackShown();
+    // The one on screen counts only if it is the stack for the patch and settings now.
+    const now = stackPicture(S.field, S.groups, S.det, c, pic(), draw);
+    if (onScreen && onScreen === now) ordinary = { key, result: onScreen.result };
+  }
+  return pickTrialResult(
+    key,
+    trial,
+    shown ? { key: shown.key, motion: shown.motion, result: shown.view.result } : null,
+    c ? { pmra: c.pmra, pmdec: c.pmdec } : null,
+    ordinary,
+  );
+}
+
+/**
+ * The decision behind `trialResult()`, pure so it can be tested in Node.
+ *
+ * @param key What the stack must be for now (`keyNow()`).
+ * @param trial The arrow's trial motion; null at the catalogue motion.
+ * @param made The newest trial stack made, with the key and motion it was made for.
+ * @param cat The catalogue motion, ″/yr; null when the target has none.
+ * @param ordinary The ordinary stack on screen and the key it is for; null when not ready.
+ * @returns The result, or null when the one on hand is not for `key` and `trial` (old or pending).
+ */
+export function pickTrialResult(
+  key: string,
+  trial: Motion | null,
+  made: { key: string; motion: Motion; result: StackResult | null } | null,
+  cat: Motion | null,
+  ordinary: { key: string; result: StackResult | null } | null,
+): TrialResult | null {
+  if (trial) {
+    if (!made || made.key !== key || !made.result) return null;
+    if (made.motion.pmra !== trial.pmra || made.motion.pmdec !== trial.pmdec) return null;
+    return { key, motion: { ...made.motion }, atCatalogue: false, result: made.result };
+  }
+  if (!cat || !ordinary || ordinary.key !== key || !ordinary.result) return null;
+  return { key, motion: { ...cat }, atCatalogue: true, result: ordinary.result };
 }
 
 /** How fast the stack follows the handle: updates in the last 2 s, per second, and the last one's time. */
