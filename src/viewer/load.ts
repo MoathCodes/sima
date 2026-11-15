@@ -994,6 +994,8 @@ function wait(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 function errText(err: unknown): string {
+  // An empty or broken reply is a JSON parse error: say what happened, not the parser's words.
+  if (err instanceof SyntaxError) return 'it sent an empty or broken answer';
   return err instanceof Error ? err.message : String(err);
 }
 

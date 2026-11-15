@@ -25,6 +25,7 @@ import {
   announce,
 } from './load.ts';
 import { on } from '../shell/bus.ts';
+import { reducedMotion } from './playback.ts';
 import { formatCoords } from '../core/astro.ts';
 import { icon, type IconName } from '../shell/icons.ts';
 import { hideFrame } from '../shell/shell.ts';
@@ -256,8 +257,12 @@ function lines(): void {
   const explain = document.getElementById('frame-explain');
   if (explain) {
     explain.className = 'frame-explain';
-    explain.hidden = S.level !== 'measure' || !S.field;
-    explain.textContent = EXPLAIN[S.mode];
+    // Less motion asked for: the frame opens on a still Two dates; say why (UX audit #10).
+    const still = reducedMotion() && S.mode === 'two' && !!S.field;
+    explain.hidden = !still && (S.level !== 'measure' || !S.field);
+    explain.textContent = still
+      ? 'Your device asks for less motion, so this is a still picture of two dates. Press Flip to play them.'
+      : EXPLAIN[S.mode];
   }
   const load = document.getElementById('frame-load');
   if (load) {

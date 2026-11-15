@@ -560,7 +560,7 @@ function selKind(sel: Selection): string {
   const cat = catalogue();
   const partial = cat.gaia.partial || cat.catwise.partial;
   const known = partial
-    ? 'frames.json lists catalogue sources only near the target’s path; look up the whole field in Layers'
+    ? 'The shipped pictures list catalogue sources only near the target’s path; look up the whole field in Layers'
     : cat.gaia.state === 'ready' || cat.catwise.state === 'ready'
       ? 'No Gaia DR3 or CatWISE2020 source here'
       : 'The catalogues are not available here, so it is not known whether a source is here';

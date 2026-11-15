@@ -27,7 +27,7 @@ export function buildLayers(root: HTMLElement): void {
         <button type="button" class="switch" role="switch" aria-checked="false" data-switch="${key}" aria-label="${esc(title)}"></button>
       </div>`,
     ).join('')}
-    <p class="tl-line" data-vizier-row hidden>frames.json lists only the sources near the target’s path.
+    <p class="tl-line" data-vizier-row hidden>The shipped pictures list only the sources near the target’s path.
       <button type="button" class="link" data-vizier>Look up the whole field (VizieR)</button></p>`;
   for (const [key] of ROWS) {
     root
