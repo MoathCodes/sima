@@ -14,12 +14,17 @@ export const RING_CHANNELS = [8, 25, 42, 59, 76, 93];
 /** Timing, seconds. */
 export const T = {
   ringIn: [0.25, 1.5], // the ring comes up
-  sweep: [0.35, 2.9], // the ring's light goes through the six detectors
-  ar: [0.5, 1.1], // سيما
-  la: [0.8, 1.4], // Sima
-  line: [1.1, 1.7], // the line
+  sweep: [0.35, 4.1], // the ring's light goes through the six detectors
+  // سيما as a constellation (mark.ts): the pen draws the figure, the dots of ي light, the
+  // letters condense out of it, and a glint crosses them.
+  pen: [0.4, 1.7],
+  sign: 1.85,
+  ink: [2.1, 3.1],
+  glint: [3.1, 3.9],
+  la: [2.2, 2.8], // Sima
+  line: [2.4, 3.0], // the line
   /** The reveal starts here when the sky map is in; else up to `hold` later. */
-  reveal: 2.9,
+  reveal: 4.1,
   hold: 2.0,
   // Seconds from the reveal:
   flareLead: 0.55, // the flare swells this long before the reveal
@@ -141,6 +146,8 @@ export interface Scene {
 /**
  * The intro at `t` seconds from its start.
  * @param has Whether a channel's shipped picture is ready to draw.
+ * @param ringFrom When the ring's first picture was ready (seconds): the ring fades in from then,
+ *   so a picture that comes late does not pop in half bright.
  */
 export function sceneAt(
   plan: Plan,
@@ -148,6 +155,7 @@ export function sceneAt(
   w: number,
   h: number,
   has: (ch: number) => boolean,
+  ringFrom = 0,
 ): Scene {
   const { land, reduced } = plan;
   const R = plan.revealAt;
@@ -193,7 +201,10 @@ export function sceneAt(
 
   // The ring: comes up, sweeps through the detectors, breathes while it waits, then fades.
   const decideAt = T.reveal - T.flareLead;
-  let ring = reduced ? smooth(0, 0.4, t) : smooth(T.ringIn[0], T.ringIn[1], t);
+  const r0In = Math.max(T.ringIn[0], ringFrom);
+  let ring = reduced
+    ? smooth(ringFrom, ringFrom + 0.4, t)
+    : smooth(r0In, r0In + T.ringIn[1] - T.ringIn[0], t);
   if (R === null && !reduced && t > decideAt) {
     ring *= 0.88 + 0.12 * Math.cos(((t - decideAt) / 2.4) * 2 * Math.PI);
   }
