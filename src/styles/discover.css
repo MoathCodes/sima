@@ -55,6 +55,11 @@
   /* Never over the sky note (H1): it sits in the bottom 56 px. */
   max-height: calc(100vh - 76px - 60px);
   display: flex;
+  /* Only a mount: the rounded card inside is the glass. app.css lists this id as Regular glass,
+     which drew a square rim and blur around the card. */
+  --mat-filter: none;
+  background: none;
+  box-shadow: none;
 }
 #discover-list > .dsc-card {
   flex: 1;
