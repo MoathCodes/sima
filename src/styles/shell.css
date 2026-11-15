@@ -14,6 +14,7 @@
 }
 .wordmark-latin {
   font: var(--text-wordmark-latin);
+  letter-spacing: var(--tracking-wordmark);
 }
 
 /* ----- Search ------------------------------------------------------------------------------- */
@@ -122,8 +123,8 @@
   border-radius: 50%;
 }
 .layer-item[aria-checked='true'] .layer-ring {
-  border-color: var(--action);
-  background: radial-gradient(circle, var(--action) 0 4px, transparent 4.5px);
+  border-color: var(--ink);
+  background: radial-gradient(circle, var(--ink) 0 4px, transparent 4.5px);
 }
 
 /* ----- The sky's loading card, top centre (GEN-4) ------------------------------------------- */
@@ -181,16 +182,8 @@
   max-width: min(640px, calc(100vw - 2 * var(--gutter)));
   padding: 8px 12px;
   border-radius: var(--r-panel);
-  background: var(--ink);
-  color: var(--card);
+  color: var(--ink);
   font: var(--text-label);
-  box-shadow: var(--lift);
-}
-.toast .icon-btn {
-  color: var(--card);
-}
-.toast .icon-btn:hover {
-  background: var(--ink-2);
 }
 
 /* ----- Dialogs: Share and About ------------------------------------------------------------- */

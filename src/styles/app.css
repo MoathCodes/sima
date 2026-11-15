@@ -78,20 +78,25 @@
    Tokens
    ------------------------------------------------------------------------------------------ */
 :root {
-  /* Colour: the chrome is two inks, card and ink (The Two Inks Rule). */
-  --action: #2740e0; /* Press Ultramarine: can be pressed; links; focus; caret; chosen tab; switch on */
-  --action-hi: #1a2fc0; /* hover fill of a primary button */
-  --action-soft: #e1e4fa; /* a control that is on or open; its text turns --action */
-  --on-action: #ffffff; /* text and icons on ultramarine */
-  --mark: #ff4a9c; /* Marker Magenta: where the user looks, on the sky and in dark windows */
-  --mark-ink: #c2135f; /* the same on the card: date playhead, current stop ring, wavelength handle */
-  --card: #f6f3ec; /* every panel */
-  --card-2: #ece7da; /* quiet fills, hover rows, segmented trough, the Share field */
-  --card-3: #dfd8c8; /* hover of a quiet fill, switch off, minor ticks, unplayed date scale */
-  --rule: #d5cebd; /* 1px lines between sections and table rows */
-  --ink: #0f1a3c; /* main text and icons; tooltip and toast fill */
-  --ink-2: #414c75; /* supporting text, unselected choices, played date scale */
-  --ink-3: #626c92; /* group labels, hints, placeholders, scale lettering, major ticks */
+  /* Colour (v2.0 Night Glass, DESIGN-v2.md section 3). The v1 names stay so every lane's
+     stylesheet turns night at once; each now points at its Night value. The chrome is glass and
+     its inks (The Two Inks Rule): a hue on glass means "press", "look here", or it is data. */
+  --action: var(--v2-action); /* Press Ultramarine: fills only (Play, the one primary button, focus ring, switch on). Never text on glass */
+  --action-hi: var(--v2-action-hi); /* hover fill of a primary button */
+  --action-soft: var(--v2-action-soft); /* a control that is on or open; its text is --on-action-soft */
+  --on-action: var(--v2-on-action); /* text and icons on ultramarine */
+  --on-action-soft: var(--v2-on-action-soft); /* text and icons on --action-soft */
+  --mark: var(--v2-mark); /* Marker Magenta: where the user looks. A mark, not text */
+  --mark-ink: var(--v2-mark); /* on Night glass the bright magenta is used everywhere */
+  --path: var(--v2-path); /* Path Amber: worked out, not observed; simulated */
+  --card: rgb(var(--v2-tint)); /* opaque Night tint: rings and fills that must hide what is under them */
+  --card-2: var(--v2-fill-1); /* quiet fills, troughs, fields (white 7%) */
+  --card-3: var(--v2-fill-2); /* hover of a quiet fill, switch off, minor ticks (white 12%) */
+  --card-4: var(--v2-fill-3); /* the chosen segment (white 18%) */
+  --rule: var(--v2-rule); /* 1px lines between sections and table rows (white 10%) */
+  --ink: var(--v2-on-glass); /* main text and icons on glass */
+  --ink-2: var(--v2-on-glass-2); /* supporting text, unselected choices */
+  --ink-3: var(--v2-on-glass-3); /* group labels, hints, placeholders, scale lettering; the faintest text there is */
 
   /* Colour: the sky and the dark data windows. */
   --sky: #05070d; /* the page behind the map */
@@ -103,7 +108,7 @@
   --st-ink-3: #7c86ab;
   --st-accent: var(--mark); /* canvas code reads magenta under this name */
   --st-accent-2: #ffb03a; /* Path Amber: worked out, not observed; simulated patch on the sky */
-  --badge-bg: rgba(9, 13, 28, 0.74); /* labels over the picture */
+  --badge-bg: var(--v2-badge-bg); /* labels over the picture (the v1 dark badge, never glass) */
   --note-bg: rgba(5, 7, 13, 0.82); /* sky notes */
 
   /* Colour: data only (The Rainbow Rule). Never chrome. */
@@ -119,12 +124,13 @@
   --p4: #8291c9;
 
   /* Colour: status labels, always with words (The Honesty Rule). */
-  --good: #12754a;
-  --good-soft: #dcefe3;
-  --warn: #8a5200;
-  --warn-soft: #f5e5c4;
-  --bad: #b3262f;
-  --bad-soft: #f7dedd;
+  --good: var(--v2-good);
+  --good-soft: var(--v2-good-soft);
+  --warn: var(--v2-warn);
+  --warn-soft: var(--v2-warn-soft);
+  --bad: var(--v2-bad);
+  --bad-soft: var(--v2-bad-soft);
+  --skill: var(--v2-skill); /* learned check marks, "Mission complete": white, never a hue (D-8) */
 
   /* Type. Five interface sizes: 11, 12, 14, 17, 25px (The Five Sizes Rule). */
   --font: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
@@ -142,17 +148,18 @@
   --text-scale: 400 11px/1 var(--font); /* scale and axis lettering only */
   --text-reading: 400 16px/1.6 var(--font); /* About's long text */
   --reading-measure: 72ch;
-  --text-wordmark: 700 24px/1 var(--font-wordmark); /* سيما */
-  --text-wordmark-latin: 700 19px/1 var(--font-wordmark); /* Sima */
+  --text-wordmark: 700 30px/1.3 var(--font-wordmark); /* سيما in the wordmark pill (DESIGN-v2 section 7) */
+  --text-wordmark-latin: 600 17px/1 var(--font); /* Sima: Archivo 600 (D-10); pair with --tracking-wordmark */
+  --tracking-wordmark: 0.02em;
 
   /* Corners: rounder as the surface gets bigger. */
-  --r-tip: 7px; /* tooltips, text buttons, the badge on the picture */
-  --r-window: 8px; /* data windows, small icon buttons, segmented choices */
-  --r-control: 9px; /* buttons, icon buttons, list rows */
-  --r-seg: 10px; /* segmented trough */
-  --r-panel: 13px; /* chrome cards on the sky: wordmark, search, actions, rail, popovers */
-  --r-frame: 14px; /* the frame and its panels: Measure, tools, overlays */
-  --r-bar: 16px; /* the bar, dialogs, the welcome card */
+  --r-tip: 8px; /* tags, tooltips, text buttons, the badge on the picture */
+  --r-window: 10px; /* wells (pictures and charts), small icon buttons, segmented choices */
+  --r-control: 12px; /* buttons, icon buttons, list rows */
+  --r-seg: 13px; /* segmented trough (a 10px choice + 3px padding: concentric) */
+  --r-panel: 18px; /* cards on the sky: wordmark, search, actions, rail, popovers, place card */
+  --r-frame: 20px; /* the frame and its panels: Measure, tools, overlays */
+  --r-bar: 24px; /* the bar, dialogs, the welcome card */
   --r-pill: 999px;
   --r-stop: 6px; /* lettered date stop */
   --r-handle: 5px; /* wavelength handle */
@@ -169,7 +176,7 @@
   --pad-dialog: 18px;
 
   /* Sizes. */
-  --h-control: 34px; /* button, small field */
+  --h-control: 36px; /* button, small field */
   --h-text-btn: 28px;
   --h-seg: 32px; /* segmented choice */
   --h-top: 46px; /* wordmark card, search field, top-right card */
@@ -210,10 +217,12 @@
   --welcome-w: 372px;
 
   /* Elevation: one level (The One Lift Rule). */
-  --lift: 0 14px 34px -14px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-chosen: 0 1px 3px rgba(15, 26, 60, 0.22); /* chosen segment */
-  --shadow-knob: 0 1px 2px rgba(15, 26, 60, 0.35); /* switch knob */
-  --shadow-handle: 0 1px 4px rgba(15, 26, 60, 0.5); /* wavelength handle */
+  --lift: var(--v2-lift-2); /* things that open (Raised, Slate) */
+  --lift-1: var(--v2-lift-1); /* things that stay (Thin, Regular) */
+  --lift-2: var(--v2-lift-2);
+  --shadow-chosen: 0 1px 3px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.12); /* chosen segment */
+  --shadow-knob: 0 1px 2px rgb(0 0 0 / 0.45); /* switch knob */
+  --shadow-handle: 0 1px 4px rgb(0 0 0 / 0.6); /* wavelength handle */
   --ring-mark: 0 0 0 2px var(--card), 0 0 0 4px var(--mark-ink); /* current date stop */
   --ring-action: 0 0 0 2px var(--card), 0 0 0 4px var(--action); /* chosen detector thumbnail */
 
@@ -251,9 +260,9 @@
 
 /* ------------------------------------------------------------------------------------------
    v2.0 Night Glass tokens (docs/design-v2/DESIGN-v2.md, front matter and sections 3 to 7).
-   Added in step 0 under their own names (--v2-*) so nothing changes yet: lane F re-skins the
-   app onto them in step 1 and then retires the v1 tokens above. No rule uses them yet.
-   Materials are given as parts; GLS-1: `backdrop-filter` is written only in this file.
+   The v1 names above now point at these, so every stylesheet is Night. New rules may use either
+   name. Materials are given as parts and put together in "Materials" below; GLS-1:
+   `backdrop-filter` is written only in this file.
    ------------------------------------------------------------------------------------------ */
 :root {
   /* Sky and data windows: never glass, never tinted (The Well Rule). */
@@ -345,6 +354,266 @@
 }
 
 /* ------------------------------------------------------------------------------------------
+   Materials (DESIGN-v2.md section 4; the lane guide is in docs/lanes.md "Night Glass materials")
+
+   Four materials, chosen by job: Thin (labels on the sky, chips), Regular (chrome that stays),
+   Raised (things that open), Slate (opaque: anything holding a picture or chart, and reading
+   panels). Each lane gives its element ONE of these classes, or asks lane F to add its mount
+   point to a list below:
+
+     .glass-thin   .glass   .glass-raised   .slate
+
+   The rules use :where(), so they weigh nothing: a lane's own `background` or `box-shadow` on
+   its element still wins (and then that element is no longer glass). Never write
+   `backdrop-filter` anywhere else (GLS-1).
+
+   html[data-glass="glass" | "solid"] is set by shell/glass.ts and decides whether the glass
+   materials blur. Solid turns every glass material into an opaque Night tint; Slate is the same
+   in both. Nothing else reads the media queries.
+
+   Each surface, from back to front (4.2): the backdrop blurred, saturated and dimmed; the tint;
+   3.5% grain; a 1px specular rim (bright at the top edge); a two-part shadow.
+   ------------------------------------------------------------------------------------------ */
+:root {
+  /* Grain: white fractal noise baked at a low alpha, one 160px tile (4.2 step 3). */
+  --v2-grain-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* The specular rim as inset lines: 30% white on the top edge, 5% round the sides, 9% at the
+     bottom. Drawn with box-shadow, so no lane loses its ::before or ::after. */
+  --v2-rim-shadow:
+    inset 0 1px 0 var(--v2-rim-top), inset 0 0 0 1px var(--v2-rim-low),
+    inset 0 -1px 0 rgb(255 255 255 / 0.09);
+}
+
+/* Thin: chips, sky labels over bright sky, small tags on the sky. */
+:where(.glass-thin, .pl-chip, #chips .pl-more) {
+  --mat-filter: var(--v2-thin-filter);
+  --mat-tint: var(--v2-thin-tint);
+  --mat-lift: var(--v2-lift-1);
+}
+/* Regular: chrome that stays. Every .card is Regular unless a later list says otherwise. */
+:where(
+    .glass,
+    .card,
+    #wordmark,
+    #search,
+    #actions,
+    #view-switch,
+    #rail,
+    #bar,
+    #discover-list,
+    #sky-loading,
+    #frame-show
+  ) {
+  --mat-filter: var(--v2-regular-filter);
+  --mat-tint: var(--v2-regular-tint);
+  --mat-lift: var(--v2-lift-1);
+}
+/* Raised: what opens. Popovers, menus, tooltips, toasts and the cards that open on the sky. */
+:where(
+    .glass-raised,
+    .popover,
+    .tooltip,
+    #toasts > *,
+    #places-list,
+    #place-card,
+    #finds,
+    #sandbox,
+    #welcome,
+    #mission,
+    #mission-success,
+    #coach,
+    #settings,
+    #sky-click,
+    #tip,
+    #places-menu,
+    #guide-menu
+  ) {
+  --mat-filter: var(--v2-raised-filter);
+  --mat-tint: var(--v2-raised-tint);
+  --mat-lift: var(--v2-lift-2);
+}
+/* Slate: opaque, no blur. The frame, Measure, the picture tools, the workspace's frames,
+   dialogs (Share, About), the phone sheet and phone pages (D-3, D-13). */
+:where(.slate, .card.panel, .dialog, #frame, #measure, #tools, #sheet, .wf) {
+  --mat-filter: none;
+  --mat-tint: var(--v2-slate-tint);
+  --mat-sheen: var(--v2-slate-sheen);
+  --mat-lift: var(--v2-lift-2);
+}
+
+/* Putting a material together. Listed again so the custom properties above (which children
+   inherit) are applied only to the material elements themselves. */
+:where(
+    .glass-thin,
+    .pl-chip,
+    #chips .pl-more,
+    .glass,
+    .card,
+    #wordmark,
+    #search,
+    #actions,
+    #view-switch,
+    #rail,
+    #bar,
+    #discover-list,
+    #sky-loading,
+    #frame-show,
+    .glass-raised,
+    .popover,
+    .tooltip,
+    #toasts > *,
+    #places-list,
+    #place-card,
+    #finds,
+    #sandbox,
+    #welcome,
+    #mission,
+    #mission-success,
+    #coach,
+    #settings,
+    #sky-click,
+    #tip,
+    #places-menu,
+    #guide-menu,
+    .slate,
+    .card.panel,
+    .dialog,
+    #frame,
+    #measure,
+    #tools,
+    #sheet,
+    .wf
+  ) {
+  background:
+    var(--v2-grain-img) 0 0 / 160px 160px repeat,
+    var(--mat-sheen, linear-gradient(transparent, transparent)),
+    linear-gradient(var(--mat-tint), var(--mat-tint));
+  -webkit-backdrop-filter: var(--mat-filter);
+  backdrop-filter: var(--mat-filter);
+  box-shadow: var(--v2-rim-shadow), var(--mat-lift);
+  color: var(--ink);
+}
+
+/* Solid: glass off (the setting, the governor, reduced transparency, phones, no support). The
+   glass materials become an opaque Night tint; Slate is unchanged. */
+:where(html[data-glass='solid'], html[data-embed]) :where(
+    .glass-thin,
+    .pl-chip,
+    #chips .pl-more,
+    .glass,
+    .card,
+    #wordmark,
+    #search,
+    #actions,
+    #view-switch,
+    #rail,
+    #bar,
+    #discover-list,
+    #sky-loading,
+    #frame-show,
+    .glass-raised,
+    .popover,
+    .tooltip,
+    #toasts > *,
+    #places-list,
+    #place-card,
+    #finds,
+    #sandbox,
+    #welcome,
+    #mission,
+    #mission-success,
+    #coach,
+    #settings,
+    #sky-click,
+    #tip,
+    #places-menu,
+    #guide-menu
+  ) {
+  --mat-filter: none;
+  --mat-tint: var(--v2-solid-tint);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --v2-thin-tint: var(--v2-solid-tint);
+    --v2-regular-tint: var(--v2-solid-tint);
+    --v2-raised-tint: var(--v2-solid-tint);
+  }
+}
+/* More contrast: Solid (glass.ts), stronger rules, one text level, a 1px border on every card. */
+@media (prefers-contrast: more) {
+  :root {
+    --ink-2: var(--v2-on-glass);
+    --ink-3: var(--v2-on-glass);
+    --v2-on-glass-2: var(--v2-on-glass);
+    --v2-on-glass-3: var(--v2-on-glass);
+    --rule: rgb(255 255 255 / 0.28);
+    --v2-rule: rgb(255 255 255 / 0.28);
+    --v2-rim-shadow: inset 0 0 0 1px var(--v2-on-glass);
+  }
+}
+/* Forced colours: no backdrop, shadow, grain or rim; every surface gets a CanvasText line. */
+@media (forced-colors: active) {
+  :where(
+      .glass-thin,
+      .pl-chip,
+      .glass,
+      .card,
+      #wordmark,
+      #search,
+      #actions,
+      #view-switch,
+      #rail,
+      #bar,
+      #discover-list,
+      .glass-raised,
+      .popover,
+      .tooltip,
+      #toasts > *,
+      #places-list,
+      #place-card,
+      #welcome,
+      #mission,
+      #mission-success,
+      #coach,
+      #settings,
+      .slate,
+      .dialog,
+      #frame,
+      #measure,
+      #tools,
+      #sheet,
+      .wf
+    ) {
+    background: Canvas;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+    border: 1px solid CanvasText;
+    color: CanvasText;
+  }
+}
+@media print {
+  :root {
+    --v2-thin-tint: var(--v2-solid-tint);
+    --v2-regular-tint: var(--v2-solid-tint);
+    --v2-raised-tint: var(--v2-solid-tint);
+    --v2-thin-filter: none;
+    --v2-regular-filter: none;
+    --v2-raised-filter: none;
+  }
+}
+
+/* The Well Rule: pictures and charts sit in opaque wells. Never blurred, tinted or under glass. */
+.well {
+  border-radius: var(--v2-r-well);
+  background: var(--v2-well);
+  box-shadow: inset 0 0 0 1px var(--v2-well-line);
+}
+.well.chart {
+  background: var(--v2-st-bg);
+}
+
+/* ------------------------------------------------------------------------------------------
    Base
    ------------------------------------------------------------------------------------------ */
 *,
@@ -369,7 +638,7 @@ body {
 
 html {
   background: var(--sky);
-  color-scheme: light;
+  color-scheme: dark; /* Night only in v2.0 (D-1): native controls and scrollbars match */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -422,16 +691,21 @@ button {
 :focus-visible {
   outline: 2px solid var(--action);
   outline-offset: 2px;
+  /* A white halo outside the ring, so it shows over dark glass (DESIGN-v2 section 9). */
+  box-shadow: 0 0 0 4px rgb(255 255 255 / 0.9);
 }
 
+/* Links are on-glass text with an underline: never ultramarine text on glass. */
 a {
-  color: var(--action);
+  color: var(--ink);
   font-weight: 500;
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-color: rgb(255 255 255 / 0.35);
+  text-underline-offset: 4px;
 }
 
 a:hover {
-  text-decoration: underline;
+  text-decoration-color: currentColor;
 }
 
 code,
@@ -498,6 +772,16 @@ samp {
 .btn.primary {
   background: var(--action);
   color: var(--on-action);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    0 6px 18px -6px rgb(63 92 245 / 0.7);
+}
+/* Large: Discover's main actions and every button on a phone (48px). */
+.btn.lg {
+  height: 48px;
+  padding: 0 20px;
+  border-radius: 14px;
+  font-size: 16px;
 }
 .btn.primary:hover {
   background: var(--action-hi);
@@ -527,7 +811,7 @@ samp {
 .icon-btn[aria-expanded='true'],
 .icon-btn.on {
   background: var(--action-soft);
-  color: var(--action);
+  color: var(--on-action-soft);
 }
 .btn:disabled,
 .icon-btn:disabled,
@@ -538,17 +822,19 @@ samp {
   scale: none;
 }
 
-/* Link: ultramarine medium text; underline on hover. Use <a> or <button class="link">. */
+/* Link: on-glass medium text, underlined at white 35%, 4px offset. Use <a> or <button class="link">. */
 .link {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--action);
+  color: var(--ink);
   font-weight: 500;
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-color: rgb(255 255 255 / 0.35);
+  text-underline-offset: 4px;
 }
 .link:hover {
-  text-decoration: underline;
+  text-decoration-color: currentColor;
 }
 
 /* Icon buttons: 36px (30px in the frame header and for close buttons), no fill. Each one has a
@@ -627,7 +913,7 @@ samp {
 }
 .seg > button[aria-pressed='true'],
 .seg > button[aria-checked='true'] {
-  background: var(--card);
+  background: var(--card-4);
   color: var(--ink);
   box-shadow: var(--shadow-chosen);
 }
@@ -636,8 +922,8 @@ samp {
   height: 16px;
 }
 
-/* Tabs: text on a 1px ruled line, 16px apart; the chosen one is ink with a 2px ultramarine
-   underline. Children have role="tab" and aria-selected. */
+/* Tabs: text on a 1px ruled line, 16px apart; the chosen one is on-glass with a 2px on-glass
+   underline (no accent text on glass). Children have role="tab" and aria-selected. */
 .tabs {
   display: flex;
   gap: 16px;
@@ -658,11 +944,11 @@ samp {
 }
 .tabs > [role='tab'][aria-selected='true'] {
   color: var(--ink);
-  border-bottom-color: var(--action);
+  border-bottom-color: var(--ink);
 }
 
-/* Switch: <button class="switch" role="switch" aria-checked="false">. 34 by 20px, Card Deep off,
-   ultramarine on, white knob. .sm is the bar's 24 by 14px one. */
+/* Switch: <button class="switch" role="switch" aria-checked="false">. 34 by 20px, white 12% off
+   with a ring so its edge passes 3:1, ultramarine on, white knob. .sm is the bar's 24 by 14px one. */
 .switch {
   position: relative;
   flex: none;
@@ -672,6 +958,7 @@ samp {
   border: 0;
   border-radius: var(--r-pill);
   background: var(--card-3);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.4);
   transition: background-color var(--t-knob);
 }
 .switch::after {
@@ -697,12 +984,11 @@ samp {
   --switch-h: var(--switch-sm-h);
 }
 
-/* Card: anything that floats over the sky. Solid, never tinted or see-through; one shadow. */
+/* Card: anything that floats over the sky. Regular glass by default; its material (and its
+   background and shadow) come from "Materials" above. */
 .card {
   border-radius: var(--r-panel);
-  background: var(--card);
   color: var(--ink);
-  box-shadow: var(--lift);
 }
 .card.panel {
   border-radius: var(--r-frame); /* the frame and its panels: Measure, tools, overlays */
@@ -718,9 +1004,7 @@ samp {
   padding: var(--pad-group);
   border: 0;
   border-radius: var(--r-panel);
-  background: var(--card);
   color: var(--ink);
-  box-shadow: var(--lift);
 }
 .popover[popover] {
   position: fixed;
@@ -748,7 +1032,7 @@ samp {
 .menu-item[aria-checked='true'],
 .menu-item[aria-selected='true'] {
   background: var(--action-soft);
-  color: var(--action);
+  color: var(--on-action-soft);
 }
 .menu-item .line {
   display: block;
@@ -763,15 +1047,13 @@ samp {
   padding: var(--pad-dialog);
   border: 0;
   border-radius: var(--r-bar);
-  background: var(--card);
   color: var(--ink);
-  box-shadow: var(--lift);
 }
 .dialog::backdrop {
-  background: rgba(5, 7, 13, 0.45);
+  background: rgb(5 7 13 / 0.55);
 }
 
-/* Tooltip: ink fill, card text, 12px. Shown after 0.35s on hover or keyboard focus; below by
+/* Tooltip: Raised glass, on-glass text, 12px. Shown after 0.35s on hover or keyboard focus; below by
    default, to the right on the rail, above on the bar. */
 .tooltip[popover] {
   position: fixed;
@@ -784,8 +1066,7 @@ samp {
   padding: 5px 9px;
   border: 0;
   border-radius: var(--r-tip);
-  background: var(--ink);
-  color: var(--card);
+  color: var(--ink);
   font: var(--text-label);
   pointer-events: none;
 }
@@ -814,6 +1095,19 @@ samp {
   background: var(--bad-soft);
   color: var(--bad);
 }
+/* A learned skill, "Mission complete": white light, never a hue (D-8). */
+.pill.skill {
+  background: rgb(255 255 255 / 0.14);
+  color: var(--skill);
+}
+/* Simulated: the word first, Path Amber, dashed (H3). */
+.pill.sim {
+  background: transparent;
+  color: var(--path);
+  box-shadow: inset 0 0 0 1px transparent;
+  outline: 1px dashed var(--path);
+  outline-offset: -1px;
+}
 
 /* Data window: a dark rectangle cut into a card (picture, charts, thumbnails). No shadow, no
    border. Labels over a picture sit on .window-badge. */
@@ -821,6 +1115,7 @@ samp {
   border-radius: var(--r-window);
   background: var(--st-bg);
   color: var(--st-ink);
+  box-shadow: inset 0 0 0 1px var(--v2-well-line);
 }
 .window-badge {
   padding: 4px 8px;
