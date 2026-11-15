@@ -115,22 +115,28 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
 }
 /* The task's help line keeps two lines' height while the task is open, so a miss note
    ("Not that one…") appears without moving the picture (UX audit #1; as O-I5 for the loading
-   line). */
-#frame-task .task:not(.done) .task-help {
-  display: block;
-  min-height: 2lh;
-}
-#frame-task .task:not(.done) .task-help[hidden] {
-  visibility: hidden;
+   line). Only where the window is tall enough: at 768 px those two lines would push the frame
+   under the bar. */
+@media (min-height: 900px) {
+  #frame-task .task:not(.done) .task-help {
+    display: block;
+    min-height: 2lh;
+  }
+  #frame-task .task:not(.done) .task-help[hidden] {
+    visibility: hidden;
+  }
 }
 
 /* The title takes its own row when the frame is narrow (UX audit #9): the buttons wrap under it
-   instead of cutting the name to "Bar…". */
-#frame-head.frame-head {
-  flex-wrap: wrap;
-}
-#frame-head .frame-name {
-  flex: 1 1 180px;
+   instead of cutting the name to "Bar…". At 1366 the header stays one row, as in v1
+   (spec-img/19): that row's height goes to the picture. */
+@media (min-width: 1421px) {
+  #frame-head.frame-head {
+    flex-wrap: wrap;
+  }
+  #frame-head .frame-name {
+    flex: 1 1 180px;
+  }
 }
 .frame-coords {
   min-width: 0;
