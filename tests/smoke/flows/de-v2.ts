@@ -74,12 +74,15 @@ export const flows: Flow[] = [
         })()`,
       ),
       expectStep(
-        'One date chip per date, each 48 px tall, the current one pressed',
+        'The date strip: one dot per date, 48 px tall to touch, the date on screen written out',
         `(() => {
-          const chips = [...document.querySelectorAll('.fp-chip')];
-          return chips.length === ${S('groups')}.length && chips.length > 1 &&
-            chips.every((c) => c.getBoundingClientRect().height >= 48) &&
-            chips[${S('epoch')}].getAttribute('aria-pressed') === 'true';
+          const strip = document.querySelector('${guide('date-strip')}');
+          const dots = [...document.querySelectorAll('.fp-dot')];
+          return dots.length === ${S('groups')}.length && dots.length > 1 &&
+            strip.getBoundingClientRect().height >= 48 &&
+            dots[${S('epoch')}].classList.contains('on') &&
+            strip.getAttribute('aria-valuenow') === String(${S('epoch')} + 1) &&
+            /\\d{4}/.test(strip.querySelector('.fp-now')?.textContent ?? '');
         })()`,
       ),
       expectStep(
@@ -95,10 +98,13 @@ export const flows: Flow[] = [
         `[...document.querySelectorAll('#frame-views [data-mode]')].map((b) => b.dataset.mode).join() === 'flip,two,diff,stack'`,
       ),
       {
-        name: 'A date chip shows its date',
+        name: 'A tap at the start of the date strip shows the first date; the arrow key steps',
         async run(page) {
-          await page.locator('.fp-chip').nth(1).click();
-          await page.waitForFunction(`${S('epoch')} === 1 && !${S('playing')}`);
+          const r = (await page.locator(guide('date-strip')).boundingBox())!;
+          await page.mouse.click(r.x + 12, r.y + r.height / 2);
+          await page.waitForFunction(`${S('epoch')} === 0 && !${S('playing')}`);
+          await page.keyboard.press('ArrowRight');
+          await page.waitForFunction(`${S('epoch')} === 1`);
         },
       },
       pressStep('view-two', 'Two dates'),

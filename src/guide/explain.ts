@@ -31,7 +31,7 @@ const PARTS: readonly [string, string, string][] = [
   ['settings-button', 'Settings', 'Choose Glass or Solid panels, or reset mission progress.'],
 
   ['play', 'Play', 'Flips through the dates. Space does the same; the arrow keys step.'],
-  ['dates', 'The date scale', 'When each picture was taken. Each letter is one visit, months apart.'],
+  ['dates', 'The date scale', 'When each picture was taken: one dot per picture, visits months apart.'],
   [
     'wavelength',
     'Infrared colour',
