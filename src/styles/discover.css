@@ -96,6 +96,11 @@
   padding: 28px 28px 22px;
   border-radius: 26px;
 }
+/* With the frame open the globe is centred left of it (sky.ts), so the welcome keeps to the
+   gutter and clear of the globe's middle, where the first beacon is. */
+html:has(#frame:not([hidden])) #dsc-welcome {
+  inset-inline-start: var(--v2-gutter);
+}
 #discover-list[hidden],
 #mission[hidden],
 #mission-success[hidden],
