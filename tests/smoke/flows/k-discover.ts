@@ -73,7 +73,7 @@ export const flows: Flow[] = [
         30000,
       ),
       expect('The skill is learned', `document.querySelector('#mission-success .dsc-skill')?.textContent?.includes('Skill learned: Blink')`),
-      pressStep('success-expert', 'How was this measured? Open Expert view'),
+      pressStep('success-expert', 'How it was measured (Expert)'),
       expect('Expert is on', `document.documentElement.dataset.view === 'expert'`),
     ],
   },
