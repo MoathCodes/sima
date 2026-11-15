@@ -1000,6 +1000,10 @@ html[data-layout^='phone'] .dsc-keys,
 #sheet [data-k='picture'] {
   display: none;
 }
+/* Planet X: while the sandbox card is open right under the step, its "show" button has no job. */
+#sheet .sheet-item:has(#sandbox:not([hidden])) [data-k='sandbox'] {
+  display: none;
+}
 /* In the sheet, its body is the one scrolling part (lane M): the cards do not scroll inside. */
 #sheet .dsc-scroll {
   overflow: visible;
