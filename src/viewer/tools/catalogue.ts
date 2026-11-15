@@ -10,6 +10,7 @@
  * A failure is said as a failure, never as "no sources here" (docs/live-service.md).
  */
 import { S, watch } from '../state.ts';
+import { SEED_BASE } from '../seed.ts';
 import { fetchCatalog } from '../../core/catalog.ts';
 import type { Neighbour, PatchCatalog } from '../../core/types.ts';
 
@@ -104,8 +105,40 @@ function count(n: number): string {
   return n === 1 ? '1 source' : `${n} sources`;
 }
 
+/** Shows a patch's catalog.json, both catalogues. */
+function showCatalog(body: PatchCatalog): void {
+  for (const cat of ['gaia', 'catwise'] as const) {
+    const rows = body.rows.filter((r) => r.cat === cat);
+    const capped = body.capped[cat] ? ' (crowded field: the faintest are missing)' : '';
+    states[cat] = {
+      rows,
+      state: 'ready',
+      partial: false,
+      line: `${count(rows.length)} in the patch, from ${body.from[cat]}${capped}`,
+    };
+  }
+  tell();
+}
+
+/** Reads a seeded patch's catalog.json; false when the seed has none, so the service is asked. */
+async function seedCatalog(id: string, myGen: number): Promise<boolean> {
+  try {
+    const res = await fetch(`${SEED_BASE}/${id}/catalog.json`);
+    if (!res.ok) return false;
+    const body = (await res.json()) as PatchCatalog;
+    if (myGen !== gen) return true;
+    if (!('rows' in body)) return false;
+    showCatalog(body);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** The live service's catalog.json for a patch: asked again every 3 s while pending. */
 async function askService(id: string, myGen: number): Promise<void> {
+  // A seeded patch's catalogue sits next to its files (scripts/seed_live.py --export).
+  if (SEED_BASE && (await seedCatalog(id, myGen))) return;
   const api = import.meta.env.VITE_LIVE_API ?? '';
   if (!api) {
     if (myGen !== gen) return;
@@ -130,17 +163,7 @@ async function askService(id: string, myGen: number): Promise<void> {
       }
       return tell();
     }
-    for (const cat of ['gaia', 'catwise'] as const) {
-      const rows = body.rows.filter((r) => r.cat === cat);
-      const capped = body.capped[cat] ? ' (crowded field: the faintest are missing)' : '';
-      states[cat] = {
-        rows,
-        state: 'ready',
-        partial: false,
-        line: `${count(rows.length)} in the patch, from ${body.from[cat]}${capped}`,
-      };
-    }
-    tell();
+    showCatalog(body);
   } catch (err) {
     if (myGen !== gen) return;
     for (const cat of ['gaia', 'catwise'] as const) {

@@ -252,8 +252,8 @@ Any other host works the same way (a CDN, the page's own host under a path such 
 `application/octet-stream`; both commands above do). Expected size: about 1 MB per 12′ patch,
 3.7 MB per 24′, 6.5 MB per 48′: roughly 400 MB for all 156 spots, or about 100 MB with `--max-fov 12`.
 
-Limit: the catalogue tool still asks the live service for a seeded patch's `catalog.json`
-(`src/viewer/tools/catalogue.ts`), so with no service it says the catalogue is unavailable there.
+The catalogue tool reads a seeded patch's `catalog.json` from the seed first
+(`src/viewer/tools/catalogue.ts`), and asks the live service only when the seed has none.
 
 ## Counters
 
