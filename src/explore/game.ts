@@ -40,7 +40,8 @@ import {
   TASKS,
   type TaskCopy,
 } from './copy.ts';
-import { hits, ringSource, targetAt } from './track.ts';
+import { hits, ringSource, tapReach, targetAt } from './track.ts';
+import { blend } from '../core/blink.ts';
 import { setMarks, startCloseup } from './closeup.ts';
 import { pickerOn, startKeyPick, sync as syncKeyPick } from './keypick.ts';
 
@@ -440,7 +441,10 @@ function tapped(p: { x: number; y: number; ra: number; dec: number }): boolean {
     .map((at) => (at ? view.skyToPic(at.ra, at.dec) : null))
     .filter((q): q is { x: number; y: number } => !!q);
   const tap = view.toPic(p.x, p.y);
-  if (hits(pts, tap, Math.max(18, 3 * view.k))) {
+  // The star's glow in the date's own picture: Difference can cancel it on one date.
+  const pix = view.group ? blend(view.field, view.group, 'median', false) : null;
+  const path = pts.map((q) => view.toField(q.x, q.y));
+  if (hits(pts, tap, tapReach(pix, view.n, path, view.k))) {
     markFound();
     return true;
   }
