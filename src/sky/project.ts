@@ -139,11 +139,11 @@ export function globeScale(width: number, fov: number): number {
 }
 
 /**
- * The widest view: the whole globe with dark space round it, its diameter 88% of the window's
- * shorter side, as far as Aladin allows (`ZOOM_MAX`). Degrees, as `fov`.
+ * The widest view: the whole globe with dark space round it, its diameter `fill` (88%) of the
+ * window's shorter side, as far as Aladin allows (`ZOOM_MAX`). Degrees, as `fov`.
  */
-export function widestFov(width: number, height: number): number {
-  const side = Math.min(width, height) * 0.88;
+export function widestFov(width: number, height: number, fill = 0.88): number {
+  const side = Math.min(width, height) * fill;
   return fovOf(Math.min(ZOOM_MAX, Math.max(1, width / Math.max(side, 1))));
 }
 

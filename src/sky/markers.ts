@@ -13,6 +13,7 @@ import {
   onZoom,
   outline,
   registerDots,
+  skyBrightness,
   toScreen,
   type SkyPoint,
 } from './sky.ts';
@@ -94,6 +95,11 @@ let measureCtx: CanvasRenderingContext2D | null = null;
 let avoidCache: { at: number; boxes: Box[] } | null = null;
 /** How long the last few paints took, ms (PLC-8: under 4 ms a frame). */
 const paintTimes: number[] = [];
+
+/** Spots drawn by globe.ts (beacons, objects to try): their place dots are not drawn twice. */
+let taken: readonly { ra: number; dec: number }[] = [];
+/** Linear brightness of the map above which a label sits on a Thin chip (DESIGN-v2 9). */
+const BRIGHT = 0.4;
 
 /** The view at the last move, so a redraw of only the patch is not taken for a move. */
 let lastView = '';
@@ -265,6 +271,23 @@ export function setChosen(id: string | null): void {
 }
 
 /**
+ * Spots another mark draws itself (globe.ts: mission beacons and objects to try). A place dot at
+ * one of them (within 0.01°) is neither drawn nor picked, so its name does not show twice.
+ * @param spots Degrees; an empty list gives the dots back.
+ */
+export function setTaken(spots: readonly { ra: number; dec: number }[]): void {
+  taken = spots.map((x) => ({ ra: x.ra, dec: x.dec }));
+  soon();
+}
+
+function isTaken(d: { ra: number; dec: number }): boolean {
+  for (const t of taken) {
+    if (Math.abs(t.dec - d.dec) < 0.01 && Math.abs(((t.ra - d.ra + 540) % 360) - 180) * Math.cos((d.dec * Math.PI) / 180) < 0.01) return true;
+  }
+  return false;
+}
+
+/**
  * Keeps labels off an element's box while it is visible (rule 5 in SPEC 9.4). Visible
  * `[data-card]` elements are kept clear without asking.
  * @returns Stop keeping it clear.
@@ -293,7 +316,7 @@ export function pick(x: number, y: number): Dot | null {
     const onLabel =
       p.label && x >= p.label.left && x <= p.label.right && y >= p.label.top && y <= p.label.bottom;
     const d = onLabel ? Math.min(dist, 4) : dist;
-    if (d < bestD) {
+    if (d < bestD && !(taken.length && isTaken(dots[p.index] as Dot))) {
       best = dots[p.index] ?? null;
       bestD = d;
     }
@@ -502,8 +525,10 @@ function paint(): void {
   ctx.font = font;
   ctx.lineWidth = 1.4;
   ctx.textBaseline = 'middle';
+  const solid = document.documentElement.dataset.glass === 'solid';
   for (const p of placed) {
     const d = dots[p.index] as Dot;
+    if (taken.length && isTaken(d)) continue;
     const colour = d.simulated ? amber : ink;
     ctx.fillStyle = colour;
     ctx.strokeStyle = colour;
@@ -525,6 +550,7 @@ function paint(): void {
       const y = p.label.top + LABEL_HEIGHT / 2;
       ctx.save();
       ctx.setLineDash([]);
+      chip(ctx, p.label, solid);
       ctx.lineJoin = 'round';
       ctx.lineWidth = 3;
       ctx.strokeStyle = halo;
@@ -547,6 +573,7 @@ function paint(): void {
     if (p.label) {
       const x = p.label.left + 1;
       const y = p.label.top + LABEL_HEIGHT / 2;
+      chip(ctx, p.label, solid);
       ctx.lineJoin = 'round';
       ctx.lineWidth = 3;
       ctx.strokeStyle = halo;
@@ -559,6 +586,25 @@ function paint(): void {
   if (finds.length || findArea) paintFinds(ctx, c.width, c.height);
   paintTimes.push(performance.now() - t0);
   if (paintTimes.length > 60) paintTimes.shift();
+}
+
+/**
+ * A label over a bright sky sits on a Thin chip (DESIGN-v2 9): the map's mean brightness under
+ * it above 0.4 (linear). A canvas cannot blur what is under it, so the chip is the Thin tint made
+ * as dark as Thin's dimming would leave it over white (82%; Solid: 95%).
+ */
+function chip(ctx: CanvasRenderingContext2D, b: Box, solid: boolean): void {
+  if (skyBrightness(b.left, b.top, b.right, b.bottom) <= BRIGHT) return;
+  const x = b.left - 4;
+  const y = b.top - 1;
+  const w = b.right - b.left + 7;
+  const h = b.bottom - b.top + 2;
+  ctx.save();
+  ctx.fillStyle = solid ? 'rgb(11 14 28 / 0.95)' : 'rgb(11 14 28 / 0.82)';
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, h / 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 /** The filter's circle (dotted, faint ink) and its sources (reticles; the hot one ringed and named). */

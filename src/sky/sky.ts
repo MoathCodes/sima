@@ -72,6 +72,8 @@ const LAYER_NAMES: Record<SkyLayer, string> = {
   'wise-w2': 'AllWISE 4.6 µm',
 };
 const H1 = 'Average of all dates: moving objects are blurred or shifted here';
+/** Discover's shorter sky note (DESIGN-v2 mockups: "Average of all dates: moving things blur here"). */
+const H1_DISCOVER = 'Average of all dates:';
 
 // ----- Aladin Lite, as much of it as Sima uses --------------------------------------------------
 
@@ -102,6 +104,13 @@ interface AladinLib {
 let A: AladinLib | null = null;
 let al: Aladin | null = null;
 let skyEl: HTMLElement | null = null;
+/** Aladin's own element: the map's box, which the globe is centred in (`mapBox`). */
+let mapHost: HTMLElement | null = null;
+/**
+ * The map's box on screen, CSS px from the window's top left. The whole window in Expert; in
+ * Discover, the free space beside its panels, so the globe is centred there (DESIGN-v2 8.4).
+ */
+const hostBox = { x: 0, y: 0, w: 0, h: 0 };
 
 // ----- State ------------------------------------------------------------------------------------
 
@@ -227,7 +236,12 @@ export async function startSky(el: HTMLElement): Promise<void> {
   host.className = 'sky-map';
   const lift = document.createElement('div');
   lift.className = 'sky-lift';
-  el.replaceChildren(host, lift);
+  // The globe's faint limb glow, in the shown detector's hue (DESIGN-v2 8.4, D-11).
+  const limb = document.createElement('div');
+  limb.className = 'sky-limb';
+  el.replaceChildren(host, lift, limb);
+  mapHost = host;
+  placeHost(freeBox());
   // The bottom layer: the first channel's soft sky (shipped), which never needs the network.
   baseChannel = flags.sw ? wantedChannel() : null;
   const base = flags.sw ? softUrl(wantedChannel()) : WISE_HIPS['wise-w1'];
@@ -263,6 +277,7 @@ export async function startSky(el: HTMLElement): Promise<void> {
     gridOptions: { enabled: flags.grid, showLabels: true, thickness: 1, labelSize: 12 },
   });
   watchContext(host);
+  watchBox();
   watchPointer(el);
   showLayer();
   loop();
@@ -436,7 +451,7 @@ export function toWorld(x: number, y: number): { ra: number; dec: number } | nul
 function skyAt(x: number, y: number): [number, number] | null {
   let w: [number, number] | undefined;
   try {
-    w = al?.pix2world(x, y);
+    w = al?.pix2world(x - hostBox.x, y - hostBox.y);
   } catch {
     return null;
   }
@@ -556,6 +571,190 @@ export function dotLayer(): HTMLCanvasElement | null {
 /** markers.ts lends the sky its dot picking, so a click on a dot is not a click on the sky. */
 export function registerDots(hooks: DotHooks): void {
   dotHooks = hooks;
+}
+
+// ----- The map's box (DESIGN-v2 8.4) ------------------------------------------------------------
+
+/** Discover's left column on desktop: the mission list (372 px) from its 16 px gutter. */
+const DISCOVER_LEFT = 388;
+/** The phone's top row (56 px) and its gap. */
+const PHONE_TOP = 64;
+/** How long the map takes to fade out, and back in, when its box moves (DESIGN-v2 10). */
+const DIP_MS = 150;
+
+/**
+ * The map's box: the whole window in Expert. In Discover, the free space beside Discover's
+ * panels, so the globe is centred there: right of the left column on desktop, between the top
+ * row and the sheet on phones.
+ */
+function freeBox(): { x: number; y: number; w: number; h: number } {
+  const W = innerWidth;
+  const H = innerHeight;
+  if (document.documentElement.dataset.view !== 'discover') return { x: 0, y: 0, w: W, h: H };
+  if (W >= 700) {
+    const left = W - DISCOVER_LEFT >= 560 ? DISCOVER_LEFT : 0;
+    return { x: left, y: 0, w: W - left, h: H };
+  }
+  const sheet = document.getElementById('sheet');
+  const top = sheet?.checkVisibility() ? sheet.getBoundingClientRect().top : H;
+  const bottom = Math.max(PHONE_TOP + 200, Math.min(H, top));
+  return { x: 0, y: PHONE_TOP, w: W, h: bottom - PHONE_TOP };
+}
+
+/** Puts Aladin's element in a box (it follows its element's size by itself). */
+function placeHost(b: { x: number; y: number; w: number; h: number }): void {
+  Object.assign(hostBox, b);
+  if (!mapHost) return;
+  Object.assign(mapHost.style, {
+    left: `${b.x}px`,
+    top: `${b.y}px`,
+    width: `${b.w}px`,
+    height: `${b.h}px`,
+  });
+  requestDraw();
+}
+
+let dipping = false;
+/**
+ * Moves the map to its box now. With `dip`, a change of place is covered by a short fade out and
+ * in (Aladin cannot move its globe across the screen); the globe keeps its size on screen.
+ */
+function updateBox(dip: boolean): void {
+  const b = freeBox();
+  const h = hostBox;
+  if (b.x === h.x && b.y === h.y && b.w === h.w && b.h === h.h) return;
+  const host = mapHost;
+  if (!host || !al || !dip || dipping) {
+    swapBox(b);
+    return;
+  }
+  dipping = true;
+  const out = host.animate([{ opacity: 1 }, { opacity: 0 }], { duration: DIP_MS, fill: 'forwards' });
+  void out.finished
+    .catch(() => undefined)
+    .then(() => {
+      dipping = false;
+      swapBox(freeBox());
+      out.cancel();
+      host.animate([{ opacity: 0 }, { opacity: 1 }], { duration: DIP_MS });
+    });
+}
+
+/** Places the map in box `b`, keeping the globe's size on screen. */
+function swapBox(b: { x: number; y: number; w: number; h: number }): void {
+  const r = view?.scale ?? 0;
+  const wasGlobe = r > 0 && r < Math.hypot(hostBox.w, hostBox.h) / 2;
+  placeHost(b);
+  if (al && wasGlobe) al.setFoV(clampFov(fovOf(b.w / 2 / r)));
+  readCamera(true);
+  requestDraw();
+}
+
+function watchBox(): void {
+  addEventListener('resize', () => updateBox(false));
+  // Discover or Expert (shell/view.ts sets html[data-view]); the phone sheet's height.
+  new MutationObserver(() => {
+    updateBox(true);
+    note();
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-view'] });
+  const sheet = document.getElementById('sheet');
+  if (sheet) {
+    new MutationObserver(() => updateBox(true)).observe(sheet, {
+      attributes: true,
+      attributeFilter: ['hidden', 'data-height', 'style', 'class'],
+    });
+    new ResizeObserver(() => updateBox(true)).observe(sheet);
+  }
+}
+
+/** The map's box on screen (the globe is centred in it), CSS px from the window's top left. */
+export function mapBox(): DOMRect {
+  return new DOMRect(hostBox.x, hostBox.y, hostBox.w, hostBox.h);
+}
+
+/**
+ * The globe's disc on screen when the whole globe shows (zoomed out); null when the sky fills
+ * the map's box. For placing cards by the globe (the welcome card overlaps its edge by 40 px).
+ */
+export function globeCircle(): { x: number; y: number; r: number } | null {
+  if (!view || skyEl?.dataset.globe !== '1') return null;
+  return { x: view.cx, y: view.cy, r: view.scale };
+}
+
+/**
+ * The diameter, CSS px, a globe `d` wide has as a view `fov` (sky.ts `flyTo`), in the map's box.
+ * Aladin keeps the globe at least half the box's width.
+ */
+export function globeFov(d: number): number {
+  const w = hostBox.w || innerWidth;
+  return fovOf(w / Math.max(1, d));
+}
+
+// ----- How bright the map is under a label (DESIGN-v2 9, "Labels over a bright sky") ------------
+
+/** CSS px per sample of the map's brightness. */
+const SAMPLE_PX = 8;
+let bright: { key: string; at: number; w: number; h: number; lin: Float32Array } | null = null;
+let sampler: CanvasRenderingContext2D | null = null;
+
+/**
+ * The map's mean brightness under a box on screen, linear (0 black to 1 white), read from the
+ * map as drawn now at one sample per 8 px. 0 when unknown (off the map, or no map yet).
+ */
+export function skyBrightness(left: number, top: number, right: number, bottom: number): number {
+  const g = brightGrid();
+  if (!g) return 0;
+  const x0 = Math.max(0, Math.floor((left - hostBox.x) / SAMPLE_PX));
+  const x1 = Math.min(g.w - 1, Math.floor((right - hostBox.x) / SAMPLE_PX));
+  const y0 = Math.max(0, Math.floor((top - hostBox.y) / SAMPLE_PX));
+  const y1 = Math.min(g.h - 1, Math.floor((bottom - hostBox.y) / SAMPLE_PX));
+  let sum = 0;
+  let n = 0;
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      sum += g.lin[y * g.w + x] ?? 0;
+      n++;
+    }
+  }
+  return n ? sum / n : 0;
+}
+
+/** The brightness samples, read again when the view or the tiles changed (at most 4 a second). */
+function brightGrid(): { w: number; h: number; lin: Float32Array } | null {
+  const canvas = mapHost?.querySelector<HTMLCanvasElement>('canvas.aladin-imageCanvas');
+  if (!canvas || !canvas.width || !skyEl) return bright;
+  let done = 0;
+  for (const t of tracks.values()) done += t.done.size;
+  const key = `${skyEl.dataset.view} ${hostBox.w} ${hostBox.h} ${done} ${current?.key ?? ''}`;
+  const now = performance.now();
+  if (bright && (bright.key === key || now - bright.at < 250)) return bright;
+  const w = Math.max(1, Math.ceil(hostBox.w / SAMPLE_PX));
+  const h = Math.max(1, Math.ceil(hostBox.h / SAMPLE_PX));
+  if (!sampler) {
+    const c = document.createElement('canvas');
+    sampler = c.getContext('2d', { willReadFrequently: true });
+  }
+  if (!sampler) return null;
+  const c = sampler.canvas;
+  if (c.width !== w || c.height !== h) {
+    c.width = w;
+    c.height = h;
+  }
+  try {
+    sampler.clearRect(0, 0, w, h);
+    sampler.drawImage(canvas, 0, 0, w, h);
+    const px = sampler.getImageData(0, 0, w, h).data;
+    const lin = new Float32Array(w * h);
+    for (let i = 0; i < lin.length; i++) {
+      const v = Math.max(px[i * 4] ?? 0, px[i * 4 + 1] ?? 0, px[i * 4 + 2] ?? 0) / 255;
+      lin[i] = v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    }
+    bright = { key, at: now, w, h, lin };
+  } catch {
+    // A canvas that cannot be read (tainted): labels then keep their halo only.
+    bright = { key, at: now, w, h, lin: new Float32Array(w * h) };
+  }
+  return bright;
 }
 
 // ----- For the intro (src/intro/intro.ts) -----------------------------------------------------
@@ -893,7 +1092,27 @@ function note(): void {
         : '') +
       `AllWISE all-sky map, ${wanted === 'wise-w1' ? 'W1, 3.4 µm' : 'W2, 4.6 µm'} (WISE, 2010 to 2011), from NASA IRSA. Nothing is filled in.`;
   }
+  // The globe's limb glow takes the hue of the detector the map shows (sky.css).
+  const det = channel !== null ? detectorOf(channel) : null;
+  if (skyEl && skyEl.dataset.det !== String(det ?? '')) skyEl.dataset.det = String(det ?? '');
+  if (document.documentElement.dataset.view === 'discover') {
+    // Discover names the detector in words (DESIGN-v2 D-11, BEGINNER-AND-MOBILE H1).
+    if (channel !== null && det !== null) {
+      const l = CHANNEL_LAM[channel] ?? lam;
+      fact = `SPHEREx D${det}, ${bandWords(det)}, ${l.toFixed(2)} µm`;
+    }
+    el.innerHTML = `<b>${H1_DISCOVER}</b> moving things blur here · <span class="sky-note-more" tabindex="0" data-tip="${esc(more)}" data-tip-pos="above">${esc(fact)}</span>`;
+    return;
+  }
   el.innerHTML = `<span>${H1}</span> · <span class="sky-note-more" tabindex="0" data-tip="${esc(more)}" data-tip-pos="above">${esc(fact)}</span>`;
+}
+
+/**
+ * A detector's band in words, as Discover says it (BEGINNER-AND-MOBILE section 8: "near infrared,
+ * deep infrared"). D1 to D3 cover 0.75 to 2.42 µm, D4 to D6 2.42 to 5.0 µm.
+ */
+export function bandWords(det: number): string {
+  return det <= 3 ? 'near infrared' : 'deep infrared';
 }
 
 function watchContext(host: HTMLElement): void {
@@ -970,8 +1189,8 @@ function keepUnder(ra: number, dec: number, x: number, y: number): void {
   if (!view) return;
   const p = project(view, ra, dec);
   if (!p) return;
-  let dx = x - cam.width / 2;
-  let dy = y - cam.height / 2;
+  let dx = x - view.cx;
+  let dy = y - view.cy;
   const reach = view.scale * 0.85;
   const far = Math.hypot(dx, dy);
   if (far > reach) {
@@ -990,6 +1209,10 @@ function readCamera(force = false): boolean {
   const fov = fovOf(al.getZoomFactor());
   const width = skyEl.clientWidth;
   const height = skyEl.clientHeight;
+  const hb = hostBox;
+  // The globe's centre: the middle of the map's box (the whole window in Expert).
+  const cx = hb.x + hb.w / 2;
+  const cy = hb.y + hb.h / 2;
   if (
     !force &&
     view &&
@@ -997,19 +1220,36 @@ function readCamera(force = false): boolean {
     dec === cam.dec &&
     fov === cam.fov &&
     width === cam.width &&
-    height === cam.height
+    height === cam.height &&
+    cx === view.cx &&
+    cy === view.cy
   ) {
-    return false;
+    // Aladin applies an instant jump (setFoV, gotoRaDec) on its next draw: measure the scale
+    // again for a few frames after a change, until it agrees.
+    if (settle <= 0) return false;
+    settle--;
+    const before = view.scale;
+    calibrateView(cx, cy);
+    return Math.abs(view.scale - before) > 1e-6 * before;
   }
+  settle = 3;
   Object.assign(cam, { ra: wrapRa(ra), dec, fov, width, height });
-  if (fov > widestFov(width, height) * 1.0001 || fov < FOV_MIN - 1e-4) al.setFoV(clampFov(fov));
-  const v = makeView(cam.ra, cam.dec, 1, width / 2, height / 2);
-  // A point well inside the globe at every zoom (its radius is at least a quarter of the width).
-  const dx = Math.min(width / 6, 200);
-  const w = skyAt(width / 2 + dx, height / 2 + dx / 2);
-  const cal = w ? calibrate(v, w[0], w[1], width / 2 + dx, height / 2 + dx / 2) : null;
-  view = cal ? makeView(cam.ra, cam.dec, cal.scale, width / 2, height / 2, cal.flip) : view;
+  if (fov > widest() * 1.0001 || fov < FOV_MIN - 1e-4) al.setFoV(clampFov(fov));
+  calibrateView(cx, cy);
   return true;
+}
+
+/** Frames left in which `readCamera` measures the scale again although nothing changed. */
+let settle = 0;
+
+/** Measures the view's scale from Aladin, at a point off the globe's centre (cx, cy). */
+function calibrateView(cx: number, cy: number): void {
+  const v = makeView(cam.ra, cam.dec, 1, cx, cy);
+  // A point well inside the globe at every zoom (its radius is at least a quarter of the width).
+  const dx = Math.min(hostBox.w / 6, 200);
+  const w = skyAt(cx + dx, cy + dx / 2);
+  const cal = w ? calibrate(v, w[0], w[1], cx + dx, cy + dx / 2) : null;
+  view = cal ? makeView(cam.ra, cam.dec, cal.scale, cx, cy, cal.flip) : view;
 }
 
 function draw(): void {
@@ -1022,8 +1262,12 @@ function draw(): void {
     // Round the whole globe, Aladin paints a fixed grey; it is masked away so space is the
     // page's own blue-black (sky.css), like the darkest sky.
     const r = view ? view.scale : 0;
-    const globe = r > 0 && r < Math.hypot(cam.width, cam.height) / 2;
-    if (globe) skyEl.style.setProperty('--globe-r', `${r.toFixed(1)}px`);
+    const globe = r > 0 && r < Math.hypot(hostBox.w, hostBox.h) / 2;
+    if (globe && view) {
+      skyEl.style.setProperty('--globe-r', `${r.toFixed(1)}px`);
+      skyEl.style.setProperty('--globe-x', `${view.cx.toFixed(1)}px`);
+      skyEl.style.setProperty('--globe-y', `${view.cy.toFixed(1)}px`);
+    }
     if ((skyEl.dataset.globe === '1') !== globe) skyEl.dataset.globe = globe ? '1' : '';
     const box = outline();
     skyEl.dataset.patch = box
@@ -1445,7 +1689,7 @@ function zoomAround(x: number, y: number, fov: number): void {
   let at = { x, y };
   let anchor = zoomTo && Math.hypot(zoomTo.x - x, zoomTo.y - y) < 2 ? zoomTo : toWorld(x, y);
   if (!anchor) {
-    at = { x: cam.width / 2, y: cam.height / 2 };
+    at = { x: view?.cx ?? cam.width / 2, y: view?.cy ?? cam.height / 2 };
     anchor = { ra: cam.ra, dec: cam.dec };
   }
   zoomTo = { fov: target, ...at, ra: anchor.ra, dec: anchor.dec };
@@ -1471,7 +1715,7 @@ function keepPatchClear(): void {
   if (!f || !box || !al) return;
   if (box.right < f.left || box.left > f.right || box.bottom < f.top || box.top > f.bottom) return;
   const shift = box.x + box.width / 2 - Math.max(80, f.left / 2);
-  const c = skyAt(cam.width / 2 + shift, cam.height / 2);
+  const c = view && skyAt(view.cx + shift, view.cy);
   if (c) flyTo({ ra: c[0], dec: c[1] });
 }
 
@@ -1563,9 +1807,16 @@ function placeClickCard(): void {
 // ----- Helpers ----------------------------------------------------------------------------------
 
 function clampFov(fov: number): number {
-  const width = cam.width || innerWidth;
-  const height = cam.height || innerHeight;
-  return Math.max(FOV_MIN, Math.min(widestFov(width, height), fov));
+  return Math.max(FOV_MIN, Math.min(widest(), fov));
+}
+
+/**
+ * The widest view in the map's box. Discover's globe may be smaller (60% of the box's shorter
+ * side), as its home view asks (`min(800px, 100vh − 160px)`, DESIGN-v2 8.4).
+ */
+function widest(): number {
+  const fill = document.documentElement.dataset.view === 'discover' ? 0.6 : 0.88;
+  return widestFov(hostBox.w || innerWidth, hostBox.h || innerHeight, fill);
 }
 
 function reducedMotion(): boolean {

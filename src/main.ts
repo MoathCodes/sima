@@ -21,6 +21,7 @@ import { startPlaces } from './shell/places.ts';
 import { startFinds } from './shell/finds.ts';
 import { startSandbox } from './shell/sandbox.ts';
 import { startSky } from './sky/sky.ts';
+import { startGlobe } from './sky/globe.ts';
 import { startSearch } from './viewer/omnibox.ts';
 import { startFrame } from './viewer/frame.ts';
 import { startBar } from './viewer/bar.ts';
@@ -81,6 +82,7 @@ await new Promise((go) => setTimeout(go, 0));
 if (!link.embed) {
   const sky = document.getElementById('sky');
   if (sky) start('sky', () => startSky(sky));
+  start('globe', startGlobe);
   start('places', startPlaces);
   start('finds', startFinds);
   start('sandbox', startSandbox);
