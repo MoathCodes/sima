@@ -241,7 +241,7 @@ from an AI. Where a value is a model or a simulation, the page says so.</p>
     Wikipedia (CC BY-SA 4.0). Each place card names its own sources.</li>
   <li><b>Sky library:</b> Aladin Lite 3.8.2 by CDS, ${link('https://aladin.cds.unistra.fr/AladinLite/')}, under the
     GPL 3.0 licence.</li>
-  <li><b>Fonts:</b> Archivo, Aref Ruqaa and Noto Sans Arabic, under the SIL Open Font License 1.1.</li>
+  <li><b>Fonts:</b> Archivo, Aref Ruqaa and Cairo, under the SIL Open Font License 1.1.</li>
   <li><b>The challenge:</b> NASA Space Apps, ${link('https://www.spaceappschallenge.org/')}, and its
     ${link('https://www.spaceappschallenge.org/2026/challenges/planet-x-and-spherex/?tab=resources', 'resources page')}.</li>
 </ul>`;

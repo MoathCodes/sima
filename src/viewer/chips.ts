@@ -23,6 +23,7 @@ import { icon } from '../shell/icons.ts';
 import { layout, onLayout } from '../shell/sheet.ts';
 import { formatDate } from '../core/astro.ts';
 import { detectorOf, LAM_MAX, LAM_MIN } from '../core/instrument.ts';
+import { t } from '../shell/i18n.ts';
 
 /** Which form the row takes now. */
 export type PlayRow = 'discover' | 'phone' | 'off';
@@ -44,18 +45,19 @@ export function startChips(): void {
   row = document.createElement('div');
   row.id = 'frame-play';
   row.className = 'fp';
+  row.dataset.i18n = '';
   row.innerHTML = `
-    <div class="fp-controls" role="group" aria-label="Playback">
-      <button type="button" class="icon-btn fp-step" data-fp-step="-1" data-guide="frame-prev" aria-label="Previous picture">${icon('prev')}</button>
-      <button type="button" class="play-btn fp-play" data-fp-play data-guide="frame-play" aria-label="Play"></button>
-      <button type="button" class="icon-btn fp-step" data-fp-step="1" data-guide="frame-next" aria-label="Next picture">${icon('next')}</button>
-      <div class="fp-seq" role="slider" tabindex="0" aria-label="Date" aria-valuemin="1" data-guide="date-strip"></div>
+    <div class="fp-controls" role="group" aria-label="${t('bar.playback')}">
+      <button type="button" class="icon-btn fp-step" data-fp-step="-1" data-guide="frame-prev" aria-label="${t('bar.prevLabel')}">${icon('prev')}</button>
+      <button type="button" class="play-btn fp-play" data-fp-play data-guide="frame-play" aria-label="${t('word.play')}"></button>
+      <button type="button" class="icon-btn fp-step" data-fp-step="1" data-guide="frame-next" aria-label="${t('bar.nextLabel')}">${icon('next')}</button>
+      <div class="fp-seq" role="slider" tabindex="0" aria-label="${t('fp.date')}" aria-valuemin="1" data-guide="date-strip"></div>
       <span class="fp-count" aria-live="off"></span>
     </div>
     <label class="fp-wl" data-guide="frame-wavelength">
-      <span class="fp-wl-name">Wavelength</span>
+      <span class="fp-wl-name">${t('bar.wavelength')}</span>
       <b class="fp-wl-value"></b>
-      <input type="range" min="0" max="1000" step="1" aria-label="Wavelength" />
+      <input type="range" min="0" max="1000" step="1" aria-label="${t('bar.wavelength')}" />
     </label>`;
   pic.after(row);
   row.querySelectorAll<HTMLElement>('[data-fp-step]').forEach((b) =>
@@ -91,7 +93,7 @@ function paint(): void {
       playBtn.innerHTML = html;
       playBtn.dataset.icon = S.playing ? 'pause' : 'play';
     }
-    playBtn.setAttribute('aria-label', S.playing ? 'Pause' : 'Play');
+    playBtn.setAttribute('aria-label', S.playing ? t('word.pause') : t('word.play'));
     playBtn.disabled = !many;
     playBtn.title = many ? '' : waitWhy();
   }
@@ -108,7 +110,7 @@ function paint(): void {
   if (wl) {
     wl.hidden = form !== 'phone';
     const v = wl.querySelector('.fp-wl-value');
-    if (v) v.textContent = S.color ? 'All six detectors' : `${S.lam.toFixed(2)} µm · D${S.det}`;
+    if (v) v.textContent = S.color ? t('fp.allSix') : `${S.lam.toFixed(2)} µm · D${S.det}`;
     const input = wl.querySelector<HTMLInputElement>('input');
     if (input && document.activeElement !== input) input.value = String(Math.round(where(S.lam) * 1000));
     input?.setAttribute('aria-valuetext', `${S.lam.toFixed(2)} µm, detector ${S.det}`);
@@ -182,13 +184,13 @@ function paintSeq(box: HTMLElement): void {
   if (!groups.length) {
     if (box.dataset.key !== 'none') {
       box.dataset.key = 'none';
-      box.innerHTML = `<p class="fp-why">${waitWhy() || 'No pictures yet'}</p>`;
+      box.innerHTML = `<p class="fp-why">${waitWhy() || t('fp.noneYet')}</p>`;
     }
     box.removeAttribute('aria-valuenow');
     return;
   }
   const { ts, at } = places();
-  const day = (i: number) => (Number.isFinite(ts[i]) ? formatDate(ts[i]!, 'day') : 'No date');
+  const day = (i: number) => (Number.isFinite(ts[i]) ? formatDate(ts[i]!, 'day') : t('fp.noDate'));
   const key = `${groups.map((g) => `${g.key}:${g.frames.length}`).join(',')}|${S.det}`;
   if (box.dataset.key !== key) {
     box.dataset.key = key;
@@ -197,7 +199,7 @@ function paintSeq(box: HTMLElement): void {
       groups
         .map((g, i) => {
           const missing = !g.frames.length;
-          return `<span class="fp-dot${missing ? ' missing' : ''}" style="--x:${at[i]}" data-tip="${day(i)}${missing ? `: no D${g.det} picture` : ''}"></span>`;
+          return `<span class="fp-dot${missing ? ' missing' : ''}" style="--x:${at[i]}" data-tip="${day(i)}${missing ? t('fp.missing', { det: `D${g.det}` }) : ''}"></span>`;
         })
         .join('') +
       '<span class="fp-head" aria-hidden="true"><span class="fp-ring"></span></span><span class="fp-now" aria-hidden="true"><span></span></span>';

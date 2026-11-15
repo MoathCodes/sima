@@ -14,6 +14,7 @@ import { openPlace } from '../shell/shell.ts';
 import { getView, onView, type View } from '../shell/view.ts';
 import { formatCoords, parseCoords } from '../core/astro.ts';
 import { TARGETS } from '../core/targets.ts';
+import { t as tr } from '../shell/i18n.ts';
 
 /** One suggestion. */
 export interface SearchHit {
@@ -82,8 +83,8 @@ function bdiText(text: string): HTMLElement {
 const SOLAR_SYSTEM = /^(the )?(sun|moon|mercury|venus|earth|mars|jupiter|saturn|uranus|neptune|pluto|planets?)$/i;
 
 const SEARCH_WORDS: Record<View, string> = {
-  expert: 'Star, galaxy or RA Dec',
-  discover: 'Star, galaxy or RA Dec',
+  expert: tr('search.placeholder'),
+  discover: tr('search.placeholder'),
 };
 
 /** Fills the search card. Called once by main.ts. */

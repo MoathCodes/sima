@@ -33,6 +33,7 @@ import {
   zoomOf,
   type View,
 } from './project.ts';
+import { t as tr } from '../shell/i18n.ts';
 
 /** What the sky shows: its centre and zoom. */
 export interface Camera {
@@ -73,11 +74,11 @@ const LAYER_NAMES: Record<SkyLayer, string> = {
   'wise-w1': 'AllWISE 3.4 µm',
   'wise-w2': 'AllWISE 4.6 µm',
 };
-const H1 = 'Average of all dates: moving objects are blurred or shifted here';
+const H1 = tr('sky.h1');
 /** Discover's shorter sky note (DESIGN-v2 mockups: "Average of all dates: moving things blur here"). */
-const H1_DISCOVER = 'All dates averaged';
+const H1_DISCOVER = tr('sky.h1Discover');
 /** Expert's sky note, short (H1); the full sentence is in its tooltip. */
-const H1_SHORT = 'Sky map, all dates averaged';
+const H1_SHORT = tr('sky.h1Short');
 
 // ----- Aladin Lite, as much of it as Sima uses --------------------------------------------------
 
@@ -1140,8 +1141,9 @@ function report(): void {
 function note(): void {
   const el = document.getElementById('sky-note');
   if (!el) return;
+  el.dataset.i18n = '';
   if (flags.lost) {
-    el.innerHTML = `The browser dropped the sky map's drawing surface, so the map stopped drawing. <button class="sky-note-btn" data-sky-reload>Reload the page</button>`;
+    el.innerHTML = `${tr('sky.lost')} <button class="sky-note-btn" data-sky-reload>${tr('sky.reload')}</button>`;
     el.querySelector('[data-sky-reload]')?.addEventListener('click', () => location.reload());
     return;
   }
@@ -1152,27 +1154,23 @@ function note(): void {
   if (channel !== null) {
     const l = CHANNEL_LAM[channel] ?? lam;
     const failed = [...tracks.entries()].some(([k, t]) => k === shown?.key && t.failed.size > 0);
-    fact = `SPHEREx ${l.toFixed(2)} µm, gaps filled${failed ? ', soft in places' : ''}`;
+    fact = tr(failed ? 'sky.factSoft' : 'sky.fact', { lam: `${l.toFixed(2)} µm` });
     more =
-      `SPHEREx DR1 all-sky map from NASA IRSA: channel ${channel} of 102, ${l} µm, detector D${detectorOf(channel)}. ` +
-      'Bright star centres, which the map leaves empty, are filled in from their rim. ' +
-      'Shown larger than its pixels, the map is softened by about half a pixel (display only). ' +
-      'Zoomed out, the map is the whole sky as a globe seen from outside: only the half facing you shows; drag to turn it. ' +
-      'Until NASA’s tiles arrive, a smoothed low-resolution sky shipped with Sima stands in' +
-      (failed ? '; some tiles did not load, so their place still shows it.' : '.');
+      tr('sky.more', { channel, lam: `${l} µm`, det: `D${detectorOf(channel)}` }) +
+      (failed ? tr('sky.moreFailed') : '.');
   } else {
     const wanted = layer === 'spherex' ? 'wise-w1' : layer;
     fact = LAYER_NAMES[wanted];
     more =
       (layer === 'spherex'
-        ? 'The SPHEREx map needs a service worker, which this browser did not allow, so AllWISE is shown. '
+        ? tr('sky.noWorker') + ' '
         : '') +
-      `AllWISE all-sky map, ${wanted === 'wise-w1' ? 'W1, 3.4 µm' : 'W2, 4.6 µm'} (WISE, 2010 to 2011), from NASA IRSA. Nothing is filled in.`;
+      tr('sky.wise', { band: wanted === 'wise-w1' ? 'W1, 3.4 µm' : 'W2, 4.6 µm' });
   }
   // Zoomed in past the map's pixels, it is blur: say why, and where the sharp pictures are.
   const coarse =
     fine && channel !== null
-      ? ` · <span class="sky-note-more" tabindex="0" data-tip="The map's pixels are 13″: zoomed in this far it is blur. The frame shows the sharper single pictures." data-tip-pos="above">soft this close</span>`
+      ? ` · <span class="sky-note-more" tabindex="0" data-tip="${tr('sky.coarseTip')}" data-tip-pos="above">${tr('sky.coarse')}</span>`
       : '';
   // The globe's limb glow takes the hue of the detector the map shows (sky.css).
   const det = channel !== null ? detectorOf(channel) : null;
@@ -1181,7 +1179,7 @@ function note(): void {
     // Discover names the detector in words (DESIGN-v2 D-11, BEGINNER-AND-MOBILE H1).
     if (channel !== null && det !== null) {
       const l = CHANNEL_LAM[channel] ?? lam;
-      fact = `SPHEREx D${det}, ${bandWords(det)}, ${l.toFixed(2)} µm`;
+      fact = tr('sky.factDiscover', { det: `D${det}`, band: bandWords(det), lam: `${l.toFixed(2)} µm` });
     }
     el.innerHTML = `<b>${H1_DISCOVER}</b> · <span class="sky-note-more" tabindex="0" data-tip="${esc(`${H1}. ${more}`)}" data-tip-pos="above">${esc(fact)}</span>${coarse}`;
     return;
@@ -1196,7 +1194,7 @@ function note(): void {
  * deep infrared"). D1 to D3 cover 0.75 to 2.42 µm, D4 to D6 2.42 to 5.0 µm.
  */
 export function bandWords(det: number): string {
-  return det <= 3 ? 'near infrared' : 'deep infrared';
+  return det <= 3 ? tr('sky.near') : tr('sky.deep');
 }
 
 function watchContext(host: HTMLElement): void {

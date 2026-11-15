@@ -13,7 +13,12 @@ const MJD_UNIX = 40587;
 const DAY_MS = 86400000;
 const D2R = Math.PI / 180;
 const MINUS = '−';
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+let MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** The month names `formatDate` writes (shell/i18n.ts sets the Arabic ones on an Arabic page). */
+export function setMonthNames(names: readonly string[]): void {
+  if (names.length === 12) MONTHS = [...names];
+}
 
 /** MJD → JavaScript Date (UTC). */
 export function mjdToDate(mjd: number): Date {
