@@ -13,6 +13,7 @@
  */
 import { setLevel } from '../explore/game.ts';
 import { viewFor, type Link, type View } from '../viewer/link.ts';
+import { S, watch } from '../viewer/state.ts';
 
 /** The two views, Discover and Expert. Also the link's `ui=` values. */
 export type { View };
@@ -87,6 +88,16 @@ export function startView(link: Link, hash: string): View {
   // game.ts no longer restores b102-level. A first visit keeps today's start until Discover is first.
   if (remembered === null && link.ui === null && v === 'expert' && !DISCOVER_FIRST) apply(v);
   else setView(v);
+  // Opening Measure in today's Expert (the frame's Measure button) chooses Expert: remember it,
+  // so a reload opens Measure again now that game.ts no longer keeps b102-level.
+  watch(['level'], () => {
+    if (S.level !== 'measure' || view !== 'expert') return;
+    try {
+      localStorage.setItem(VIEW_KEY, 'expert');
+    } catch {
+      // Blocked storage: the view lasts for this visit only.
+    }
+  });
   return v;
 }
 
