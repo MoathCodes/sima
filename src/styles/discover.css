@@ -940,3 +940,9 @@ html[data-layout^='phone'] .dsc-keys {
 html[data-layout^='phone'] .dsc-link {
   min-height: var(--v2-hit-phone);
 }
+
+/* Discover's mission card guides each step: v1's task line under the frame's header would only
+   take height from the picture (lane DE's request). */
+html[data-view='discover'] #frame-task {
+  display: none;
+}
