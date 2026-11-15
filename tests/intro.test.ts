@@ -84,7 +84,7 @@ test("index.html's early check and introWanted agree on when the intro plays", (
     runInNewContext(script!, {
       URLSearchParams,
       location: { search, hash },
-      localStorage: {
+      sessionStorage: {
         getItem: () => {
           if (seen === null) throw new Error('blocked');
           return seen ? '1' : null;

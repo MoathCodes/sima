@@ -358,7 +358,7 @@ const solidSteps: Step[] = [
       const browser = page.context().browser()!;
       const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
       try {
-        await phone.addInitScript(() => localStorage.setItem('sima-intro', '1'));
+        await phone.addInitScript(() => sessionStorage.setItem('sima-intro', '1'));
         const p = await phone.newPage();
         await openPage(p, page.url().replace(/[?#].*$/, ''));
         const coarse = await p.evaluate(() => matchMedia('(pointer: coarse)').matches);

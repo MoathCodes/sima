@@ -21,7 +21,7 @@
         var flag = q.get('intro');
         var seen = null;
         try {
-          seen = localStorage.getItem('sima-intro') !== null;
+          seen = sessionStorage.getItem('sima-intro') !== null;
         } catch (e) {}
         var shared = /(?:^#|&)w=/.test(location.hash);
         if (q.get('embed') !== '1' && !shared && (flag === '1' || (flag !== '0' && seen === false))) {

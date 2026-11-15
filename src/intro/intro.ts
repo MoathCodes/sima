@@ -56,7 +56,7 @@ const discover = () => document.documentElement.dataset.view === 'discover';
 
 function remember(): void {
   try {
-    localStorage.setItem(INTRO_KEY, '1');
+    sessionStorage.setItem(INTRO_KEY, '1');
   } catch {
     // Storage blocked: the intro just will not remember.
   }
