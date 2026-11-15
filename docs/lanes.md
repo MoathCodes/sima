@@ -371,7 +371,6 @@ Wrap every read and write in `try`; storage can be blocked.
 | `sima-view` | v2.0: the view, `discover` or `expert` | F |
 | `sima-missions` | v2.0: mission progress. Reset clears only this key; never in a link | H |
 | `sima-panels` | v2.0: the visitor's Panels choice, `glass` or `solid` | F |
-| `sima-panels-auto` | v2.0: `solid` when the governor found the sky slow with glass on ("Try glass again" clears it) | F |
 | `frame-box` | The frame's position and size | F |
 | `sky-places` | Saved places | G |
 | `sima-guide` | Tour progress, seen tips, "all numbers" | H (E writes `allNumbers`). Always merge into this entry, never overwrite it |

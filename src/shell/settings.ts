@@ -14,9 +14,7 @@ import {
   glassLevel,
   glassReason,
   onGlass,
-  panelsChoice,
   setPanels,
-  tryGlassAgain,
   type GlassLevel,
   type GlassReason,
 } from './glass.ts';
@@ -50,7 +48,6 @@ export function startSettings(): void {
         <button type="button" role="radio" data-panels="solid" data-guide="panels-solid">Solid</button>
       </div>
       <p class="st-note" data-panels-note></p>
-      <button type="button" class="btn st-try" data-try-glass data-guide="panels-try-glass" hidden>Try glass again</button>
     </section>
     <section class="st-group" aria-labelledby="st-motion">
       <h3 class="group-label" id="st-motion">Motion</h3>
@@ -85,11 +82,6 @@ export function startSettings(): void {
     e.preventDefault();
     pick(radios[(i + step + radios.length) % radios.length]);
   });
-  q('[data-try-glass]').addEventListener('click', () => {
-    tryGlassAgain();
-    q<HTMLElement>(`[data-panels="${glassLevel()}"]`).focus();
-  });
-
   const confirm = q('[data-confirm]');
   const reset = q<HTMLButtonElement>('[data-reset]');
   const done = q('[data-reset-done]');
@@ -199,7 +191,6 @@ const PANELS_NOTE: Record<GlassReason, string> = {
   unsupported: 'This browser cannot draw glass, so panels are solid.',
   'reduced-transparency': 'Panels are solid because your system asks for less transparency. Choose Glass to try it anyway.',
   phone: 'Panels start solid on phones, to keep the sky smooth. Choose Glass to try it.',
-  slow: 'Panels are solid because the sky was slow with glass on.',
   software: 'Panels are solid because this browser draws the sky without a graphics card.',
   default: 'Glass lets the sky show through the panels.',
 };
@@ -224,8 +215,6 @@ function fill(el: HTMLElement): void {
           : 'Solid panels hide the sky behind them. You chose them.'
         : PANELS_NOTE[why];
   }
-  const tryAgain = el.querySelector<HTMLElement>('[data-try-glass]');
-  if (tryAgain) tryAgain.hidden = !(why === 'slow' && panelsChoice() === null);
   const motion = el.querySelector<HTMLElement>('[data-motion]');
   if (motion) {
     motion.textContent = matchMedia('(prefers-reduced-motion: reduce)').matches
