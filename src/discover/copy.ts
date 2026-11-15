@@ -47,12 +47,10 @@ export const MISSION_COPY: Readonly<Record<MissionId, MissionCopy>> = {
 
 export const WELCOME = {
   heading: 'This is the real infrared sky.',
-  body: "NASA's SPHEREx telescope photographs the whole sky again and again. Put its pictures side by side and you can catch stars that move.",
+  body: "NASA's SPHEREx photographs the whole sky again and again. Compare the dates and catch stars that move.",
   start: 'Start your first mission',
-  startLine: 'One star jumps · about 1 minute',
+  startLine: 'One star jumps · 1 min',
   look: 'Look around first',
-  expert: 'Show me every number',
-  fine: 'Pictures here are real and say where they came from. Anything made up says “Simulated” first. Your progress stays in this browser.',
 };
 
 export const MEASURING = 'Measuring…';

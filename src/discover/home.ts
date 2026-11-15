@@ -2,15 +2,17 @@
  * Discover's home and its two small screens (BEGINNER-AND-MOBILE.md sections 5.1, 5.2 and 5.5).
  * Owner: lane K.
  *
- * - The welcome card (first visit, after the intro): the first mission, "Look around first",
- *   "Show me every number", and the fine print. It does not say "every picture is real" (H3).
+ * - The welcome card (first visit, after the intro): one heading, one line, the first mission and
+ *   "Look around first". It does not say "every picture is real" (H3). Expert is the switch in
+ *   the top row, so the card does not offer it again (redesign: one thing, one place).
  * - The mission list: three missions with their states (done, suggested next, not started, in
- *   progress), the skills record ("learned ✓", nothing locked: B-4), "Try another object" and the
- *   Expert view link. On phones it is the sheet at half with the next mission first.
- * - The object card for "Try another object": ungraded, with what to look for and the way to
- *   Expert. Its counts are taken from the pictures shown, never typed (H9).
+ *   progress; nothing locked: B-4) and "Try another object". One line under each name.
+ *   On phones the next mission comes first, as the sheet's peek: its name and **Start**.
+ * - On phones, the card for what the frame shows when no mission runs (an object, a found
+ *   place): its name, its kind, what to try, and ✕ back to the globe.
  */
 import { MISSIONS, MISSION_IDS, OBJECTS, type MissionId } from '../explore/missions.ts';
+import { S } from '../viewer/state.ts';
 import { progress } from '../explore/progress.ts';
 import { targetByKey } from '../core/targets.ts';
 import { MISSION_COPY, WELCOME, plainKind } from './copy.ts';
@@ -30,7 +32,7 @@ const OBJECT_ICON: Record<string, Parameters<typeof icon>[0]> = {
 
 // ----- The welcome card ------------------------------------------------------------------------
 
-/** Fills the welcome card. */
+/** Fills the welcome card. On a phone its peek is the heading and Start (the sheet, 11.6). */
 export function renderWelcome(el: HTMLElement): void {
   el.className = 'dsc-card dsc-welcome';
   el.dataset.material = 'raised';
@@ -38,29 +40,13 @@ export function renderWelcome(el: HTMLElement): void {
     <p class="dsc-wm" aria-hidden="true"><span class="ar" lang="ar">سيما</span><span class="la">Sima</span></p>
     <h2 class="dsc-title" tabindex="-1" data-k="title">${esc(WELCOME.heading)}</h2>
     <p class="dsc-lead">${esc(WELCOME.body)}</p>
-    <button class="dsc-btn primary dsc-start" type="button" data-k="start" data-guide="mission-start">
+    <button class="dsc-btn primary dsc-start" type="button" data-k="start" data-guide="mission-start" data-peek-end>
       <span><span class="s1">${esc(WELCOME.start)}</span><span class="s2">${esc(WELCOME.startLine)}</span></span>${icon('arrow-right')}
     </button>
-    <div class="dsc-row2">
-      <button class="dsc-btn" type="button" data-k="look" data-close data-guide="discover-look">${esc(WELCOME.look)}</button>
-      <button class="dsc-btn" type="button" data-k="expert" data-guide="welcome-expert">${icon('chart')}${esc(WELCOME.expert)}</button>
-    </div>
-    <p class="dsc-fine">${esc(WELCOME.fine)}</p>`;
+    <button class="dsc-btn quiet dsc-look" type="button" data-k="look" data-close data-guide="discover-look">${esc(WELCOME.look)}</button>`;
 }
 
 // ----- The mission list ------------------------------------------------------------------------
-
-/** The skills record: "✓ Blink · Stack · What-if", heard as "Blink, learned. Stack, not yet." */
-function skills(): string {
-  const learned = progress().learned;
-  const heard = MISSION_IDS.map((id) => `${MISSIONS[id].skill}, ${learned.includes(id) ? 'learned' : 'not yet'}.`).join(' ');
-  const shown = MISSION_IDS.map((id) =>
-    learned.includes(id)
-      ? `<span class="on">${icon('check')}${esc(MISSIONS[id].skill)}</span>`
-      : `<span>${esc(MISSIONS[id].skill)}</span>`,
-  ).join('');
-  return `<p class="dsc-skills" data-guide="skills-record"><span class="dsc-sr">Skills: ${esc(heard)}</span><span class="dsc-skills-row" aria-hidden="true">${shown}</span></p>`;
-}
 
 /** A mission row's state: done, in progress (step k of n), suggested next, or not started. */
 function rowState(id: MissionId, suggested: MissionId | null): { cls: string; side: string; words: string } {
@@ -73,7 +59,7 @@ function rowState(id: MissionId, suggested: MissionId | null): { cls: string; si
     const k = Math.min(recorded + 1, steps.length);
     return {
       cls: id === suggested ? 'next going' : 'going',
-      side: `<span class="dsc-state-tag">Step ${k} of ${steps.length}</span><span class="dsc-go" aria-hidden="true">${icon('play')}</span>`,
+      side: `<span class="dsc-state-tag">${k}/${steps.length}</span><span class="dsc-go" aria-hidden="true">${icon('play')}</span>`,
       words: `in progress, step ${k} of ${steps.length}`,
     };
   }
@@ -82,15 +68,19 @@ function rowState(id: MissionId, suggested: MissionId | null): { cls: string; si
   return { cls: '', side: `<span class="dsc-go" aria-hidden="true">${icon('play')}</span>`, words: 'not started' };
 }
 
+/** "Simulated" first on Planet X (H3): a dashed pill before the name. */
+function name(id: MissionId): string {
+  return `${MISSIONS[id].simulated ? '<span class="dsc-pill sim">Simulated</span>' : ''}${esc(MISSION_COPY[id].name)}`;
+}
+
 function missionRow(id: MissionId, suggested: MissionId | null): string {
   const m = MISSIONS[id];
   const c = MISSION_COPY[id];
   const s = rowState(id, suggested);
-  const meta = `${m.simulated ? '<span class="dsc-pill sim">Simulated</span>' : ''}<span>Skill: ${esc(m.skill)} · ${c.minutes} min</span>`;
   return `<li><button class="dsc-m ${s.cls}" type="button" data-mission="${id}" data-guide="mission-${id}"
       aria-label="${esc(`${m.simulated ? 'Simulated: ' : ''}${c.name}. ${c.line}. Skill: ${m.skill}, about ${c.minutes} minute${c.minutes > 1 ? 's' : ''}. ${s.words}.`)}">
     <span class="dsc-node" aria-hidden="true">${icon(NODE_ICON[id])}</span>
-    <span class="dsc-mt"><span class="t">${esc(c.name)}</span>${s.cls.includes('done') ? '' : `<span class="d">${esc(c.line)}</span>`}<span class="k">${meta}</span></span>
+    <span class="dsc-mt"><span class="t">${name(id)}</span><span class="d">${esc(c.line)} · ${c.minutes} min</span></span>
     <span class="dsc-side">${s.side}</span>
   </button></li>`;
 }
@@ -106,39 +96,63 @@ function objectRows(): string {
   }).join('');
 }
 
-/** Fills the mission list. `phone` puts the suggested mission first, with Start mission (5.2). */
+/** Fills the mission list. `phone` puts the suggested mission first, as the sheet's peek (5.2). */
 export function renderList(el: HTMLElement, phone: boolean): void {
   const p = progress();
   const suggested = nextMission(null);
   const done = p.learned.length;
+  const count = `<span class="dsc-faint">${done} of ${MISSION_IDS.length} done</span>`;
   el.className = `dsc-card dsc-list${phone ? ' phone' : ''}`;
   el.dataset.material = 'regular';
-  const foot = `<p class="dsc-foot">${icon('chart')}<span>Want every number now?</span> <button class="dsc-link" type="button" data-k="expert" data-guide="list-expert">Expert view</button></p>`;
-  if (phone && suggested) {
-    const c = MISSION_COPY[suggested];
-    const m = MISSIONS[suggested];
-    const n = MISSION_IDS.indexOf(suggested) + 1;
+  if (phone) {
+    const n = suggested ? MISSION_IDS.indexOf(suggested) + 1 : 0;
+    const peek = suggested
+      ? `<div class="dsc-next" data-peek-end>
+          <span class="dsc-node" aria-hidden="true">${icon(NODE_ICON[suggested])}</span>
+          <span class="dsc-mt"><span class="t">${name(suggested)}</span><span class="d">Mission ${n} of ${MISSION_IDS.length} · ${MISSION_COPY[suggested].minutes} min</span></span>
+          <button class="dsc-btn primary" type="button" data-mission="${suggested}" data-guide="mission-start"
+            aria-label="${esc(`Start mission ${n}: ${MISSIONS[suggested].simulated ? 'Simulated: ' : ''}${MISSION_COPY[suggested].name}`)}">${icon('play')}Start</button>
+        </div>`
+      : `<div class="dsc-next" data-peek-end><span class="dsc-node done" aria-hidden="true">${icon('check')}</span><span class="dsc-mt"><span class="t">All missions done</span><span class="d">Try an object below</span></span></div>`;
+    // Find opens the search page (shell.ts listens for [data-find]): a name or RA and Dec.
     el.innerHTML = `
-      <div class="dsc-list-hd"><h2 class="dsc-h" tabindex="-1" data-k="title">Suggested next · Mission ${n} of ${MISSION_IDS.length}</h2><span class="dsc-faint">${done} of ${MISSION_IDS.length} done</span></div>
-      <div class="dsc-suggest">
-        <p class="t">${m.simulated ? '<span class="dsc-pill sim">Simulated</span> ' : ''}${esc(c.name)}</p>
-        <p class="d">${esc(c.line)} · ${c.minutes} min</p>
-        <button class="dsc-btn primary lg" type="button" data-mission="${suggested}" data-guide="mission-start">Start mission${icon('arrow-right')}</button>
-      </div>
-      ${skills()}
-      <h3 class="dsc-sub">Other missions and objects</h3>
-      <ul class="dsc-mlist">${MISSION_IDS.filter((id) => id !== suggested).map((id) => missionRow(id, null)).join('')}</ul>
-      <ul class="dsc-olist">${objectRows()}</ul>
-      ${foot}`;
+      <h2 class="dsc-sr" tabindex="-1" data-k="title">Missions</h2>
+      <button class="dsc-find" type="button" data-find data-guide="sheet-find">${icon('search')}<span>Star, galaxy or RA Dec</span></button>
+      ${peek}
+      <div class="dsc-sub-hd"><h3 class="dsc-sub">Missions</h3>${count}</div>
+      <ul class="dsc-mlist">${MISSION_IDS.map((id) => missionRow(id, suggested)).join('')}</ul>
+      <div class="dsc-sub-hd"><h3 class="dsc-sub">Try another object</h3></div>
+      <ul class="dsc-olist">${objectRows()}</ul>`;
     return;
   }
   el.innerHTML = `
-    <div class="dsc-list-hd"><h2 class="dsc-h" tabindex="-1" data-k="title">Missions</h2><span class="dsc-faint">${done} of ${MISSION_IDS.length} done</span></div>
-    ${skills()}
+    <div class="dsc-list-hd"><h2 class="dsc-h" tabindex="-1" data-k="title">Missions</h2>${count}</div>
     <div class="dsc-scroll" data-scroll>
       <ul class="dsc-mlist">${MISSION_IDS.map((id) => missionRow(id, suggested)).join('')}</ul>
-      <div class="dsc-sub-hd"><h3 class="dsc-sub">Try another object</h3><span class="dsc-faint">no mission, real pictures</span></div>
+      <div class="dsc-sub-hd"><h3 class="dsc-sub">Try another object</h3></div>
       <ul class="dsc-olist">${objectRows()}</ul>
+    </div>`;
+}
+
+// ----- What the frame shows, on a phone ----------------------------------------------------------
+
+/**
+ * The phone's card for the frame when no mission runs: a shipped object (its kind and what to
+ * try, from lane H's OBJECTS) or any other place (its name). ✕ closes the frame.
+ */
+export function renderObject(el: HTMLElement): void {
+  const o = OBJECTS.find((x) => x.target === S.target);
+  const t = S.target ? targetByKey(S.target) : undefined;
+  // What to try: the first sentence of lane H's line; the Expert half is the top row's switch.
+  const tip = o ? (/^[^.?!]*[.?!](\s+[^.?!]*\?)?/.exec(o.look)?.[0] ?? o.look) : '';
+  const kind = t ? plainKind(t.kind) : '';
+  el.className = 'dsc-card dsc-objcard';
+  el.innerHTML = `
+    <div class="dsc-ohd">
+      <h2 class="dsc-title" tabindex="-1" data-k="title">${esc(S.label || t?.name || 'This spot')}</h2>
+      <button class="dsc-icon-btn" type="button" data-k="close-frame" data-close data-guide="object-close" aria-label="Close the pictures" data-tip="Close">${icon('close')}</button>
     </div>
-    ${foot}`;
+    ${kind ? `<p class="dsc-obj">${esc(kind)}</p>` : ''}
+    ${tip ? `<p class="dsc-tip">${icon('bulb')}<span>${esc(tip)}</span></p>` : ''}
+    <span data-peek-end></span>`;
 }

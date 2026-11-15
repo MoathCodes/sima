@@ -15,6 +15,14 @@
  * card or the picture (A11Y-3).
  *
  * For lane C's mission beacons: `focusMission(id)` opens the home list and focuses that row.
+ *
+ * Phones (redesign): the globe comes first. At home the frame is closed and the sheet shows the
+ * next mission at peek; the frame opens only for a mission, an object or a found place, and then
+ * the sheet shows that thing's card (`object`: name, kind, what to try, ✕ back to the globe).
+ * A place card opened from the sky goes in the sheet with Back (11.2).
+ *
+ * Desktop: a place card opened from the sky takes the left column's place (the list, mission or
+ * success card steps aside until it closes), so it never covers them.
  */
 import { MISSION_IDS, isMissionId, type MissionId } from '../explore/missions.ts';
 import { openTarget } from '../explore/game.ts';
@@ -22,16 +30,17 @@ import { leaveMission, onProgress, progress } from '../explore/progress.ts';
 import { getView, onView, setView } from '../shell/view.ts';
 import { closable } from '../shell/escape.ts';
 import { hideFrame, onFrameMove, openPlace } from '../shell/shell.ts';
-import { onLayout } from '../shell/sheet.ts';
+import { back, onLayout, onSheet, openSheet, sheetContent } from '../shell/sheet.ts';
 import { globeHome, onBeaconPress } from '../sky/globe.ts';
 import { detail } from '../viewer/detail.ts';
-import { S } from '../viewer/state.ts';
+import { S, watch } from '../viewer/state.ts';
 import type { Link } from '../viewer/link.ts';
 import { targetByKey } from '../core/targets.ts';
-import { renderList, renderWelcome } from './home.ts';
-import { askLeave, hint, missionBody, openMission, running, startMissions } from './mission.ts';
+import { renderList, renderObject, renderWelcome } from './home.ts';
+import { askLeave, hint, missionBody, openMission, render as renderMission, running, startMissions } from './mission.ts';
 import { clearSuccess, showSuccess, successBody } from './success.ts';
 import { dismiss, phone, present } from './ui.ts';
+import { startField } from './field.ts';
 
 type Screen = 'welcome' | 'home' | 'mission' | 'success';
 
@@ -41,6 +50,10 @@ let focusNext = false;
 
 const welcome = document.createElement('section');
 const list = document.createElement('div');
+/** On phones: the card for what the frame shows when no mission runs. */
+const objectCard = document.createElement('div');
+/** Its mount: none on desktop (the list stays there), so a detached stand-in. */
+const objectStub = document.createElement('div');
 /** The welcome card has no mount point of its own: on phones it goes in the sheet through this. */
 const stub = document.createElement('div');
 
@@ -105,7 +118,7 @@ export function startDiscover(link: Link): void {
   closable(successMount, 30, () => go('home', true));
   closable(welcome, 30, lookAround);
 
-  for (const el of [welcome, listMount, missionMount, successMount, list, successBody()])
+  for (const el of [welcome, listMount, missionMount, successMount, list, successBody(), objectCard])
     el.addEventListener('click', onClick);
   document.addEventListener('keydown', onKey);
 
@@ -113,10 +126,22 @@ export function startDiscover(link: Link): void {
   onProgress(() => {
     if (screen === 'home') renderList(list, phone());
   });
+  let wasPhone = phone();
   onLayout(() => {
-    renderList(list, phone());
+    if (phone() === wasPhone) return;
+    wasPhone = phone();
+    renderList(list, wasPhone);
+    renderMission();
     sync();
   });
+  // Phones: the frame opening or closing changes what the sheet shows (home or the object card).
+  const frameEl = document.getElementById('frame');
+  if (frameEl) new MutationObserver(sync).observe(frameEl, { attributes: true, attributeFilter: ['hidden'] });
+  watch(['target', 'label'], () => {
+    if (objectCard.isConnected) renderObject(objectCard);
+  });
+  startPlaceCard();
+  startField();
   onFrameMove(place);
   addEventListener('resize', place);
   // The intro covers the page: Discover's cards wait for it to land (html[data-intro]).
@@ -131,8 +156,36 @@ export function startDiscover(link: Link): void {
     openMission(link.mission);
     screen = 'mission';
   } else screen = fresh ? 'welcome' : 'home';
+  // Phones open on the globe: the frame waits for a mission or an object, unless the link named
+  // a place to look at.
+  if (phone() && screen !== 'mission' && !link.target && link.ra === null) hideFrame(true);
   renderList(list, phone());
   sync();
+}
+
+/**
+ * A place card opened from the sky (lane G's `#place-card`). On a phone it goes in the sheet at
+ * half, with Back to what was there; its own ✕ or Back closes it. On desktop Discover the CSS
+ * gives it the left column (discover.css).
+ */
+function startPlaceCard(): void {
+  const card = document.getElementById('place-card');
+  if (!card) return;
+  let inSheet = false;
+  new MutationObserver(() => {
+    const open = !card.hidden;
+    if (open && phone() && !inSheet && getView() === 'discover') {
+      inSheet = true;
+      openSheet(card, { height: 'half', label: 'Place', back: true });
+    } else if (!open && inSheet && sheetContent() === card) back();
+  }).observe(card, { attributes: true, attributeFilter: ['hidden'] });
+  onSheet(() => {
+    if (!inSheet || card.closest('#sheet')) return;
+    // Left the sheet (Back, or replaced): the card closes, so it does not float on the page.
+    inSheet = false;
+    if (!card.hidden) card.querySelector<HTMLElement>('[data-close]')?.click();
+    if (!card.hidden) card.hidden = true;
+  });
 }
 
 /** v1's welcome card (lane H's `#welcome`) belongs to Expert; Discover has its own. */
@@ -173,7 +226,10 @@ function sync(): void {
   if (!listMount || !missionMount || !successMount) return;
   const on = getView() === 'discover' && document.documentElement.dataset.intro === undefined;
   hideOldWelcome();
-  const want = on ? screen : null;
+  const frameOpen = !!document.getElementById('frame')?.checkVisibility();
+  let want: Screen | 'object' | null = on ? screen : null;
+  if (want === 'home' && phone() && frameOpen) want = 'object';
+  if (want !== 'object') dismiss(objectStub, objectCard);
   if (want !== 'welcome') {
     dismiss(stub, welcome);
     welcome.hidden = true;
@@ -193,8 +249,13 @@ function sync(): void {
     }
     shown = welcome;
   } else if (want === 'home') {
-    present(listMount, list, { height: 'half', label: 'Missions' });
+    // Phones: the globe first; the sheet peeks with Find and the next mission (redesign).
+    present(listMount, list, { height: 'peek', label: 'Missions' });
     shown = list;
+  } else if (want === 'object') {
+    renderObject(objectCard);
+    present(objectStub, objectCard, { height: 'peek', label: S.label || 'Pictures' });
+    shown = objectCard;
   } else if (want === 'mission') {
     present(missionMount, missionBody(), { height: 'peek', label: `Mission: ${running() ?? ''}` });
     shown = missionBody();
@@ -219,6 +280,8 @@ function place(): void {
   const rail = document.getElementById('rail');
   const rr = rail?.checkVisibility() ? rail.getBoundingClientRect() : null;
   const left = rr?.width && !phone() ? Math.round(rr.right + 12) : 16;
+  // The place card takes the left column's place in Discover (discover.css).
+  document.documentElement.style.setProperty('--dsc-left', `${left}px`);
   for (const id of ['discover-list', 'mission', 'mission-success']) {
     const m = mount(id);
     if (!m) continue;
@@ -295,6 +358,12 @@ function onClick(e: MouseEvent): void {
     }
     case 'close':
       go('home');
+      return;
+    case 'close-frame':
+      // Phones: back to the globe from an object or a found place.
+      hideFrame(true);
+      globeHome({ animate: true });
+      focusNext = true;
       return;
   }
 }

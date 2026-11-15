@@ -62,9 +62,9 @@ export function drawChart(canvas: HTMLCanvasElement, spec: ChartSpec): void {
   if (!ctx) return;
   const W = canvas.clientWidth;
   const H = canvas.clientHeight;
-  const ink3 = token('--st-ink-3', '#7c86ab');
-  const ink2 = token('--st-ink-2', '#aab2d0');
-  const line = token('--st-line', '#27305a');
+  const ink3 = token('--st-ink-3', '#7d7d86');
+  const ink2 = token('--st-ink-2', '#a8a8b0');
+  const line = token('--st-line', '#2c2c31');
   ctx.font = '400 11px Archivo, sans-serif';
   const pts = spec.points.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
   if (!pts.length) {
@@ -92,7 +92,7 @@ export function drawChart(canvas: HTMLCanvasElement, spec: ChartSpec): void {
 
   // Shaded bands (where water and methane absorb, …), behind everything.
   for (const b of spec.bands ?? []) {
-    ctx.fillStyle = 'rgba(170,178,208,0.08)';
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
     const a = X(Math.max(b.x0, x0));
     const z = X(Math.min(b.x1, x1));
     if (z <= a) continue;
@@ -214,8 +214,8 @@ export function drawPath(canvas: HTMLCanvasElement, spec: PathSpec): void {
   if (!ctx) return;
   const W = canvas.clientWidth;
   const H = canvas.clientHeight;
-  const ink3 = token('--st-ink-3', '#7c86ab');
-  const ink2 = token('--st-ink-2', '#aab2d0');
+  const ink3 = token('--st-ink-3', '#7d7d86');
+  const ink2 = token('--st-ink-2', '#a8a8b0');
   ctx.font = '400 11px Archivo, sans-serif';
   const pts = spec.points.filter((p) => Number.isFinite(p.east) && Number.isFinite(p.north));
   if (!pts.length) {
@@ -242,7 +242,7 @@ export function drawPath(canvas: HTMLCanvasElement, spec: PathSpec): void {
   const X = (e: number) => W / 2 - (e - ce) * k;
   const Y = (n: number) => H / 2 - (n - cn) * k;
 
-  ctx.strokeStyle = token('--st-line', '#27305a');
+  ctx.strokeStyle = token('--st-line', '#2c2c31');
   ctx.beginPath();
   ctx.moveTo(0, H / 2 + 0.5);
   ctx.lineTo(W, H / 2 + 0.5);
@@ -262,7 +262,7 @@ export function drawPath(canvas: HTMLCanvasElement, spec: PathSpec): void {
     ctx.setLineDash([]);
   };
   lineOf(spec.catalogue, token('--st-accent-2', '#ffb03a'), true);
-  lineOf(spec.fit, token('--st-ink', '#eef0f8'), false);
+  lineOf(spec.fit, token('--st-ink', '#f4f4f5'), false);
 
   for (const p of pts) {
     ctx.fillStyle = p.colour;

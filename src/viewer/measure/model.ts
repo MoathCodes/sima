@@ -135,7 +135,7 @@ function motionHeadline(t: TargetInput): Headline {
     value: `${num(f.total, 2)}″/yr`,
     valueTip: `How far the star moves across the sky in a year, measured from the pixels: ${num(f.total, 2)} ± ${num(f.totalErr, 2)} arcseconds a year. An arcsecond is 1/3600 of a degree; one SPHEREx pixel is 6.15″.`,
     pill,
-    sub: `${term(`Measured ±${num(f.totalErr, 2)}″`, 'The 1σ error: the true value is within this about two times in three.')} from the pixels of ${f.used} of ${f.of} real exposures${cat ? `, catalogue ${num(cat.total, 2)}″/yr` : ''}`,
+    sub: `${term(`±${num(f.totalErr, 2)}″`, 'Measured from the pixels. The 1σ error: the true value is within this about two times in three.')} · ${f.used} of ${f.of} real exposures${cat ? ` · catalogue ${num(cat.total, 2)}″/yr` : ''}`,
     chart: 'path',
     para:
       // The line above already gives the value, its error and the exposures used; say only what it does not.

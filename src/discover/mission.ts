@@ -35,10 +35,9 @@ import { setTrial, trialResult, type TrialResult } from '../viewer/motion.ts';
 import { emit } from '../shell/bus.ts';
 import { hideFrame } from '../shell/shell.ts';
 import { closeSandbox, onSandbox, openSandbox, sandboxState, type SandboxReading } from '../shell/sandbox.ts';
-import { openSheet } from '../shell/sheet.ts';
 import { targetByKey } from '../core/targets.ts';
 import { KEYS, LEAVE_ASK, MEASURING, MISSION_COPY, plainKind } from './copy.ts';
-import { esc, icon, liveRegion, phone, rerender, say } from './ui.ts';
+import { esc, icon, liveRegion, rerender, say } from './ui.ts';
 
 /** A mission as it runs on this page. */
 interface Run {
@@ -70,8 +69,6 @@ interface Run {
 
 let run: Run | null = null;
 const body = document.createElement('div');
-/** The hint on phones: secondary content in the sheet, with Back to the step (11.2). */
-const hintCard = document.createElement('div');
 const live = liveRegion();
 let noteTimer = 0;
 let pollTimer = 0;
@@ -94,16 +91,13 @@ export function startMissions(opts: { onFinish: typeof finished; onLeave: () => 
   left = opts.onLeave;
   body.className = 'dsc-card dsc-mission';
   body.dataset.material = 'raised';
-  hintCard.className = 'dsc-card dsc-hintcard';
-  for (const el of [body, hintCard]) {
-    el.addEventListener('click', onClick);
-    el.addEventListener('keydown', (e) => {
-      if (e.key.toLowerCase() === 'h' && !e.ctrlKey && !e.metaKey && !e.altKey && !isField(e.target)) {
-        e.preventDefault();
-        hint();
-      }
-    });
-  }
+  body.addEventListener('click', onClick);
+  body.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'h' && !e.ctrlKey && !e.metaKey && !e.altKey && !isField(e.target)) {
+      e.preventDefault();
+      hint();
+    }
+  });
   watch(['target', 'field', 'groups', 'source', 'epoch', 'mode', 'playing', 'det'], (keys) => {
     if (!run) return;
     if (keys.has('groups') || keys.has('field')) resetCounts();
@@ -194,13 +188,10 @@ export function hint(): void {
     draw();
   }
   const text = hintText();
+  // On a phone the hint shows inside the step, so the sheet's peek grows to hold it and the
+  // picture and Play stay in view (redesign: no second screen for a hint).
   render();
   say(live, text);
-  if (phone()) {
-    // Secondary content in the sheet at half; Back returns to the step at peek (11.2).
-    renderHintCard();
-    openSheet(hintCard, { height: 'half', label: 'Hint', back: true });
-  }
 }
 
 /** Show me: lane H's instruction (rings or points). It never passes a step (MSN-7). */
@@ -209,7 +200,6 @@ export function showMe(): void {
   if (!run || !k) return;
   run.shown = showMissionStep(run.id, k);
   render();
-  if (phone() && hintCard.isConnected) renderHintCard();
   say(live, run.shown);
 }
 
@@ -516,22 +506,22 @@ export function render(): void {
     body,
     `
     <div class="dsc-hd">
-      <p class="dsc-eyebrow dsc-wide">Mission ${n} of ${MISSION_IDS.length} · Skill: ${esc(m.skill)} · about ${c.minutes} minute${c.minutes > 1 ? 's' : ''}</p>
-      <p class="dsc-eyebrow dsc-ph">${m.simulated ? 'Simulated · ' : ''}${esc(c.name)} · step ${i} of ${total}</p>
+      <h2 class="dsc-title" tabindex="-1" data-k="title">${m.simulated ? '<span class="dsc-pill sim">Simulated</span>' : ''}${esc(c.name)}</h2>
+      <span class="dsc-segs" role="progressbar" aria-label="Mission progress: step ${i} of ${total}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${did}">${m.steps
+        .map((_, j) => `<span class="${j < did ? 'on' : j === did ? 'now' : ''}"></span>`)
+        .join('')}</span>
       <button class="dsc-icon-btn" type="button" data-k="leave-x" data-close data-guide="mission-leave" aria-label="Leave the mission" data-tip="Leave the mission">${icon('close')}</button>
     </div>
-    <h2 class="dsc-title" tabindex="-1" data-k="title">${esc(m.title ?? c.name)}</h2>
-    <p class="dsc-obj">${objectLine(r)}</p>
+    <p class="dsc-obj">Mission ${n} of ${MISSION_IDS.length} · ${objectLine(r)}</p>
     <div class="dsc-scroll" data-scroll>
       <ol class="dsc-steps">${steps}</ol>
     </div>
-    <div class="dsc-hint-row">
+    <div class="dsc-hint-row" data-peek-end>
       ${nextLabel ? `<button class="dsc-btn" type="button" data-k="hint" data-guide="mission-hint">${icon('bulb')}${esc(nextLabel)}</button>` : ''}
       ${now && !r.shown ? `<button class="dsc-btn quiet" type="button" data-k="show" data-guide="mission-show-me">${icon('eye')}Show me</button>` : ''}
       ${r.id === 'runaway' && step() === 'tap' ? `<button class="dsc-btn quiet" type="button" data-k="picture">Go to the picture</button>` : ''}
+      <span class="dsc-keys" tabindex="0" role="note" aria-label="${esc(KEYS)}" data-tip="${esc(KEYS)}">${icon('keyboard')}</span>
     </div>
-    <div class="dsc-bar" role="progressbar" aria-label="Mission progress" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${did}"><span style="width:${Math.round((did / total) * 100)}%"></span></div>
-    <p class="dsc-keys">${esc(KEYS)}</p>
     ${
       r.asking
         ? `<div class="dsc-ask" role="group" aria-label="${esc(LEAVE_ASK)}"><p>${esc(LEAVE_ASK)}</p><div class="dsc-row"><button class="dsc-btn primary" type="button" data-k="leave">Leave</button><button class="dsc-btn" type="button" data-k="stay">Stay</button></div></div>`
@@ -540,7 +530,30 @@ export function render(): void {
     '[data-k="step"], .dsc-title',
   );
   body.append(live);
-  if (hintCard.isConnected) renderHintCard();
+  arrive(r);
+}
+
+/** What was on the card at the last draw: a new step slides in, a new hint rises (redesign 4). */
+let drawnStep = '';
+let drawnHelp = 0;
+function arrive(r: Run): void {
+  const key = `${r.id}|${step() ?? ''}`;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ease = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
+  if (key !== drawnStep && drawnStep.startsWith(`${r.id}|`)) {
+    body.querySelector('.dsc-step.now')?.animate(
+      reduced ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: 'translateX(24px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 320, easing: ease },
+    );
+  } else if (r.help > drawnHelp) {
+    const boxes = body.querySelectorAll('.dsc-hintbox');
+    boxes[boxes.length - 1]?.animate(
+      reduced ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 200, easing: ease },
+    );
+  }
+  drawnStep = key;
+  drawnHelp = r.help;
 }
 
 /** The hint box, Show me's words, and the ghost's snap button once Show me was pressed. */
@@ -553,28 +566,6 @@ function helpBoxes(r: Run): string {
         ? `<button class="dsc-btn" data-k="snap" type="button">${icon('path')}${esc(r.shown)}</button>`
         : `<p class="dsc-hintbox shown">${icon('eye')}<span>${esc(r.shown)}</span></p>`;
   return html;
-}
-
-/** The phone's hint card: the step, its hints and Show me, for the sheet at half. */
-function renderHintCard(): void {
-  const r = run;
-  const s = instruction();
-  if (!r || !s) {
-    hintCard.replaceChildren();
-    return;
-  }
-  const nextLabel = hintLabels()[r.help] ?? null;
-  rerender(
-    hintCard,
-    `<p class="dsc-eyebrow">Hint · ${esc(MISSION_COPY[r.id].name)}</p>
-    <p class="dsc-st">${esc(s.title)}</p>
-    ${helpBoxes(r)}
-    <div class="dsc-hint-row">
-      ${nextLabel ? `<button class="dsc-btn" type="button" data-k="hint">${icon('bulb')}${esc(nextLabel)}</button>` : ''}
-      ${!r.shown ? `<button class="dsc-btn quiet" type="button" data-k="show">${icon('eye')}Show me</button>` : ''}
-    </div>`,
-    '.dsc-st',
-  );
 }
 
 function stateLine(r: Run): string {

@@ -74,6 +74,15 @@ export function startGlobe(): void {
   layer.setAttribute('role', 'group');
   layer.setAttribute('aria-label', 'Missions and objects on the sky');
   document.getElementById('sky-marks')?.after(layer);
+  // The wheel over a beacon or its tag zooms the sky under it, as it does beside it.
+  layer.addEventListener(
+    'wheel',
+    (e) => {
+      e.preventDefault();
+      document.getElementById('sky')?.dispatchEvent(new WheelEvent('wheel', e));
+    },
+    { passive: false },
+  );
   for (const id of PANELS) {
     const el = document.getElementById(id);
     if (el) keepClear(el);

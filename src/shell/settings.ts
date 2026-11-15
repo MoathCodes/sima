@@ -2,8 +2,8 @@
  * Settings (v2.0, BEGINNER-AND-MOBILE.md section 5.7). Owner: lane F.
  *
  * In `#settings`: Panels (Glass or Solid, and why the page chose Solid when it did), the motion
- * line (read-only: motion follows the system), Reset my progress (asks first; clears only
- * `sima-missions` through progress.ts), and "Your progress is kept in this browser only."
+ * line (read-only: motion follows the system) and Reset (asks first; clears only
+ * `sima-missions` through progress.ts). A reason is said only when the page chose Solid.
  *
  * On a desktop it is a Raised card under the Settings button (top right), closed by Escape
  * (order 30), the close button, the button again or a click outside. In a phone layout it opens
@@ -50,16 +50,17 @@ export function startSettings(): void {
       </div>
       <p class="st-note" data-panels-note></p>
     </section>
-    <section class="st-group" aria-labelledby="st-motion">
+    <section class="st-group st-row" aria-labelledby="st-motion">
       <h3 class="group-label" id="st-motion">Motion</h3>
-      <p class="st-note" data-motion></p>
+      <span class="st-note term" tabindex="0" data-motion></span>
     </section>
     <section class="st-group" aria-labelledby="st-progress">
-      <h3 class="group-label" id="st-progress">Your progress</h3>
-      <p class="st-note">Your progress is kept in this browser only.</p>
-      <button type="button" class="btn st-reset" data-reset data-guide="settings-reset">Reset my progress</button>
+      <div class="st-row">
+        <h3 class="group-label" id="st-progress">Progress</h3>
+        <button type="button" class="btn st-reset" data-reset data-guide="settings-reset" data-tip="Kept in this browser only">Reset</button>
+      </div>
       <div class="st-confirm" data-confirm role="group" aria-labelledby="st-confirm-q" hidden>
-        <p id="st-confirm-q" class="st-q">Reset your missions? The steps you did and the skills you learned are cleared. Nothing else changes.</p>
+        <p id="st-confirm-q" class="st-q">Reset your missions and skills?</p>
         <div class="st-confirm-row">
           <button type="button" class="btn primary" data-reset-yes data-guide="settings-reset-yes">Reset</button>
           <button type="button" class="btn quiet" data-reset-no>Keep my progress</button>
@@ -102,7 +103,7 @@ export function startSettings(): void {
   q('[data-reset-yes]').addEventListener('click', () => {
     resetProgress();
     endConfirm();
-    done.textContent = 'Your progress is reset. Every mission starts fresh.';
+    done.textContent = 'Progress reset.';
   });
 
   q('[data-close]').addEventListener('click', () => closeSettings());
@@ -194,7 +195,7 @@ const PANELS_NOTE: Record<GlassReason, string> = {
   'reduced-transparency': 'Panels are solid because your system asks for less transparency. Choose Glass to try it anyway.',
   phone: 'Panels start solid on phones, to keep the sky smooth. Choose Glass to try it.',
   software: 'Panels are solid because this browser draws the sky without a graphics card.',
-  default: 'Glass lets the sky show through the panels.',
+  default: '',
 };
 
 function fill(el: HTMLElement): void {
@@ -210,17 +211,14 @@ function fill(el: HTMLElement): void {
   }
   const note = el.querySelector<HTMLElement>('[data-panels-note]');
   if (note) {
-    note.textContent =
-      why === 'choice'
-        ? level === 'glass'
-          ? 'Glass lets the sky show through the panels. You chose it.'
-          : 'Solid panels hide the sky behind them. You chose them.'
-        : PANELS_NOTE[why];
+    // Only a reason the page chose for you is said; your own choice needs no sentence.
+    note.textContent = why === 'choice' ? '' : PANELS_NOTE[why];
+    note.hidden = !note.textContent;
   }
   const motion = el.querySelector<HTMLElement>('[data-motion]');
   if (motion) {
-    motion.textContent = matchMedia('(prefers-reduced-motion: reduce)').matches
-      ? 'Follows your system: reduced. Panels fade instead of moving. To change it, turn off Reduce motion in your device’s accessibility settings.'
-      : 'Follows your system: full motion. To reduce it, turn on Reduce motion in your device’s accessibility settings.';
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    motion.textContent = reduced ? 'Reduced (system)' : 'Full (system)';
+    motion.dataset.tip = `Follows your device’s Reduce motion setting${reduced ? ': panels fade instead of moving' : ''}.`;
   }
 }

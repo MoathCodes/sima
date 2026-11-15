@@ -82,7 +82,7 @@ function bdiText(text: string): HTMLElement {
 const SOLAR_SYSTEM = /^(the )?(sun|moon|mercury|venus|earth|mars|jupiter|saturn|uranus|neptune|pluto|planets?)$/i;
 
 const SEARCH_WORDS: Record<View, string> = {
-  expert: 'Search a star or galaxy, or paste coordinates',
+  expert: 'Star, galaxy or RA Dec',
   discover: 'Find a star, galaxy or nebula',
 };
 

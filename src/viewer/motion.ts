@@ -279,7 +279,7 @@ function drawArrow(ctx: CanvasRenderingContext2D, view: Readonly<PictureView>): 
   const tip = { x: tail.x + off.dx, y: tail.y + off.dy };
   const css = getComputedStyle(document.documentElement);
   const amber = css.getPropertyValue('--st-accent-2').trim() || '#ffb03a';
-  const ink = css.getPropertyValue('--st-ink-3').trim() || '#7c86ab';
+  const ink = css.getPropertyValue('--st-ink-3').trim() || '#7d7d86';
 
   // The reach of the handle: a faint dotted ring, so the scale reads at a glance.
   ctx.strokeStyle = ink;

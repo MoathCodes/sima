@@ -481,7 +481,7 @@ function drawPlanet(ctx: CanvasRenderingContext2D, view: Readonly<PictureView>):
     const ty = Math.min(view.size - 14, Math.max(14, y));
     ctx.save();
     ctx.setLineDash([]);
-    ctx.fillStyle = 'rgba(9, 13, 28, 0.82)';
+    ctx.fillStyle = 'rgba(14, 14, 16, 0.84)';
     ctx.beginPath();
     ctx.roundRect(tx, ty - 10, w, 20, 7);
     ctx.fill();

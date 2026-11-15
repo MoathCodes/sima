@@ -6,7 +6,7 @@
  *    from the shipped all-sky images (public/sky-seed/allsky), one detector at a time, from
  *    0.91 to 4.92 µm, each in its detector's colour.
  * 2. A "diamond ring" flare at the point of the edge where the globe will land: Barnard's Star.
- * 3. The name inside the dark disc: سيما, Sima, and one line.
+ * 3. The name inside the dark disc: سيما written as a constellation (mark.ts), Sima, and one line.
  * 4. The shadow slides off: the globe is the real SPHEREx sky (the shipped image of the channel
  *    the sky map shows), and it turns until Barnard's Star faces us.
  * 5. The globe grows until the sky fills the window; the sky map takes over and glides in to its
@@ -29,6 +29,7 @@ import { targetByKey } from '../core/targets.ts';
 import { INTRO_KEY } from './wanted.ts';
 import { lookAt, nestPixel, radec, toSky, unit } from './sphere.ts';
 import {
+  RING_CHANNELS,
   T,
   flareDir,
   globeRadius,
@@ -38,6 +39,7 @@ import {
   type Landing,
   type Plan,
 } from './scene.ts';
+import { showMark } from './mark.ts';
 import { hex, startPainter, type PainterEvent, type PainterInit, type Rgb } from './render.ts';
 
 const DEG = Math.PI / 180;
@@ -85,6 +87,8 @@ interface Run {
   painter: Painter | null;
   /** Shipped pictures the painter has ready. */
   loaded: Set<number>;
+  /** When the ring's first picture was ready (seconds from the start). */
+  ringFrom: number | null;
   revealAt: number | null;
   handAt: number | null;
   /** The sky map has been moved to the landing's start (it must be put back on a skip). */
@@ -114,8 +118,8 @@ function play(replay: boolean): void {
   el.innerHTML = `
     <canvas class="intro-sky" role="img" aria-label="NASA SPHEREx's infrared sky as a globe"></canvas>
     <div class="intro-name">
-      <span class="intro-ar" lang="ar" dir="rtl">سيما</span>
-      <span class="intro-la">Sima</span>
+      <div class="intro-ar" role="img" lang="ar" aria-label="سيما"></div>
+      <div class="intro-la" role="img" aria-label="Sima"></div>
       <p class="intro-line">The infrared sky, as NASA's SPHEREx sees it.</p>
     </div>
     <span class="intro-star" aria-hidden="true"></span>
@@ -131,6 +135,7 @@ function play(replay: boolean): void {
     start: nowAbs() + lead,
     painter: null,
     loaded: new Set(),
+    ringFrom: null,
     revealAt: null,
     handAt: null,
     moved: false,
@@ -204,8 +209,12 @@ function paint(run: Run, canvas: HTMLCanvasElement): Painter {
   };
   const tell = (e: PainterEvent) => {
     if (running !== run) return;
-    if (e.type === 'loaded') run.loaded.add(e.ch);
-    else {
+    if (e.type === 'loaded') {
+      run.loaded.add(e.ch);
+      if (run.ringFrom === null && RING_CHANNELS.includes(e.ch)) {
+        run.ringFrom = Math.max(0, (nowAbs() - run.start) / 1000);
+      }
+    } else {
       console.warn(`intro: ${e.why}; the page shows without it`);
       finish(run, 'fade');
     }
@@ -328,7 +337,7 @@ function frame(run: Run): void {
     run.sent = key;
     run.painter?.plan(p);
   }
-  const s = sceneAt(p, t, w, h, (ch) => run.loaded.has(ch));
+  const s = sceneAt(p, t, w, h, (ch) => run.loaded.has(ch), run.ringFrom ?? 0);
   if (s.done) {
     finish(run, 'land');
     return;
@@ -408,12 +417,13 @@ function skyIsIn(): boolean {
 function showWords(run: Run, lead: number): void {
   const name = run.el.querySelector<HTMLElement>('.intro-name');
   if (!name) return;
-  name.style.setProperty('--r0', `${globeRadius(innerWidth, innerHeight)}px`);
-  const parts = [...name.children] as HTMLElement[];
-  const times = [T.ar, T.la, T.line];
-  parts.forEach((el, i) => {
-    const [a, b] = times[i] ?? T.line;
-    el.animate(
+  const r0 = globeRadius(innerWidth, innerHeight);
+  name.style.setProperty('--r0', `${r0}px`);
+  const [ar, la, line] = [...name.children] as HTMLElement[];
+  showMark(ar!, la!, r0, lead, run.reduced);
+  [la, line].forEach((el, i) => {
+    const [a, b] = i ? T.line : T.la;
+    el!.animate(
       run.reduced
         ? [{ opacity: 0 }, { opacity: 1 }]
         : [

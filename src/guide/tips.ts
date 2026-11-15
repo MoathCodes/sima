@@ -35,8 +35,8 @@ const mode = (m: Mode) => () => S.mode === m;
 const TIPS: readonly Tip[] = [
   {
     id: 'measure-words',
-    title: 'Plain words for every number',
-    text: 'Point at any word with a dotted line to see what it means, what is normal and why it matters.',
+    title: 'Dotted words explain themselves',
+    text: 'Point at one.',
     at: 'measure-panel',
     when: () => S.level === 'measure' && !!S.field,
   },

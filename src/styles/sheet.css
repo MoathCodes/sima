@@ -2,6 +2,11 @@
    src/shell/phone.ts sets html[data-layout] and --pic, --sheet-h, --sheet-top on <html>.
    - The sheet is Slate (opaque) at every height, 28 px top corners, never glass, never over the
      picture: it starts under the frame's bottom edge.
+   - Globe first (redesign): while the frame is closed (html[data-phone='globe']) the globe fills
+     the screen and the sheet sits over its bottom edge at peek, half or full. With the frame open
+     (data-phone='frame') the frame is the screen under the top row and the sheet sits under it.
+   - Motion: phone.ts glides the sheet and the frame's parts between layouts (transform only);
+     the sheet's background reaches below the screen so a glide never shows a gap.
    - Full-height pages (Settings, About, Find on phones) are the sheet at data-height="page".
    - Placement only for other lanes' cards (where the frame, the bar and Measure sit on a phone);
      their looks stay in their own stylesheets. */
@@ -25,21 +30,28 @@ html:not([data-layout^='phone']) .sheet:not([data-height='page']) {
   display: none;
 }
 
-/* The grabber: a button (11.2). The bar it shows is small; its hit area is 48 px tall. */
+/* The grabber: a button (11.2). Its bar is small; its hit area is 96 × 28 px over the content's
+   top padding, so it costs the peek no height. A tap steps the height; a drag moves it. */
 .sheet-grab {
-  flex: none;
-  align-self: center;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 2;
   display: grid;
   place-items: start center;
   width: 96px;
-  height: var(--v2-hit-phone, 48px);
-  margin: 0 auto -16px;
-  padding: 10px 0 0;
+  height: 28px;
+  margin: 0 0 0 -48px;
+  padding: 8px 0 0;
   border: 0;
   border-radius: var(--v2-r-control);
   background: none;
   color: inherit;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
+}
+.sheet[data-dragging] .sheet-grab {
+  cursor: grabbing;
 }
 .sheet-grab-bar {
   width: 36px;
@@ -62,6 +74,7 @@ html:not([data-layout^='phone']) .sheet:not([data-height='page']) {
 /* Back, and a page's title. */
 .sheet-head {
   flex: none;
+  touch-action: none;
   display: flex;
   align-items: center;
   gap: var(--v2-hit-gap-phone, 8px);
@@ -103,12 +116,15 @@ html:not([data-layout^='phone']) .sheet:not([data-height='page']) {
 .sheet-body {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 8px var(--sheet-pad) var(--sheet-pad);
+  padding: 16px var(--sheet-pad) var(--sheet-pad);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 /* A sheet that starts with a Back row needs no gap above its content. */
+.sheet-head:not([hidden]) {
+  margin-top: 14px;
+}
 .sheet-head:not([hidden]) + .sheet-body {
   padding-top: 0;
 }
@@ -146,22 +162,8 @@ html[data-layout^='phone'] :is(#tools, #frames, #frame-grip, #rail, #sky-coords)
   display: none !important;
 }
 
-/* ----- Phone fit: the frame under the top row, the sheet under the frame ------------------------- */
+/* ----- Phone fit: the sheet ------------------------------------------------------------------- */
 
-html[data-layout='phone-fit'] #frame {
-  position: fixed !important;
-  top: calc(env(safe-area-inset-top, 0px) + 56px) !important;
-  right: calc(env(safe-area-inset-right, 0px) + var(--v2-gutter-phone, 12px)) !important;
-  left: calc(env(safe-area-inset-left, 0px) + var(--v2-gutter-phone, 12px)) !important;
-  width: auto !important;
-  max-height: none !important;
-  translate: none !important;
-  --pic-max: var(--pic) !important;
-}
-/* The fit layout has no bar: the Discover frame carries Play and the date chips (11.1). */
-html[data-layout='phone-fit'] #bar {
-  display: none !important;
-}
 html[data-layout='phone-fit'] .sheet:not([data-height='page']) {
   position: fixed;
   top: var(--sheet-top, auto);
@@ -173,7 +175,174 @@ html[data-layout='phone-fit'] .sheet:not([data-height='page']) {
     env(safe-area-inset-left, 0px);
   border-radius: var(--v2-r-sheet) var(--v2-r-sheet) 0 0;
   border-top: 1px solid var(--v2-rule);
-  /* No slide between heights: the picture grows at once, so a sliding sheet would cross it. */
+  box-shadow: var(--v2-lift-2);
+}
+/* The sheet's surface reaches below the screen: a glide up from a shorter height shows no gap. */
+html[data-layout='phone-fit'] .sheet:not([data-height='page'])::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: 100vh;
+  background: inherit;
+  pointer-events: none;
+}
+/* Content arriving in the sheet rises in (redesign 4). */
+html[data-layout^='phone'] .sheet-item:not([hidden]) {
+  animation: sheet-in var(--dur-3, 320ms) var(--ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) both;
+}
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-layout^='phone'] .sheet-item:not([hidden]) {
+    animation: sheet-fade 0.2s linear both;
+  }
+  @keyframes sheet-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}
+/* Short screens at peek: the step's second sentence waits for half (the picture keeps 240 px). */
+@media (max-height: 700px) {
+  html[data-layout^='phone'] .sheet[data-height='peek'] .dsc-how {
+    display: none;
+  }
+}
+
+/* ----- Phone fit, frame open: the frame is the screen under the top row ---------------------
+   The picture as wide as the screen allows; under it the dates (lane E's control, its own row),
+   then Play and the views. Previous and next: the dates control steps itself. */
+
+html[data-layout='phone-fit'] #frame {
+  position: fixed !important;
+  top: calc(env(safe-area-inset-top, 0px) + 56px) !important;
+  right: env(safe-area-inset-right, 0px) !important;
+  left: env(safe-area-inset-left, 0px) !important;
+  width: auto !important;
+  max-height: none !important;
+  translate: none !important;
+  padding: 8px 12px 10px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: var(--v2-st-bg) !important;
+  --pic-max: var(--pic) !important;
+}
+/* The fit layout has no bar: the frame carries Play and the date chips (11.1). */
+html[data-layout='phone-fit'] #bar {
+  display: none !important;
+}
+html[data-layout^='phone'][data-view='discover'] #frame-head {
+  padding: 0 52px 0 0;
+  min-height: 0;
+}
+/* Name, then one source line (H2): real or not, SPHEREx, release, dates, detector, µm. */
+html[data-layout^='phone'][data-view='discover'] .frame-name {
+  display: block;
+}
+html[data-layout^='phone'][data-view='discover'] .frame-title {
+  font: 600 17px/1.25 var(--font);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+html[data-layout^='phone'][data-view='discover'] :is(.frame-source, .frame-prov) {
+  display: inline;
+  margin: 0;
+  font: 500 12px/1.4 var(--font);
+  color: var(--v2-on-glass-3);
+}
+html[data-layout^='phone'][data-view='discover'] .frame-source > .term {
+  color: var(--v2-on-glass-2);
+}
+html[data-layout^='phone'][data-view='discover'] .frame-prov::before {
+  content: ' · ';
+}
+/* The field size is the frame's own small button on a phone (discover/field.ts). */
+html[data-layout^='phone'][data-view='discover'] .frame-actions {
+  display: none;
+}
+/* The loading line floats over the top of the picture instead of taking a row. */
+html[data-layout^='phone'][data-view='discover'] #frame-load {
+  position: absolute;
+  z-index: 3;
+  top: calc(var(--pic-top, 64px) + 8px);
+  right: 20px;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  pointer-events: none;
+}
+html[data-layout^='phone'][data-view='discover'] #frame-load:not(:has(.load-text:not(:empty))) {
+  display: none;
+}
+html[data-layout^='phone'][data-view='discover'] #frame-pic {
+  margin-top: 8px;
+}
+/* Dates, then Play and the views. */
+html[data-layout^='phone'][data-view='discover'] #frame-play.fp {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  grid-template-areas:
+    'chips chips'
+    'play views';
+  gap: 8px;
+  margin-top: 8px;
+}
+html[data-layout^='phone'][data-view='discover'] .fp-controls {
+  grid-area: play;
+  display: block;
+}
+html[data-layout^='phone'][data-view='discover'] .fp-step {
+  display: none;
+}
+html[data-layout^='phone'][data-view='discover'] .fp-play {
+  width: 48px;
+  height: 48px;
+}
+/* The dates (lane E's sequence control, chips.ts): placed here, styled there. */
+html[data-layout^='phone'][data-view='discover'] .fp-chips {
+  grid-area: chips;
+  min-width: 0;
+}
+/* The views sit beside Play, in the row under the dates. */
+html[data-layout^='phone'][data-view='discover'] #frame-views {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  left: calc(12px + 48px + 8px);
+  margin: 0;
+  flex-wrap: nowrap;
+}
+html[data-layout^='phone'][data-view='discover'] #frame-views > button {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 4px;
+  font-size: 13px;
+}
+html[data-layout^='phone'][data-view='discover'] #frame-views > button > span {
+  white-space: nowrap;
+}
+
+/* A place card from the sky, in the sheet on phones (discover/index.ts): it lies flat in it. */
+#sheet #place-card {
+  position: static !important;
+  inset: auto !important;
+  width: auto !important;
+  max-height: none !important;
+  margin: 0;
+  padding: 0;
+  translate: none !important;
+  opacity: 1 !important;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
 }
 
 /* ----- Phone scroll: one column that scrolls (rotation, short screens, 400% zoom, Expert) -------- */
