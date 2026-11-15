@@ -37,11 +37,11 @@
   will-change: opacity, transform;
 }
 .intro-ar {
-  font: 600 clamp(40px, calc(var(--r0, 240px) * 0.3), 84px) / 1.2 var(--font-wordmark);
+  font: 700 clamp(40px, calc(var(--r0, 240px) * 0.3), 84px) / 1.2 var(--font-wordmark);
 }
 .intro-la {
   margin-top: calc(var(--r0, 240px) * 0.01);
-  font: 600 clamp(19px, calc(var(--r0, 240px) * 0.105), 30px) / 1 var(--font-wordmark);
+  font: 700 clamp(19px, calc(var(--r0, 240px) * 0.105), 30px) / 1 var(--font-wordmark);
   letter-spacing: 0.02em;
 }
 .intro-line {

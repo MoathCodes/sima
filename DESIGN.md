@@ -77,9 +77,9 @@ typography:
     fontWeight: 400
     lineHeight: 1.6
   wordmark:
-    fontFamily: "'Reem Kufi', 'Archivo', sans-serif"
+    fontFamily: "'Amiri', 'Archivo', sans-serif"
     fontSize: "24px"
-    fontWeight: 600
+    fontWeight: 700
     lineHeight: 1
 rounded:
   tip: "7px"
@@ -291,13 +291,13 @@ These are data colours. They never colour chrome.
 **Display Font:** Archivo
 **Body Font:** Archivo (the same family, variable weight 100 to 900)
 **Label/Mono Font:** Archivo for labels. The system monospace (ui-monospace) appears only for code: the link in Share and code in About.
-**Wordmark Font:** Reem Kufi, for سيما and Sima in the top-left card, and the Arabic name in About.
+**Wordmark Font:** Amiri, for سيما and Sima in the top-left card, the name in the intro and About, and every Arabic name in the app (places lists and cards). One token, `--font-wordmark`, sets it everywhere.
 
-**Character:** Archivo is a grotesque from Omnibus-Type, made to work in print and on screen alike. It is compact and a little stiff, like the lettering on a printed chart, with plain, open shapes that stay clear at 11 and 12px. Its tabular figures keep the punctuation narrow ("10.39″" stays one word), so dates and coordinates do not jitter and do not gape. Reem Kufi is a geometric Kufic face; its square, built letters suit a name that means "a sign or a mark", and its Latin letters match its Arabic, so سيما and Sima read as one mark.
+**Character:** Archivo is a grotesque from Omnibus-Type, made to work in print and on screen alike. It is compact and a little stiff, like the lettering on a printed chart, with plain, open shapes that stay clear at 11 and 12px. Its tabular figures keep the punctuation narrow ("10.39″" stays one word), so dates and coordinates do not jitter and do not gape. Amiri is a classic Naskh in the line of the Bulaq press books (Khaled Hosny); its calligraphic سيما reads as a title on a printed star atlas, set against the plain grotesque of the chart, and its own Latin letters (a book serif) match its Arabic, so سيما and Sima read as one mark. It stays clear at 14px for Arabic names in lists.
 
-**Why these and not others.** Round 1 (Nov 2026) compared on screen: Atkinson Hyperlegible Next (very legible but read as generic here), Readex Pro and Alexandria (good Arabic, but their wide Latin letters cost space on the bar at 1366px), Kufam and Changa (strong Kufic wordmarks, weaker as a pair with the UI face), El Messiri (too soft for a chart). Round 4 replaced the first UI face, IBM Plex Sans: the impeccable skill lists IBM Plex among the faces that mean "you stopped looking", and the team asked for faces that are not the usual AI defaults. Compared on the app's own strings (scratchpad specimen): Schibsted Grotesk (its tabular figures make the full stop and comma as wide as a digit, so "10.39" reads "10 . 39"), Libre Franklin (no tabular figures in the open build), Hanken Grotesk (no prime marks ′ ″, which every coordinate needs). Archivo has the figures, the primes and µ, and the 35 KB Latin file is smaller than Plex's was. An Arabic UI face, if the interface is translated, should be chosen to pair with Archivo (Reem Kufi stays the wordmark).
+**Why these and not others.** Round 1 (Nov 2026) compared on screen: Atkinson Hyperlegible Next (very legible but read as generic here), Readex Pro and Alexandria (good Arabic, but their wide Latin letters cost space on the bar at 1366px), Kufam and Changa (strong Kufic wordmarks, weaker as a pair with the UI face), El Messiri (too soft for a chart). Round 4 replaced the first UI face, IBM Plex Sans: the impeccable skill lists IBM Plex among the faces that mean "you stopped looking", and the team asked for faces that are not the usual AI defaults. Compared on the app's own strings (scratchpad specimen): Schibsted Grotesk (its tabular figures make the full stop and comma as wide as a digit, so "10.39" reads "10 . 39"), Libre Franklin (no tabular figures in the open build), Hanken Grotesk (no prime marks ′ ″, which every coordinate needs). Archivo has the figures, the primes and µ, and the 35 KB Latin file is smaller than Plex's was. An Arabic UI face, if the interface is translated, should be chosen to pair with Archivo (Amiri stays the wordmark). Round 5 (15 Nov 2026) replaced the first wordmark face, Reem Kufi, which the product owner found typical of AI-made designs. Compared on the wordmark (dark intro, light card) and on Arabic place names at 14 and 17px: Aref Ruqaa (the most striking سيما, but its Ruqʿa letters are hard to read at 14px), Noto Naskh Arabic and Markazi Text (good, plainer), Readex Pro, Alexandria and Noto Kufi Arabic (clean geometric sans, the generic choice), Qahiri (unreadable small). The sheet is kept outside the repo (`~/.cache/sima-rebuild/fonts/compare.png`).
 
-**Shipping.** Both families are under the SIL Open Font License 1.1. The woff2 files and their licences (`OFL-Archivo.txt`, `OFL-Reem-Kufi.txt`) are in `src/styles/fonts/` and are bundled by Vite; no font host is contacted. The Latin subset covers the app's symbols (µ, ′, ″, −, ·, ×, …); Greek σ falls back to Helvetica Neue or Arial. Text falls back to those faces until the font arrives (`font-display: swap`).
+**Shipping.** Both families are under the SIL Open Font License 1.1. The woff2 files and their licences (`OFL-Archivo.txt`, `OFL-Amiri.txt`) are in `src/styles/fonts/` and are bundled by Vite; no font host is contacted. The Latin subset covers the app's symbols (µ, ′, ″, −, ·, ×, …); Greek σ falls back to Helvetica Neue or Arial. Text falls back to those faces until the font arrives (`font-display: swap`).
 
 ### Hierarchy
 - **Headline** (600, 25px, line-height 1.15, letter-spacing -0.02em): the welcome card's heading, the one big measured number in Measure, section headings in About.
@@ -307,7 +307,7 @@ These are data colours. They never colour chrome.
 - **Label** (500, 12px, line-height 1.35 to 1.4): supporting lines, tooltips, status labels, provenance lines. Group labels inside panels are 600 in Faint Ink, in sentence case.
 - **Scale** (400, 11px): lettering on the ruled scales and under small charts. Nothing else is this small.
 - **Reading** (400, 16px, line-height 1.6, lines up to about 72ch): the long text in the About dialog.
-- **Wordmark** (Reem Kufi 600): "سيما" at 24px, then "Sima" at 19px, in one card.
+- **Wordmark** (Amiri 700): "سيما" at 24px, then "Sima" at 19px, in one card.
 
 ### Named Rules
 **The Five Sizes Rule.** Interface text is 11, 12, 14, 17 or 25px. The only others are 16px for About's reading text and the wordmark (24px Arabic, 19px Latin), and the name in the opening intro (see Intro).
@@ -472,7 +472,7 @@ Motion says where a thing came from and where it went. It is short and it never 
 The first visit opens with about six seconds of motion (6.25 s, then the cards' 0.45 s fade). It is the one deliberate exception to the rules above: motion here is there to set the scene, once, and it ends in the calm page. Everything in it is real data or plainly a mark, and it never holds the page up.
 
 1. **Darkness, then the ring** (0 to 2.9 s). On Blue-black Sky, a black disc (the sky globe in shadow) with a thin ring of light round its edge, like an eclipse's corona. The ring's light is the real SPHEREx sky along the globe's edge, from the shipped all-sky images: brighter sky reaches further out, so the Milky Way makes the streamers. It steps through one channel from each detector, 0.91 to 4.92 µm, each in its detector hue (`d1` to `d6`: here they colour detector data, as the Rainbow Rule allows). A line at the bottom says what the light is, in Label size and `st-ink-3`: "SPHEREx all-sky map, NASA IRSA (DR1) · average of all dates · 0.91 µm, detector D1".
-2. **The name** inside the disc, in `st-ink`: سيما (Reem Kufi 600, 30% of the disc's radius, 40 to 84px), Sima under it (Reem Kufi, 19 to 30px), and one line in Reading size and `st-ink-2`: "The infrared sky, as NASA's SPHEREx sees it." Each fades and rises 8px into place.
+2. **The name** inside the disc, in `st-ink`: سيما (Amiri 700, 30% of the disc's radius, 40 to 84px), Sima under it (Amiri, 19 to 30px), and one line in Reading size and `st-ink-2`: "The infrared sky, as NASA's SPHEREx sees it." Each fades and rises 8px into place.
 3. **The diamond ring** (about 2.35 s). A small white flare on the edge, up and to the right, where Barnard's Star sits: the spot the page will land on. Its name is beside it in Label size and `st-ink-2`, only when the frame's patch is a named target at the landing's centre.
 4. **The shadow slides off** (from 2.9 s, 1.45 s long), away from the flare, as at the end of an eclipse. The globe under it is the real map in the channel the sky map shows, grey and lifted as the Grey Map Rule says. The ring fades as the globe lights. The name leaves first.
 5. **The turn and the dive** (3.2 to 4.95 s). The globe turns until Barnard's Star faces us, then grows until the sky fills the window. It is the same globe the sky map shows zoomed right out (orthographic), so nothing changes shape on the way.
