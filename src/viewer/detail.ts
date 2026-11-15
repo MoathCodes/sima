@@ -194,6 +194,33 @@ function saveAllNumbers(): void {
   }
 }
 
+/**
+ * "Send this to my computer" (Expert on a phone, 11.5): the system share sheet with this view's
+ * link, or the link copied when there is no share sheet.
+ */
+async function sendToComputer(p: HTMLElement): Promise<void> {
+  const done = p.querySelector<HTMLElement>('.ms-computer-done');
+  const url = location.href;
+  const say = (t: string) => {
+    if (done) done.textContent = t;
+  };
+  try {
+    if (typeof navigator.share === 'function') {
+      await navigator.share({ title: `Sima: ${S.label}`, url });
+      say('');
+      return;
+    }
+  } catch (err) {
+    if ((err as DOMException)?.name === 'AbortError') return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    say('Link copied. Open it on your computer.');
+  } catch {
+    say(`Copy this link: ${url}`);
+  }
+}
+
 // ----- Building the panel -------------------------------------------------------------------
 
 function skeleton(p: HTMLElement): void {
@@ -231,8 +258,14 @@ function skeleton(p: HTMLElement): void {
         <button type="button" class="btn" data-all data-guide="all-numbers" aria-pressed="false"></button>
         <p class="ms-foot-line" data-all-line></p>
       </div>
+      <div class="ms-computer" data-computer>
+        <p>Picture tools, several frames and workspaces need a computer.</p>
+        <button type="button" class="btn" data-send data-guide="send-to-computer">Send this to my computer</button>
+        <p class="ms-computer-done" role="status"></p>
+      </div>
     </div>`;
   p.querySelector('[data-close]')?.addEventListener('click', () => setMeasureOpen(false));
+  p.querySelector('[data-send]')?.addEventListener('click', () => void sendToComputer(p));
   p.querySelector('[data-all]')?.addEventListener('click', () => {
     S.allNumbers = !S.allNumbers;
     if (!S.allNumbers) S.measureTab = null;

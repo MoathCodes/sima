@@ -863,3 +863,53 @@
 .lg-name::before {
   content: 'Aa';
 }
+
+/* ------------------------------------------------------------------------------------------
+   v2.0: Measure in the phone column (BEGINNER-AND-MOBILE 11.5). One column: headline, tabs,
+   chart, "Show all the numbers", then "Send this to my computer". Measure is always there, so
+   it has no close button; every target is at least 48 px.
+   ------------------------------------------------------------------------------------------ */
+.ms-computer {
+  display: none;
+}
+html[data-layout^='phone'] .ms-panel {
+  overflow: visible;
+}
+html[data-layout^='phone'] :is(.ms-wrap, .ms-all) {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'main' 'aside' 'foot';
+  grid-template-rows: auto;
+}
+html[data-layout^='phone'] .ms-main > .ms-chart {
+  flex: none;
+  height: 220px;
+}
+html[data-layout^='phone'] .ms-tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+html[data-layout^='phone'] .ms-tabs > [role='tab'],
+html[data-layout^='phone'] .ms-panel .btn {
+  min-height: 48px;
+}
+html[data-layout^='phone'] .ms-headrow [data-close] {
+  display: none;
+}
+html[data-layout^='phone'] .ms-computer {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+.ms-computer p {
+  flex: 1 1 180px;
+  margin: 0;
+  color: var(--ink-2);
+  font: var(--text-label);
+}
+.ms-computer .ms-computer-done:empty {
+  display: none;
+}

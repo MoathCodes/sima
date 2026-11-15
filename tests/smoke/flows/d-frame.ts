@@ -111,7 +111,7 @@ export const flows: Flow[] = [
       pressStep('view-swipe', 'Swipe'),
       pressStep('view-stack', 'Stack'),
       pressStep('view-trail', 'Trail'),
-      pressStep('measure', 'Back to Explore'),
+      pressStep('measure', 'Close Measure'),
       pressStep('frame-hide', 'Hide the frame (FRM-5)'),
     ],
   },
