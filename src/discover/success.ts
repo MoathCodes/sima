@@ -17,7 +17,8 @@ import { targetMeasurements } from '../viewer/load.ts';
 import type { TrialResult } from '../viewer/motion.ts';
 import type { MissionInputs } from '../explore/missions.ts';
 import { MEASURING, MISSION_COPY } from './copy.ts';
-import { ghostLines } from '../explore/plain.ts';
+import { ghostLines, planetLines } from '../explore/plain.ts';
+import { planetEdges } from '../explore/plan-x.ts';
 import { esc, icon, liveRegion, rerender, say } from './ui.ts';
 
 /** What the mission left for its result. */
@@ -187,8 +188,19 @@ function planetX(r: MissionInputs['sandbox']): string {
         : 'it would not show with this method';
   return `<p class="dsc-label">Model · Simulated</p>
     <p class="dsc-cat">By a simple model and this patch's measured noise: with your pretend planet at <b>${Math.round(p.distance)} AU</b> and <b>${p.radius.toFixed(1)} times Earth's width</b>, ${say}.</p>
+    ${edgeLines(r.noises)}
     ${observed}
     <p class="dsc-src">Model: Sima's sandbox · Noise: measured from SPHEREx pixels</p>`;
+}
+
+/** Lane H's edges: how far a Neptune-sized planet would show, and how big one at 500 AU must be. */
+function edgeLines(noises: Parameters<typeof planetEdges>[0] | undefined): string {
+  if (!noises?.length) return '';
+  const l = planetLines(planetEdges(noises));
+  return [l.distance, l.radius]
+    .filter(Boolean)
+    .map((t) => `<p class="dsc-fine">${esc(t)}</p>`)
+    .join('');
 }
 
 /** The result in one sentence, for the live region. */

@@ -1,7 +1,7 @@
 import type { Field, MotionFit, Det } from '../core/types.ts';
 import type { Motion } from '../core/motion.ts';
 import type { StackResult } from '../core/stack.ts';
-import type { PretendPlanet, Verdict } from '../core/sandbox.ts';
+import type { DetectorNoise, PretendPlanet, Verdict } from '../core/sandbox.ts';
 import { hits } from './track.ts';
 
 /**
@@ -222,7 +222,12 @@ export interface MissionInputs extends CheckInputs {
   /** How far a tap still counts, in the tap's units: tapReach (track.ts), as the tour uses. */
   radius?: number;
   trial?: { key: string; motion: Motion; atCatalogue: boolean; result: StackResult } | null;
-  sandbox?: { planet: PretendPlanet; verdict: Verdict; patchKey: string } | null;
+  sandbox?: {
+    planet: PretendPlanet;
+    verdict: Verdict;
+    patchKey: string;
+    noises?: readonly DetectorNoise[];
+  } | null;
   fit?: MotionFit | null;
 }
 
