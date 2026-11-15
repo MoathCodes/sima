@@ -25,6 +25,7 @@ import {
   announce,
 } from './load.ts';
 import { on } from '../shell/bus.ts';
+import { formatCoords } from '../core/astro.ts';
 import { icon, type IconName } from '../shell/icons.ts';
 import { hideFrame } from '../shell/shell.ts';
 import { measureShown, setMeasureOpen } from './detail.ts';
@@ -91,7 +92,7 @@ export function startFrame(): void {
     // A new spot loads: the frame shows, so its progress is always in view.
     hideFrame(false);
     if (m.target) void loadTarget(m.target, { fov: m.fov });
-    else void aimAt(m.ra, m.dec, m.fov);
+    else void aimAt(m.ra, m.dec, m.fov, m.name);
   });
   on('band', (m) => {
     S.color = false;
@@ -102,7 +103,7 @@ export function startFrame(): void {
     preview: (ra, dec) => previewPatch(ra, dec),
     wheel: (steps) => void setFov(nextFov(steps)),
   });
-  watch(['label', 'source', 'set', 'fov', 'level', 'measureOpen', 'tools', 'target'], header);
+  watch(['label', 'source', 'set', 'fov', 'level', 'measureOpen', 'tools', 'target', 'ra', 'dec'], header);
   watch(['level', 'mode', 'groups', 'source', 'field'], views);
   watch(['level', 'sameColour'], () => regroup());
   let combined = S.pic.combinePass;
@@ -164,6 +165,8 @@ function header(): void {
   if (!head) return;
   const measure = S.level === 'measure';
   const open = measureShown();
+  // A named spot that is not a shipped target: its coordinates follow the source (audit #5).
+  const named = !S.target && !!S.label && S.label !== formatCoords(S.ra, S.dec);
   const view = document.documentElement.dataset.view;
   const discover = view === 'discover';
   const expert = view === 'expert';
@@ -185,7 +188,7 @@ function header(): void {
   const html = `
     <div class="frame-name">
       <h2 class="frame-title"></h2>
-      <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span>${src?.cls === 'real' ? '<span class="frame-agency"> · NASA SPHEREx</span>' : ''}</p>
+      <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span>${src?.cls === 'real' ? '<span class="frame-agency"> · NASA SPHEREx</span>' : ''}${named ? `<span class="frame-coords"> · ${formatCoords(S.ra, S.dec)}</span>` : ''}</p>
       <p class="frame-prov" data-guide="data-line"></p>
     </div>
     <div class="frame-actions">

@@ -113,6 +113,31 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
 #frame-task:not(:empty) {
   margin-bottom: 4px;
 }
+/* The task's help line keeps two lines' height while the task is open, so a miss note
+   ("Not that one…") appears without moving the picture (UX audit #1; as O-I5 for the loading
+   line). */
+#frame-task .task:not(.done) .task-help {
+  display: block;
+  min-height: 2lh;
+}
+#frame-task .task:not(.done) .task-help[hidden] {
+  visibility: hidden;
+}
+
+/* The title takes its own row when the frame is narrow (UX audit #9): the buttons wrap under it
+   instead of cutting the name to "Bar…". */
+#frame-head.frame-head {
+  flex-wrap: wrap;
+}
+#frame-head .frame-name {
+  flex: 1 1 180px;
+}
+.frame-coords {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .frame-head {
   display: flex;

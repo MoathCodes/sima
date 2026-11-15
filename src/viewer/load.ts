@@ -214,7 +214,7 @@ async function loadPractice(key: string, fov?: number): Promise<void> {
  * @returns Resolves when the spot's first pictures are on screen, when it is known there are
  *   none, or when a newer aim replaces this one.
  */
-export async function aimAt(ra: number, dec: number, fov?: number): Promise<void> {
+export async function aimAt(ra: number, dec: number, fov?: number, name?: string): Promise<void> {
   const want = nearestFov(fov ?? S.fov);
   const near = TARGETS.find((t) => separation(t.ra, t.dec, ra, dec) < TARGET_RADIUS);
   // A small move (a drag inside the picture, or of the patch on the sky) keeps the target and the
@@ -241,7 +241,8 @@ export async function aimAt(ra: number, dec: number, fov?: number): Promise<void
   S.dec = Math.max(-90, Math.min(90, dec));
   S.fov = want;
   S.target = null;
-  S.label = formatCoords(S.ra, S.dec);
+  // A named place keeps its name (UX audit #5); the header adds the coordinates under it.
+  S.label = name?.trim() || formatCoords(S.ra, S.dec);
   // Real exposures fetched earlier for a wider field may already hold this spot.
   const held = [...onHand].reverse().find((set) => covers(set.data, S.ra, S.dec, want));
   if (held) {

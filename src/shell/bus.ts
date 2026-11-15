@@ -28,8 +28,10 @@ export interface BusEvents {
    *   snaps it to the nearest step of FOVS.
    * - `target`: a shipped target key (`barnard`, …) when the spot is one of the five; else
    *   null or absent.
+   * - `name`: optional, the place's name ("Andromeda Galaxy"): the frame's title, with the
+   *   coordinates on the line under it (UX audit #5). Without it the title is the coordinates.
    */
-  aim: { ra: number; dec: number; fov?: number; target?: string | null };
+  aim: { ra: number; dec: number; fov?: number; target?: string | null; name?: string };
 
   /**
    * Frame → sky: the patch the frame looks at now, and what it holds.
