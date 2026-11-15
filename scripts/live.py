@@ -59,6 +59,15 @@ DEFAULT_ORIGINS = ["http://localhost:5173"]
 # Detectors whose oldest and newest exposures are asked first. The viewer opens on 2.0 um
 # (detector 3), so that pair is likeliest to be the first look it shows.
 FIRST_DETS = (3, 2, 4, 1, 5, 6)
+# Watching and pausing (docs/research/prediction.md, option 1). A patch is watched while a page
+# asked for its status in the last WATCH_SECS (the page asks every 1.5 s). Unwatched, it finishes
+# the cutouts under way and pauses; a first look not yet written may start FIRST_GRACE more
+# cutouts. Asked again, it carries on: searches and cutouts are cached on disk.
+WATCH_SECS = 5.0
+FIRST_GRACE = 4
+# Classes of work: a page asks (watched), or the seed job fetches ahead (seed).
+CLASSES = ("watched", "seed")
+HELD_RESCAN = 60                   # seconds between rereads of the finished patches on disk
 
 ID_RE = re.compile(r"[0-9a-f]{16}")
 
@@ -169,10 +178,33 @@ def allowed_origin(origin: str | None, allowed: list[str]) -> str | None:
     return None
 
 
-def patch_catalogue(ra: float, dec: float) -> dict:
-    """The 'catalogue' block of a patch: a fixed position, not a catalogue object."""
+def patch_catalogue(ra: float, dec: float, ahead: bool = False) -> dict:
+    """The 'catalogue' block of a patch: a fixed position, not a catalogue object. `ahead`: the
+    seed job chose the spot (a tour stop or a listed place), not a user."""
+    who = ("Patch centre chosen ahead of time for a tour stop or a listed place" if ahead
+           else "Patch centre asked for in the viewer")
     return {"ra": ra, "dec": dec, "ep": 2016.0, "pmra": 0.0, "pmdec": 0.0, "parallax": None,
-            "from": "Patch centre typed by the user (a position, not a catalogue object)"}
+            "from": f"{who} (a position, not a catalogue object)"}
+
+
+def offset_arcmin(ra0: float, dec0: float, ra: float, dec: float) -> tuple[float, float]:
+    """Offset of (ra, dec) from (ra0, dec0) in arcmin: x east, y north (fine for a degree or two).
+    The same as the page's surround.ts `offsetArcmin`."""
+    dra = ((ra - ra0) % 360 + 540) % 360 - 180
+    return dra * math.cos(math.radians(dec0)) * 60, (dec - dec0) * 60
+
+
+def covers(held: dict, ra: float, dec: float, fov: int) -> bool:
+    """True when a held patch's cutouts hold the whole asked field: the page's surround.ts `covers`
+    without its one-pixel slack. `held` has ra, dec, fov (its cutout side is cutout_size(fov)).
+    A held patch is used only up to 2 steps wider than asked (at least 12'), so a small field never
+    downloads a 48' patch's 6 MB."""
+    if held["fov"] > max(12, 2 * fov):
+        return False
+    side = cutout_size(held["fov"]) * 60 - pb.CUTOUT_MARGIN_DEG * 60
+    x, y = offset_arcmin(held["ra"], held["dec"], ra, dec)
+    reach = side / 2 - fov / 2
+    return abs(x) <= reach and abs(y) <= reach
 
 
 def catalog_radius(fov: int) -> float:
@@ -192,7 +224,8 @@ class Patch:
     """One patch: its status and the work that fills it. States: queued, searching, first, rest,
     ready, empty, failed."""
 
-    def __init__(self, service: "Service", pid: str, ra: float, dec: float, fov: int, rels: list[str]):
+    def __init__(self, service: "Service", pid: str, ra: float, dec: float, fov: int, rels: list[str],
+                 klass: str = "watched"):
         self.svc = service
         self.id = pid
         self.dir = service.root / pid
@@ -206,7 +239,13 @@ class Patch:
             # higher of the two), how many tries are allowed and how many seconds it may take.
             "searchTry": 0, "searchTries": len(pb.SEARCH_WAITS) + 1, "searchBudget": pb.SEARCH_BUDGET,
             "searchTimedOut": False,
+            # Fetched ahead by the seed job rather than for a page that asked.
+            "ahead": klass == "seed",
         }
+        self.klass = klass
+        self.last_seen = time.time() if klass == "watched" else 0.0
+        self.grace = FIRST_GRACE
+        self.queued_at = time.time()
         self.search_started = 0.0
         self.started = time.time()
         self.finished = 0.0
@@ -229,13 +268,46 @@ class Patch:
         with self.lock:
             self.status.update(kw)
 
+    # -- watching ---------------------------------------------------------------------------
+
+    def touch(self):
+        """A page asked about this patch: it is watched for the next WATCH_SECS."""
+        self.last_seen = time.time()
+        self.grace = FIRST_GRACE
+
+    def watched(self) -> bool:
+        return time.time() - self.last_seen < WATCH_SECS
+
+    def wanted(self) -> bool:
+        """Someone waits for it: a page is watching, or the seed job asked for it."""
+        return self.klass == "seed" or self.watched()
+
+    def priority(self) -> int:
+        """Priority of its requests for the shared slots (prebake._Gate), asked again while waiting."""
+        return pb.WATCHED if self.watched() else pb.SEED
+
+    def keep_going(self) -> bool:
+        """Asked before each cutout starts: carry on while wanted; else let a first look not yet
+        written start a few more cutouts, then pause."""
+        if self.wanted():
+            return True
+        if not self.status["first"] and self.grace > 0:
+            self.grace -= 1
+            return True
+        return False
+
     # -- the work ---------------------------------------------------------------------------
 
     def run(self):
+        self.timings["wait"] = time.time() - self.queued_at
+        with pb.priority(self.priority):
+            self._run()
+
+    def _run(self):
         t0 = time.time()
         st = self.snapshot()
         ra, dec, fov, rels = st["ra"], st["dec"], st["fov"], st["searched"]
-        cat = patch_catalogue(ra, dec)
+        cat = patch_catalogue(ra, dec, st["ahead"])
         size = cutout_size(fov)
         try:
             self.search_started = time.time()
@@ -277,7 +349,8 @@ class Patch:
                 pb.estimate_lam(e, ra, dec)
             p = pb.plan(exps, per_det(fov), LIVE_MAX_FRAMES)
             planned = sum(min(p["perDet"], len(g)) for g in p["groups"].values())
-            self.set(state="first", done=0, total=planned, kept=0)
+            # After a pause the first look may already be written: carry on with the rest.
+            self.set(state="rest" if self.snapshot()["first"] else "first", done=0, total=planned, kept=0)
 
             def on_frame(got):
                 # The first look goes out as soon as it can blink; the rest keeps coming.
@@ -289,8 +362,16 @@ class Patch:
                     self.write_step("first", first, p, cat, fov, size, len(exps), p["perDet"])
                     self.set(state="rest")
 
+            report: dict = {}
             frames, _ = pb.fetch_plan(p, cat, size, ahead=first_look_groups(p), on_frame=on_frame,
-                                      on_progress=lambda d, t: self.set(done=d, total=t, kept=d))
+                                      on_progress=lambda d, t: self.set(done=d, total=t, kept=d),
+                                      keep_going=self.keep_going, report=report)
+            if report.get("stopped"):
+                # Nobody watches it any more: what it fetched stays on disk for when it is asked again.
+                self.set(state="paused")
+                self.svc.count("paused")
+                self.finish()
+                return
             self.timings["full"] = time.time() - t0
             if not frames:
                 self.set(state="failed", error="no exposure could be downloaded")
@@ -322,7 +403,8 @@ class Patch:
             "perDetPerWindow": per_det,
             "monthly": False,
             "frames": entries,
-            "live": {"id": self.id, "step": step, "fetched": now_iso(), "found": found, "windows": nwin},
+            "live": {"id": self.id, "step": step, "fetched": now_iso(), "found": found, "windows": nwin,
+                     "ahead": bool(self.status["ahead"])},
         }
         out = self.dir / step
         out.mkdir(parents=True, exist_ok=True)
@@ -334,13 +416,16 @@ class Patch:
     def finish(self):
         self.finished = time.time()
         st = self.snapshot()
-        pb.log(f"patch {self.id} {st['state']} ra={st['ra']} dec={st['dec']} fov={st['fov']} "
+        pb.log(f"patch {self.id} {st['state']} {self.klass} ra={st['ra']} dec={st['dec']} fov={st['fov']} "
                f"found={st['found']} kept={st['kept']} "
-               + " ".join(f"{k}={v:.1f}s" for k, v in self.timings.items()))
+               + " ".join(f"{k}={v:.1f}s" for k, v in self.timings.items())
+               + f" | {self.svc.counts_line()}")
         if st["state"] in ("ready", "empty"):
             self.dir.mkdir(parents=True, exist_ok=True)
             st["timings"] = {k: round(v, 1) for k, v in self.timings.items()}
             pb._write_atomic(self.dir / "status.json", json.dumps(st).encode())
+            if st["state"] == "ready":
+                self.svc.hold(st)
 
     def run_catalog(self):
         st = self.snapshot()
@@ -384,26 +469,109 @@ class Busy(Exception):
 
 
 class Service:
+    """Patches by id, a queue in three classes (a page watching first, then seed work, then work
+    nobody watches, which is dropped and paused), and an index of finished patches, so a spot
+    inside one is answered from it (coverage reuse)."""
+
     def __init__(self, root: Path, max_running: int = MAX_RUNNING, max_queued: int = MAX_QUEUED):
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
         self.patches: dict[str, Patch] = {}
         self.lock = threading.Lock()
-        self.queue: queue.Queue[Patch] = queue.Queue()
+        self.waiting: list[Patch] = []
+        self.wake = threading.Condition(self.lock)
         self.max_queued = max_queued
+        self.count_lock = threading.Lock()
+        self.counts = {"cached": 0, "reused": 0, "started": 0, "seeded": 0, "paused": 0, "resumed": 0}
+        self.held: dict[str, dict] = {}
+        self.held_at = 0.0
+        self._load_held()
         self.cat_queue: queue.Queue[Patch] = queue.Queue()
         for _ in range(max_running):
-            threading.Thread(target=self._worker, args=(self.queue, "run"), daemon=True).start()
-        threading.Thread(target=self._worker, args=(self.cat_queue, "run_catalog"), daemon=True).start()
+            threading.Thread(target=self._runner, daemon=True).start()
+        threading.Thread(target=self._cat_worker, daemon=True).start()
 
-    @staticmethod
-    def _worker(q: queue.Queue, method: str):
+    # -- queue ------------------------------------------------------------------------------
+
+    def _enqueue(self, p: Patch):
+        """Under self.lock."""
+        p.queued_at = time.time()
+        p.set(state="queued")
+        self.waiting.append(p)
+        self.wake.notify()
+
+    def _next(self) -> Patch:
+        """The next patch to run: watched first, then seed work, oldest first in each. One nobody
+        watches any more is set aside as paused (it starts again when asked)."""
+        with self.lock:
+            while True:
+                for p in [q for q in self.waiting if not q.wanted()]:
+                    self.waiting.remove(p)
+                    p.set(state="paused")
+                    self.count("paused")
+                if self.waiting:
+                    p = min(self.waiting, key=lambda q: (0 if q.watched() else 1, q.queued_at))
+                    self.waiting.remove(p)
+                    return p
+                self.wake.wait(1.0)
+
+    def _runner(self):
         while True:
-            p = q.get()
+            p = self._next()
             try:
-                getattr(p, method)()
+                p.run()
+            except Exception as e:  # noqa: BLE001 - run() reports its own; this is a last guard
+                pb.log(f"patch {p.id} runner: {type(e).__name__}: {e}")
+
+    def _cat_worker(self):
+        while True:
+            p = self.cat_queue.get()
+            try:
+                p.run_catalog()
             finally:
-                q.task_done()
+                self.cat_queue.task_done()
+
+    # -- counters ---------------------------------------------------------------------------
+
+    def count(self, what: str):
+        with self.count_lock:
+            self.counts[what] = self.counts.get(what, 0) + 1
+
+    def counts_line(self) -> str:
+        return " ".join(f"{k}={v}" for k, v in self.counts.items())
+
+    # -- coverage reuse ---------------------------------------------------------------------
+
+    def _load_held(self):
+        """The index of finished patches on disk, for coverage reuse. Read again every HELD_RESCAN s,
+        so patches another process wrote (the seed job) are found too."""
+        self.held_at = time.time()
+        rels = releases()
+        for path in self.root.glob("*/status.json"):
+            try:
+                st = json.loads(path.read_text())
+            except (OSError, json.JSONDecodeError):
+                continue
+            if st.get("state") == "ready" and st.get("full") and st.get("searched") == rels:
+                self.held[st["id"]] = {k: st[k] for k in ("id", "ra", "dec", "fov")}
+
+    def hold(self, st: dict):
+        """A patch finished: index it for reuse."""
+        if st.get("full") and st.get("searched") == releases():
+            self.held[st["id"]] = {k: st[k] for k in ("id", "ra", "dec", "fov")}
+
+    def covering(self, ra: float, dec: float, fov: int, skip: str = "") -> str | None:
+        """The id of a finished patch whose cutouts hold the asked field: the narrowest, then the
+        nearest. None if there is none."""
+        if time.time() - self.held_at > HELD_RESCAN:
+            self._load_held()
+        found = [h for h in self.held.values() if h["id"] != skip and covers(h, ra, dec, fov)]
+        if not found:
+            return None
+        best = min(found, key=lambda h: (h["fov"], math.hypot(*offset_arcmin(h["ra"], h["dec"], ra, dec))))
+        return best["id"]
+
+    # -- requests ---------------------------------------------------------------------------
 
     def _from_disk(self, pid: str) -> dict | None:
         path = self.root / pid / "status.json"
@@ -419,36 +587,67 @@ class Service:
             st["catalog"] = f"/api/patch/{pid}/catalog.json"
         return st
 
-    def request(self, ra: float, dec: float, fov: int) -> dict:
-        """Find or start the patch. Raises Busy when too many are waiting."""
+    def _known(self, pid: str, watch: bool) -> dict | None:
+        """Status of a patch held in memory or on disk, or None (unknown, or may be tried again).
+        A page asking (`watch`) keeps it watched and wakes a paused one. Under self.lock."""
+        p = self.patches.get(pid)
+        if p is not None:
+            if watch:
+                p.touch()
+            st = p.snapshot()
+            if st["state"] == "failed" and time.time() - p.finished > p.retry_after:
+                return None
+            if st["state"] in ("ready", "empty") and not p.dir.exists():
+                del self.patches[pid]
+                self.held.pop(pid, None)
+                return None  # cache folder was deleted
+            if st["state"] == "paused" and p.wanted():
+                self.count("resumed")
+                self._enqueue(p)
+                st = p.snapshot()
+            self._ensure_catalog(p, st)
+            return st
+        disk = self._from_disk(pid)
+        if disk is None:
+            return None
+        if not disk.get("catalog") and disk.get("state") in ("ready", "empty"):
+            p = Patch(self, pid, disk["ra"], disk["dec"], disk["fov"], disk.get("searched", releases()))
+            p.status.update({k: v for k, v in disk.items() if k in p.status})
+            p.finished = time.time()
+            self.patches[pid] = p
+            self._ensure_catalog(p, p.snapshot())
+            return p.snapshot()
+        return {k: v for k, v in disk.items() if k != "timings"}
+
+    def request(self, ra: float, dec: float, fov: int, klass: str = "watched") -> dict:
+        """Find or start the patch. A finished patch that holds the field answers instead of a new
+        fetch (`reused: true`, with that patch's own id, centre and field). `klass` "seed" is work
+        nobody waits for (the seed job). Raises Busy when too many are waiting."""
         rels = releases()
         pid = patch_id(ra, dec, fov, rels)
+        watch = klass == "watched"
         with self.lock:
             p = self.patches.get(pid)
-            if p is not None:
-                st = p.snapshot()
-                if st["state"] == "failed" and time.time() - p.finished > p.retry_after:
-                    p = None
-                elif st["state"] in ("ready", "empty") and not p.dir.exists():
-                    p = None  # cache folder was deleted
-                else:
-                    self._ensure_catalog(p, st)
-                    return st
-            disk = self._from_disk(pid)
-            if disk is not None:
-                if not disk.get("catalog"):
-                    p = Patch(self, pid, ra, dec, fov, rels)
-                    p.status.update({k: v for k, v in disk.items() if k in p.status})
-                    p.finished = time.time()
-                    self.patches[pid] = p
-                    self._ensure_catalog(p, p.snapshot())
-                    return p.snapshot()
-                return {k: v for k, v in disk.items() if k != "timings"}
-            if self.queue.qsize() >= self.max_queued:
+            if p is not None and klass == "seed":
+                p.klass = "seed"  # the seed job waits for it too: no pause when a page leaves
+            st = self._known(pid, watch)
+            if st is not None:
+                self.count("cached")
+                return st
+            cover = self.covering(ra, dec, fov, skip=pid)
+            if cover is not None:
+                st = self._known(cover, watch)
+                if st is not None and st.get("state") == "ready":
+                    self.count("reused")
+                    pb.log(f"patch {cover} reused for fov={fov} | {self.counts_line()}")
+                    return dict(st, reused=True)
+                self.held.pop(cover, None)
+            if watch and sum(1 for q in self.waiting if q.klass == "watched") >= self.max_queued:
                 raise Busy()
-            p = Patch(self, pid, ra, dec, fov, rels)
+            p = Patch(self, pid, ra, dec, fov, rels, klass=klass)
             self.patches[pid] = p
-            self.queue.put(p)
+            self.count("seeded" if klass == "seed" else "started")
+            self._enqueue(p)
             self._ensure_catalog(p, p.snapshot())
             return p.snapshot()
 
@@ -462,12 +661,9 @@ class Service:
         self.cat_queue.put(p)
 
     def status(self, pid: str) -> dict | None:
+        """Status by id. A page reading it keeps the patch watched, and wakes it if it paused."""
         with self.lock:
-            p = self.patches.get(pid)
-        if p is not None:
-            return p.snapshot()
-        st = self._from_disk(pid)
-        return None if st is None else {k: v for k, v in st.items() if k != "timings"}
+            return self._known(pid, True)
 
     def file(self, pid: str, *parts: str) -> Path | None:
         path = self.root.joinpath(pid, *parts)
@@ -515,7 +711,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "public, max-age=3600")
+        # A step's files never change once written, and a new release list gives new ids.
+        self.send_header("Cache-Control", "public, max-age=31536000, immutable")
         self._cors()
         self.end_headers()
         self.wfile.write(body)
@@ -545,7 +742,8 @@ class Handler(BaseHTTPRequestHandler):
         u = urlsplit(self.path)
         path = u.path.rstrip("/") or "/"
         if path == "/api/health":
-            self._json(200, {"ok": True, "releases": releases(), "fovs": list(FOVS)})
+            self._json(200, {"ok": True, "releases": releases(), "fovs": list(FOVS),
+                             "counts": dict(self.service.counts)})
             return
         if path == "/api/patch":
             try:
