@@ -75,7 +75,8 @@ export const flows: Flow[] = [
         name: 'The wheel zooms the sky toward the pointer (SKY-3)',
         async run(page, size) {
           const before = await viewOf(page);
-          await page.mouse.move(size.width * 0.33, size.height * 0.55);
+          // Left of the frame and Measure, which Expert opens with.
+          await page.mouse.move(size.width * 0.2, size.height * 0.55);
           await page.mouse.wheel(0, -240);
           await page.waitForFunction(
             (fov) =>

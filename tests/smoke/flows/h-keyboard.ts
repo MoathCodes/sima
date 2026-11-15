@@ -122,7 +122,9 @@ export const flows: Flow[] = [
     name: 'Keyboard only: the tour to the found runaway (GDE-1)',
     owner: 'H',
     steps: [
-      enterOn('starter-runaway', 'Enter on "Runaway star"'),
+      // Expert has no welcome card: the tour starts from the Guide menu.
+      enterOn('guide-button', 'Enter on Guide'),
+      enterOn('guide-tour', 'Enter on "Take the 3-minute tour"'),
       onStep(1),
       keyStep('Space', 'Space plays'),
       onStep(2),
@@ -201,7 +203,6 @@ export const flows: Flow[] = [
     owner: 'H',
     path: '/?target=barnard',
     steps: [
-      enterOn('welcome-own', 'Close the welcome card'),
       enterOn('hint', 'Hint'),
       keyStep('Enter', 'Another hint'),
       keyStep('Enter', 'Look closer'),

@@ -1,6 +1,6 @@
 /**
  * Lane H's flows: the demo of SPEC 9.6 through the tour, the hints, the numbers tour, "Explain
- * the screen", resuming and ending the tour, and the welcome card after a reload in Measure.
+ * the screen", ending the tour, and no welcome card after a reload in Measure.
  * Owner: lane H.
  */
 import type { Page } from 'playwright-core';
@@ -50,6 +50,12 @@ const taskSays = (text: string) =>
     `document.querySelector('#frame-task')?.textContent?.includes(${JSON.stringify(text)})`,
   );
 
+/** Expert has no welcome card: the 3-minute tour starts from the Guide menu. */
+const fromGuide: Step[] = [
+  pressStep('guide-button', 'Open Guide'),
+  pressStep('guide-tour', 'Take the 3-minute tour'),
+];
+
 const skip: Step = {
   name: 'Skip step',
   run: (page) => page.locator('#tour .tour-card [data-skip]').click(),
@@ -60,7 +66,7 @@ export const flows: Flow[] = [
     name: 'Demo through the tour (SPEC 9.6, H)',
     owner: 'H',
     steps: [
-      pressStep('starter-runaway', 'Press "Runaway star"'),
+      ...fromGuide,
       onStep(1),
       ringsPart('play'),
       expect(
@@ -98,7 +104,7 @@ export const flows: Flow[] = [
       ),
       taskSays('Rings: catalogue predictions'),
       onStep(6),
-      openMeasureStep('Open Measure'),
+      pressStep('measure', 'Press Measure'),
       onStep(7),
       ringsPart('wavelength'),
       {
@@ -131,7 +137,6 @@ export const flows: Flow[] = [
     owner: 'H',
     path: '/?target=barnard',
     steps: [
-      pressStep('welcome-own', 'Close the welcome card'),
       taskSays('Runaway star'),
       pressStep('hint', 'Hint'),
       taskSays('Most dots stay put'),
@@ -151,7 +156,6 @@ export const flows: Flow[] = [
     owner: 'H',
     path: '/?target=r-dra',
     steps: [
-      pressStep('welcome-own', 'Close the welcome card'),
       taskSays('The breathing giant'),
       expect('No mover words on a star that changes brightness', `!document.querySelector('#frame-task')?.textContent?.includes('jumps')`),
       {
@@ -171,7 +175,6 @@ export const flows: Flow[] = [
     name: 'Tour the numbers (GDE-7)',
     owner: 'H',
     steps: [
-      pressStep('welcome-own', 'Close the welcome card'),
       pressStep('guide-button', 'Open Guide'),
       pressStep('guide-numbers', 'Tour the numbers'),
       onStep(1, 3),
@@ -192,7 +195,6 @@ export const flows: Flow[] = [
     name: 'Explain the screen (GDE-6)',
     owner: 'H',
     steps: [
-      pressStep('welcome-own', 'Close the welcome card'),
       pressStep('guide-button', 'Open Guide'),
       pressStep('guide-explain', 'Explain the screen'),
       {
@@ -208,31 +210,14 @@ export const flows: Flow[] = [
       expect('Closed', `document.getElementById('explain').hidden`),
     ],
   },
-  {
-    name: 'Resume after reload; End tour is final (GDE-3, O-G9)',
-    owner: 'H',
-    steps: [
-      pressStep('starter-runaway', 'Press "Runaway star"'),
-      onStep(1),
-      skip,
-      onStep(2),
-      { name: 'Reload', run: async (page) => void (await page.reload()) },
-      expect('Pick up the tour?', `!!document.querySelector('${guide('tour-resume')}')`),
-      pressStep('tour-resume', 'Pick up the tour'),
-      onStep(2),
-      { name: 'End tour', run: (page) => page.locator('#tour .tour-card [data-end]').click() },
-      { name: 'Reload', run: async (page) => void (await page.reload()) },
-      expect(
-        'The welcome card does not ask again',
-        `!!document.querySelector('${guide('starter-runaway')}') && !document.querySelector('${guide('tour-resume')}')`,
-      ),
-    ],
-  },
+  // "Resume after reload; End tour is final (GDE-3, O-G9)" is retired: "Pick up the tour?" lived
+  // on v1's welcome card, which v2.0 no longer shows (Expert starts at Measure, Discover has its
+  // own welcome).
   {
     name: 'Skipping "Press Measure" opens Measure (O-G6)',
     owner: 'H',
     steps: [
-      pressStep('starter-runaway', 'Press "Runaway star"'),
+      ...fromGuide,
       onStep(1),
       skip,
       onStep(2),
@@ -254,11 +239,13 @@ export const flows: Flow[] = [
     owner: 'H',
     path: '/?target=barnard',
     steps: [
-      pressStep('welcome-own', 'Close the welcome card'),
       openMeasureStep('Open Measure'),
       { name: 'Reload', run: async (page) => void (await page.reload()) },
       expect('Measure is open', `!document.getElementById('measure').hidden`),
-      expect('No welcome card', `document.getElementById('welcome').hidden`),
+      expect(
+        'No welcome card',
+        `![...document.querySelectorAll('#welcome, ${guide('discover-welcome')}')].some((w) => w.checkVisibility())`,
+      ),
       keyStep('Escape', 'Escape'),
       expect('Measure closed', `document.getElementById('measure').hidden`),
     ],

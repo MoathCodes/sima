@@ -226,9 +226,10 @@ export function skyReady(load: SkyLoad): void {
 
 /**
  * The loading card sits in the top row's free gap, between the search field and the actions,
- * when the gap holds it at its full 320 px (UX audit #9: at 1280 px a fixed width cut its words,
- * at 1024 it sat on the search field). Narrower, its words wrap to three lines and it reaches
- * past the 76 px line where the frame and Measure hang; so it hangs under the search field
+ * as wide as that gap allows (UX audit #9: at 1280 px a fixed width cut its words, at 1024 it
+ * sat on the search field), centred on the row's middle line: in a narrow gap its words wrap to
+ * three lines, which hung from the row's top reach past the 76 px line where the frame and
+ * Measure hang. Under 250 px they would wrap to four, so it hangs under the search field
  * instead, left of the frame, and the chips row gives way to it (layout.ts).
  */
 function placeLoading(card: HTMLElement): void {
@@ -238,12 +239,14 @@ function placeLoading(card: HTMLElement): void {
   const left = search.right + 10;
   const right = actions.left - 10;
   const room = right - left;
-  if (room >= 320) {
+  if (room >= 250) {
     const w = Math.min(320, room);
     card.style.left = `${Math.round(left + (room - w) / 2)}px`;
-    card.style.top = '';
+    card.style.top = `${Math.round((search.top + search.bottom) / 2)}px`;
+    card.style.transform = 'translateY(-50%)';
     card.style.width = `${Math.round(w)}px`;
   } else {
+    card.style.transform = '';
     const frame = frameRect();
     const end = frame ? Math.min(search.right, frame.left - 10) : search.right;
     const w = Math.min(320, end - search.left);

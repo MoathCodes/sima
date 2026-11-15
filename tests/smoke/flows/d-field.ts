@@ -113,6 +113,8 @@ export const flows: Flow[] = [
     owner: 'D',
     path: '/?target=barnard',
     steps: [
+      // Expert opens with Measure, which covers the patch in the middle of the sky.
+      pressStep('measure', 'Close Measure'),
       stillReal('at the start'),
       pressStep('fov-larger', 'Field 12′'),
       pressStep('fov-larger', 'Field 24′'),

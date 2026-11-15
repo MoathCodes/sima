@@ -27,7 +27,8 @@ function sameDetector(want?: number): Step {
   return {
     name: `Headline and chart are about the same detector${want ? ` (D${want})` : ''}`,
     async run(page) {
-      await page.waitForFunction(() => !/Measuring/.test(document.querySelector('#measure [data-headline]')?.textContent ?? ''), undefined, { timeout: 15000 });
+      // Expert opens with Measure, before the pictures are in: wait for them too.
+      await page.waitForFunction(() => !/Measuring|still loading/.test(document.querySelector('#measure [data-headline]')?.textContent ?? ''), undefined, { timeout: 15000 });
       const r = await page.evaluate(() => ({
         head: document.querySelector('#measure [data-headline]')?.textContent ?? '',
         chart: document.querySelector('#measure [data-chart-head]')?.textContent ?? '',
