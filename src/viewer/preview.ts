@@ -112,13 +112,17 @@ function tileUrl(tile: number, frame: number): string {
 
 const tiles = new Map<string, Promise<ImageData | null>>();
 
-function loadTile(tile: number, frame: number, signal?: AbortSignal): Promise<ImageData | null> {
+/**
+ * One tile, shared by every caller that needs it. Its fetch is not tied to any caller's signal:
+ * a cancelled picture must not leave the next one, waiting on the same tile, without it.
+ */
+function loadTile(tile: number, frame: number): Promise<ImageData | null> {
   const url = tileUrl(tile, frame);
   let p = tiles.get(url);
   if (!p) {
     p = (async () => {
       try {
-        const res = await fetch(url, { signal });
+        const res = await fetch(url);
         if (!res.ok) return null;
         const bmp = await createImageBitmap(await res.blob());
         const c = new OffscreenCanvas(bmp.width, bmp.height);
@@ -127,7 +131,7 @@ function loadTile(tile: number, frame: number, signal?: AbortSignal): Promise<Im
         ctx.drawImage(bmp, 0, 0);
         return ctx.getImageData(0, 0, bmp.width, bmp.height);
       } catch {
-        tiles.delete(url); // a cancelled or failed tile is asked again next time
+        tiles.delete(url); // a failed tile is asked again next time
         return null;
       }
     })();
@@ -163,7 +167,7 @@ export async function skyPreview(
   }
   const need = [...new Set(where.map((w) => w.tile))];
   const got = new Map<number, ImageData | null>();
-  await Promise.all(need.map(async (t) => got.set(t, await loadTile(t, frame, signal))));
+  await Promise.all(need.map(async (t) => got.set(t, await loadTile(t, frame))));
   if (signal?.aborted || ![...got.values()].some(Boolean)) return null;
   const canvas = new OffscreenCanvas(m, m);
   const ctx = canvas.getContext('2d');
@@ -171,7 +175,8 @@ export async function skyPreview(
   const img = ctx.createImageData(m, m);
   where.forEach((w, k) => {
     const t = got.get(w.tile);
-    const v = t ? (t.data[(w.row * t.width + w.col) * 4] ?? 0) : 0;
+    if (!t) return; // no tile: left see-through, never drawn as black sky
+    const v = t.data[(w.row * t.width + w.col) * 4] ?? 0;
     img.data.set([v, v, v, 255], k * 4);
   });
   ctx.putImageData(img, 0, 0);

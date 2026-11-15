@@ -4,6 +4,7 @@
  * off" path: the real pictures stay, the line says why nothing wider comes, and the sky map
  * around them (when its tiles load) is labelled. Owner: lane D.
  */
+import type { Page } from 'playwright-core';
 import { guide, pressStep, type Flow, type Step } from '../smoke.ts';
 
 type Sima = {
@@ -33,6 +34,22 @@ const stillReal = (why: string) =>
          document.querySelector('#frame-exif')?.textContent?.startsWith('Real SPHEREx data') &&
          document.getElementById('frame-cover')?.hidden === true; })()`,
   );
+
+/** A point inside the patch on the sky, clear of the cards, and the patch's width (px). */
+async function patchPoint(page: Page): Promise<{ x: number; y: number; w: number }> {
+  const at = await page.evaluate(() => {
+    const [x = 0, y = 0, w = 0] = (document.getElementById('sky')?.dataset.patch ?? '')
+      .split(' ')
+      .map(Number);
+    for (const f of [0.5, 0.3, 0.7, 0.15]) {
+      const p = { x: x + w * f, y: y + w * 0.5, w };
+      if (document.elementFromPoint(p.x, p.y)?.closest('#sky')) return p;
+    }
+    return null;
+  });
+  if (!at || at.w < 30) throw new Error('the patch is not clear of the cards');
+  return at;
+}
 
 export const flows: Flow[] = [
   {
@@ -91,6 +108,59 @@ export const flows: Flow[] = [
       pressStep('fov-smaller', 'Field 12′ again'),
       pressStep('fov-smaller', 'Field 6′ again'),
       stillReal('back at 6′'),
+    ],
+  },
+  {
+    name: 'A press or a short drag of the patch keeps the target and its pictures (D, FRM-2)',
+    owner: 'D',
+    path: '/?target=barnard',
+    steps: [
+      ownWay,
+      stillReal('at the start'),
+      pressStep('fov-larger', 'Field 12′'),
+      pressStep('fov-larger', 'Field 24′'),
+      stillReal('at 24′'),
+      {
+        name: 'A press on the patch without moving it reloads nothing',
+        async run(page) {
+          const at = await patchPoint(page);
+          await page.evaluate(() => {
+            const w = window as unknown as Sima & { seen: string[] };
+            w.seen = [];
+            const t = setInterval(() => w.seen.push(w.sima.S.source), 30);
+            setTimeout(() => clearInterval(t), 1500);
+          });
+          await page.mouse.move(at.x, at.y);
+          await page.mouse.down();
+          await page.mouse.up();
+          await page.waitForTimeout(1600);
+          const seen = await page.evaluate(() => (window as unknown as { seen: string[] }).seen);
+          if (seen.some((x) => x !== 'real')) throw new Error(`the frame reloaded: ${[...new Set(seen)]}`);
+        },
+      },
+      {
+        name: 'Drag the patch about 2′ off the target: target and real pictures stay',
+        async run(page) {
+          const at = await patchPoint(page);
+          const before = await page.evaluate(() => (window as unknown as Sima).sima.S.ra);
+          await page.mouse.move(at.x, at.y);
+          await page.mouse.down();
+          await page.mouse.move(at.x - at.w * 0.04, at.y, { steps: 3 });
+          await page.mouse.move(at.x - at.w * 0.09, at.y, { steps: 3 });
+          await page.mouse.up();
+          await page.waitForFunction(
+            (b) => (window as unknown as Sima).sima.S.ra !== b,
+            before,
+            { timeout: 8000 },
+          );
+          const s = await page.evaluate(() => {
+            const S = (window as unknown as Sima & { sima: { S: { target: string } } }).sima.S;
+            return `${S.target}|${S.source}`;
+          });
+          if (s !== 'barnard|real') throw new Error(`after the drag: ${s}`);
+        },
+      },
+      stillReal('after the drag'),
     ],
   },
   {
