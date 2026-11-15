@@ -913,3 +913,8 @@ html[data-layout^='phone'] .ms-computer {
 .ms-computer .ms-computer-done:empty {
   display: none;
 }
+/* "Original" over the picture is one press away on phones too (H8), with a 48 px target. */
+html[data-layout^='phone'] .tl-original {
+  min-width: 48px;
+  min-height: 48px;
+}

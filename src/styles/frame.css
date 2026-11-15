@@ -299,7 +299,7 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
   height: 18px;
   border-radius: var(--r-stop);
   background: var(--tint);
-  color: var(--ink);
+  color: rgb(var(--v2-tint)); /* dark letters on the pale pass tints */
   font: var(--text-label);
   font-weight: 600;
 }
@@ -759,7 +759,7 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
   border: 0;
   border-radius: var(--r-stop);
   background: var(--tint);
-  color: var(--ink);
+  color: rgb(var(--v2-tint)); /* dark letters on the pale pass tints */
   font: var(--text-label);
   font-weight: 600;
 }
@@ -1154,15 +1154,13 @@ html[data-view='discover'] .frame-views > button {
   accent-color: var(--v2-mark);
 }
 
-/* Phones (lane M sets html[data-layout] and --pic). No bar: the frame's own row plays; every
-   target is at least 48 px; the picture is the side lane M computes. Picture tools, Measure's
+/* Phones (lane M sets html[data-layout], places the cards and sizes the picture through
+   --pic-max). No bar in either phone layout: the frame's own row plays (chips.ts); every
+   target is at least 48 px. Picture tools, Measure's
    button and hiding the frame are not offered on a phone (Measure is in the column, 11.5). */
 html[data-layout^='phone'] #bar,
 html[data-layout^='phone'] .frame-head :is([data-tools], [data-measure], [data-hide]) {
   display: none;
-}
-html[data-layout^='phone'] #frame-pic {
-  width: min(100%, var(--pic, 100%));
 }
 html[data-layout^='phone'] .frame-head {
   cursor: default;
@@ -1180,17 +1178,19 @@ html[data-layout^='phone'] .frame-views > button {
 html[data-layout^='phone'] .frame-views {
   flex-wrap: wrap;
 }
-/* The scroll layout: the frame and Measure are in the page's column (11.1, 11.5). */
-html[data-layout='phone-scroll'] :is(#frame, #measure) {
-  position: relative;
-  inset: auto;
-  translate: none;
-  width: auto;
-  max-width: none;
-  max-height: none;
-  margin: 0 var(--v2-gutter-phone) var(--v2-gutter-phone);
-}
 /* Discover's four views are words only, so all four fit the frame at any width. */
 html[data-view='discover'] .frame-views > button > .icon {
   display: none;
+}
+
+/* The wavelength scale shrinks with the bar, down to 320 px wide (MOB-1): its head wraps. */
+.wl {
+  min-width: 0;
+  max-width: 100%;
+}
+.wl-head {
+  flex-wrap: wrap;
+  row-gap: 2px;
+  height: auto;
+  min-height: 22px;
 }
