@@ -194,6 +194,51 @@ export const en = {
   "frame.noneHere": "No real pictures here",
   "frame.openNow": "Real SPHEREx pictures you can open now",
   "frame.practice": "Practice on made-up pictures",
+
+  // Settings (shell/settings.ts).
+  "st.close": "Close Settings",
+  "st.panels": "Panels",
+  "st.glass": "Glass",
+  "st.solid": "Solid",
+  "st.motion": "Motion",
+  "st.progress": "Progress",
+  "st.kept": "Kept in this browser only",
+  "st.reset": "Reset",
+  "st.resetQ": "Reset your missions and skills?",
+  "st.keep": "Keep my progress",
+  "st.done": "Progress reset.",
+  "st.why.forced": "Panels are solid while your system uses forced colours.",
+  "st.why.contrast": "Panels are solid because your system asks for more contrast.",
+  "st.why.embed": "Panels are solid in an embedded page.",
+  "st.why.unsupported": "This browser cannot draw glass, so panels are solid.",
+  "st.why.transparency": "Panels are solid because your system asks for less transparency. Choose Glass to try it anyway.",
+  "st.why.phone": "Panels start solid on phones, to keep the sky smooth. Choose Glass to try it.",
+  "st.why.software": "Panels are solid because this browser draws the sky without a graphics card.",
+  "st.reduced": "Reduced (system)",
+  "st.full": "Full (system)",
+  "st.motionTip": "Follows your device’s Reduce motion setting.",
+  "st.motionTipReduced": "Follows your device’s Reduce motion setting: panels fade instead of moving.",
+
+  // The sky note (sky/sky.ts).
+  "sky.h1": "Average of all dates: moving objects are blurred or shifted here",
+  "sky.h1Discover": "All dates averaged",
+  "sky.h1Short": "Sky map, all dates averaged",
+  "sky.lost": "The browser dropped the sky map's drawing surface, so the map stopped drawing.",
+  "sky.reload": "Reload the page",
+  "sky.fact": "SPHEREx {lam}, gaps filled",
+  "sky.factSoft": "SPHEREx {lam}, gaps filled, soft in places",
+  "sky.factDiscover": "SPHEREx {det}, {band}, {lam}",
+  "sky.near": "near infrared",
+  "sky.deep": "deep infrared",
+  "sky.more": "SPHEREx DR1 all-sky map from NASA IRSA: channel {channel} of 102, {lam}, detector {det}. Bright star centres, which the map leaves empty, are filled in from their rim. Shown larger than its pixels, the map is softened by about half a pixel (display only). Zoomed out, the map is the whole sky as a globe seen from outside: only the half facing you shows; drag to turn it. Until NASA’s tiles arrive, a smoothed low-resolution sky shipped with Sima stands in",
+  "sky.moreFailed": "; some tiles did not load, so their place still shows it.",
+  "sky.noWorker": "The SPHEREx map needs a service worker, which this browser did not allow, so AllWISE is shown.",
+  "sky.wise": "AllWISE all-sky map, {band} (WISE, 2010 to 2011), from NASA IRSA. Nothing is filled in.",
+  "sky.coarse": "soft this close",
+  "sky.coarseTip": "The map's pixels are 13″: zoomed in this far it is blur. The frame shows the sharper single pictures.",
+
+  // Search (viewer/omnibox.ts).
+  "search.placeholder": "Star, galaxy or RA Dec",
 } as const satisfies Record<string, string | EnPlural>;
 
 /** A message key. */

@@ -21,6 +21,7 @@ import {
 import { resetProgress } from '../explore/progress.ts';
 import { leavePage, onPhone, phonePage } from './pages.ts';
 import { languageGroup } from './language.ts';
+import { t } from './i18n.ts';
 
 let opener: HTMLElement | null = null;
 
@@ -37,33 +38,34 @@ export function startSettings(): void {
   el.dataset.guide = 'settings';
   el.dataset.overlay = 'settings';
   el.classList.add('st-card', 'appear');
+  el.dataset.i18n = '';
   el.innerHTML = `
     <header class="st-head">
-      <h2 id="settings-title" class="st-title">Settings</h2>
-      <button type="button" class="icon-btn sm st-close" data-close aria-label="Close Settings" data-tip="Close">${icon('close')}</button>
+      <h2 id="settings-title" class="st-title">${t('word.settings')}</h2>
+      <button type="button" class="icon-btn sm st-close" data-close aria-label="${t('st.close')}" data-tip="${t('word.close')}">${icon('close')}</button>
     </header>
     <section class="st-group" aria-labelledby="st-panels">
-      <h3 class="group-label" id="st-panels">Panels</h3>
+      <h3 class="group-label" id="st-panels">${t('st.panels')}</h3>
       <div class="seg st-seg" role="radiogroup" aria-labelledby="st-panels">
-        <button type="button" role="radio" data-panels="glass" data-guide="panels-glass">Glass</button>
-        <button type="button" role="radio" data-panels="solid" data-guide="panels-solid">Solid</button>
+        <button type="button" role="radio" data-panels="glass" data-guide="panels-glass">${t('st.glass')}</button>
+        <button type="button" role="radio" data-panels="solid" data-guide="panels-solid">${t('st.solid')}</button>
       </div>
       <p class="st-note" data-panels-note></p>
     </section>
     <section class="st-group st-row" aria-labelledby="st-motion">
-      <h3 class="group-label" id="st-motion">Motion</h3>
+      <h3 class="group-label" id="st-motion">${t('st.motion')}</h3>
       <span class="st-note term" tabindex="0" data-motion></span>
     </section>
     <section class="st-group" aria-labelledby="st-progress">
       <div class="st-row">
-        <h3 class="group-label" id="st-progress">Progress</h3>
-        <button type="button" class="btn st-reset" data-reset data-guide="settings-reset" data-tip="Kept in this browser only">Reset</button>
+        <h3 class="group-label" id="st-progress">${t('st.progress')}</h3>
+        <button type="button" class="btn st-reset" data-reset data-guide="settings-reset" data-tip="${t('st.kept')}">${t('st.reset')}</button>
       </div>
       <div class="st-confirm" data-confirm role="group" aria-labelledby="st-confirm-q" hidden>
-        <p id="st-confirm-q" class="st-q">Reset your missions and skills?</p>
+        <p id="st-confirm-q" class="st-q">${t('st.resetQ')}</p>
         <div class="st-confirm-row">
-          <button type="button" class="btn primary" data-reset-yes data-guide="settings-reset-yes">Reset</button>
-          <button type="button" class="btn quiet" data-reset-no>Keep my progress</button>
+          <button type="button" class="btn primary" data-reset-yes data-guide="settings-reset-yes">${t('st.reset')}</button>
+          <button type="button" class="btn quiet" data-reset-no>${t('st.keep')}</button>
         </div>
       </div>
       <p class="st-note st-done" data-reset-done role="status"></p>
@@ -103,7 +105,7 @@ export function startSettings(): void {
   q('[data-reset-yes]').addEventListener('click', () => {
     resetProgress();
     endConfirm();
-    done.textContent = 'Progress reset.';
+    done.textContent = t('st.done');
   });
 
   q('[data-close]').addEventListener('click', () => closeSettings());
@@ -139,7 +141,7 @@ export function openSettings(from?: HTMLElement): void {
   fill(el);
   el.hidden = false;
   setExpanded(true);
-  if (onPhone()) phonePage(el, 'Settings', () => hide(el));
+  if (onPhone()) phonePage(el, t('word.settings'), () => hide(el));
   else place(el);
   el.querySelector<HTMLElement>('[role="radio"][tabindex="0"]')?.focus();
 }
@@ -187,14 +189,14 @@ function place(el: HTMLElement): void {
 }
 
 const PANELS_NOTE: Record<GlassReason, string> = {
-  'forced-colors': 'Panels are solid while your system uses forced colours.',
-  contrast: 'Panels are solid because your system asks for more contrast.',
+  'forced-colors': t('st.why.forced'),
+  contrast: t('st.why.contrast'),
   choice: '',
-  embed: 'Panels are solid in an embedded page.',
-  unsupported: 'This browser cannot draw glass, so panels are solid.',
-  'reduced-transparency': 'Panels are solid because your system asks for less transparency. Choose Glass to try it anyway.',
-  phone: 'Panels start solid on phones, to keep the sky smooth. Choose Glass to try it.',
-  software: 'Panels are solid because this browser draws the sky without a graphics card.',
+  embed: t('st.why.embed'),
+  unsupported: t('st.why.unsupported'),
+  'reduced-transparency': t('st.why.transparency'),
+  phone: t('st.why.phone'),
+  software: t('st.why.software'),
   default: '',
 };
 
@@ -218,7 +220,7 @@ function fill(el: HTMLElement): void {
   const motion = el.querySelector<HTMLElement>('[data-motion]');
   if (motion) {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    motion.textContent = reduced ? 'Reduced (system)' : 'Full (system)';
-    motion.dataset.tip = `Follows your device’s Reduce motion setting${reduced ? ': panels fade instead of moving' : ''}.`;
+    motion.textContent = reduced ? t('st.reduced') : t('st.full');
+    motion.dataset.tip = reduced ? t('st.motionTipReduced') : t('st.motionTip');
   }
 }
