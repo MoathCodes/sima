@@ -87,6 +87,14 @@
   text-align: start;
 }
 
+/* Values with units ("10.50″/yr", "2.00 µm", "12 / 72") that sit in their own box (a flex
+   item, a badge): they take the direction of their first letter, so a number never ends up
+   behind its unit. Phase 2 wraps values in Arabic sentences with ltr(). */
+[dir='rtl']
+  :is(.ms-value > *, .wl-value, .fp-wl-value, .bar-count, .frame-fov, .tl-num, .tl-readout, .pill) {
+  unicode-bidi: plaintext;
+}
+
 /* Time runs left to right (as on Arabic scientific plots): playback, the dates, the date stops.
    The wavelength scale runs short to long, left to right. Pictures and their marks (scale bar,
    N/E compass, letters) are never mirrored. Sliders keep low on the left. */
