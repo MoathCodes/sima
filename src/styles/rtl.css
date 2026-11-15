@@ -47,3 +47,68 @@
 [dir='rtl'] :is(#sky, #sky-marks, canvas, svg.chart, .aladin-container) {
   direction: ltr;
 }
+
+/* ------------------------------------------------------------------------------------------
+   Layout (phase 1). The cards keep the places they have in English: their positions are worked
+   out by the layout code from the sky and the frame, and those lanes are mid-rewrite. Inside
+   each card the order and the text run right to left (title at the right, close at the left).
+   ------------------------------------------------------------------------------------------ */
+[dir='rtl'],
+[dir='rtl'] body {
+  direction: ltr; /* the cards' own places (logical insets included) stay as in English */
+}
+[dir='rtl']
+  :is(
+    [data-card],
+    [data-overlay],
+    [popover],
+    dialog,
+    #sheet,
+    #settings,
+    #discover-list,
+    #mission,
+    #mission-success,
+    #coach,
+    #view-switch,
+    #toasts
+  )
+  > * {
+  direction: rtl;
+}
+/* Until phase 2 translates every surface, a line still in English keeps English order (its
+   full stop stays at its end); an Arabic line reads right to left. */
+[dir='rtl'] :is(p, h1, h2, h3, h4, li, dt, dd, label, td, th, figcaption, summary, legend) {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Time runs left to right (as on Arabic scientific plots): playback, the dates, the date stops.
+   The wavelength scale runs short to long, left to right. Pictures and their marks (scale bar,
+   N/E compass, letters) are never mirrored. Sliders keep low on the left. */
+[dir='rtl']
+  :is(
+    .bar-play,
+    .bar-dates,
+    .wl,
+    .wl-strip,
+    .fp-controls,
+    .fp-chips,
+    .fp-line,
+    .fp-wl,
+    .fp-scale,
+    [class^='ds-'],
+    #frame-pic,
+    [class^='pic-'],
+    .tl-slider,
+    .tl-hist,
+    .tl-cuts,
+    .tl-sw-band,
+    input[type='range']
+  ) {
+  direction: ltr;
+}
+
+/* Icons that point a way turn round; play, next and previous do not (time runs left to right). */
+[dir='rtl'] .icon:is([data-icon='arrow-right'], [data-icon='back']) {
+  transform: scaleX(-1);
+}
