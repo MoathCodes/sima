@@ -164,7 +164,7 @@ const SWATCHES: { fill: string; texts: string[]; on: Mat[]; regular?: string[] }
 const MATERIALS = ALL;
 const BACKDROPS = {
   white: 'background:#fff',
-  sky: 'background:#05070d',
+  sky: 'background:#0b0b0c',
   betelgeuse:
     "background:url('/docs/design-v2/mockups/img/sky-betelgeuse-1900.jpg') -800px -380px / 1900px 1030px",
   'milky way':
