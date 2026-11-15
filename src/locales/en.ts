@@ -762,6 +762,47 @@ export const en = {
   'gm.catSays': '{src} says {v}.',
   'gm.moves':
     'Moves {v} arcseconds a year, measured from the pixels of {used} of {of} real exposures.',
+
+  // The picture badge, the source line and the timeline (viewer/render.ts, scrub.ts).
+  'pic.noDate': 'no date',
+  'pic.dayRange': '{a} to {b}',
+  'pic.month': 'Month {n} of {of}',
+  'pic.pass': 'Survey pass {n}',
+  'pic.passShort': 'Pass {n}',
+  'pic.sim': 'Simulated: made-up pictures for practice',
+  'pic.color': 'Color: red {r} · green {g} · blue {b}',
+  'pic.none': 'none',
+  'pic.twoTitle': 'Red {a} · Cyan {b}',
+  'pic.stacking': 'Stacking every exposure…',
+  'pic.alongCat': 'Along the catalogue motion',
+  'pic.checks': 'Checks: {a}, {b}',
+  'pic.stackOf': { one: 'Stack of {n} exposure', other: 'Stack of {n} exposures' },
+  'pic.nExposures': { one: '{n} exposure', other: '{n} exposures' },
+  'pic.nPictures': { one: '{n} picture', other: '{n} pictures' },
+  'pic.noExp': 'No {det} exposure on this date: nothing is filled in',
+  'pic.shots': '{lam} · {n} shots',
+  'pic.reference': 'reference',
+  'pic.refWas': 'Reference was {lam}',
+  'pic.loading': 'Loading real SPHEREx exposures…',
+  'pic.noPractice': 'Simulated: no practice pictures in this build',
+  'pic.noPictures': 'No pictures here: nothing is shown as data',
+  'pic.simData': 'Simulated pictures for practice, not real data',
+  'pic.real': 'Real SPHEREx data',
+  'pic.realHow': 'Real SPHEREx data, {how}',
+  'pic.comma': '{a}, {b}',
+  'pic.sep': ', ',
+  'pic.noExpShort': 'no {det} exposure on this date',
+  'pic.coverMid': 'real exposures cover the middle {v}',
+  'pic.coverMidRest':
+    'real exposures cover the middle {v}, the sky map (all dates averaged) the rest',
+  'pic.coverPart': 'real exposures cover part of the field',
+  'pic.coverPartRest':
+    'real exposures cover part of the field, the sky map (all dates averaged) the rest',
+  'pic.processed': 'Processed: {steps}',
+  'pic.madeUp': 'made-up pictures for practice',
+  'pic.redCyan': 'red {a} · cyan {b}',
+  'pic.stackN': 'stack of {n}',
+  'pic.stackNRange': 'stack of {n}, {range}',
 } as const satisfies Record<string, string | EnPlural>;
 
 /** A message key. */

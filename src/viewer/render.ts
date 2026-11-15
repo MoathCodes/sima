@@ -38,13 +38,9 @@ import {
   type StackView,
 } from './paint.ts';
 import { trialView } from './motion.ts';
+import { fmtList, t as tr } from '../shell/i18n.ts';
 import { liveWords } from './seed.ts';
-import {
-  aroundMap,
-  aroundMapReady,
-  coverageMask,
-  maskOutline,
-} from './surround.ts';
+import { aroundMap, aroundMapReady, coverageMask, maskOutline } from './surround.ts';
 
 /** How bright the sky map is drawn around the real exposures: dimmed, so it never passes for them. */
 const MAP_ALPHA = 0.5;
@@ -174,15 +170,17 @@ function lamRange(lams: number[]): string {
 }
 
 function dayRange(a: number, b: number): string {
-  if (!Number.isFinite(a)) return 'no date';
+  if (!Number.isFinite(a)) return tr('pic.noDate');
   const da = formatDate(a, 'day');
   const db = formatDate(b, 'day');
-  return da === db || !Number.isFinite(b) ? da : `${da} to ${db}`;
+  return da === db || !Number.isFinite(b) ? da : tr('pic.dayRange', { a: da, b: db });
 }
 
 /** The pass or month a window is, in words: "Survey pass 2", "Month 5 (May 2025)". */
 export function passName(field: Field | null, window: number): string {
-  return field?.monthly ? `Month ${window + 1} of ${field.windows}` : `Survey pass ${window + 1}`;
+  return field?.monthly
+    ? tr('pic.month', { n: String(window + 1), of: String(field.windows) })
+    : tr('pic.pass', { n: String(window + 1) });
 }
 
 /**
@@ -228,7 +226,7 @@ export function hud(): Hud | null {
   const field = S.field;
   if (!g || !field) return null;
   const measure = S.level === 'measure';
-  const sim = field.simulated ? 'Simulated: made-up pictures for practice' : undefined;
+  const sim = field.simulated ? tr('pic.sim') : undefined;
   if (S.color) {
     const mix = pic().mix;
     const ch = (c: string) =>
@@ -240,7 +238,11 @@ export function hud(): Hud | null {
       letter: g.letter,
       title: formatDate(g.mjd, measure ? 'time' : 'month'),
       lines: [
-        `Color: red ${ch('r') || 'none'} · green ${ch('g') || 'none'} · blue ${ch('b') || 'none'}`,
+        tr('pic.color', {
+          r: ch('r') || tr('pic.none'),
+          g: ch('g') || tr('pic.none'),
+          b: ch('b') || tr('pic.none'),
+        }),
       ],
       warn: sim,
     };
@@ -249,10 +251,20 @@ export function hud(): Hud | null {
     const [a, b] = pair();
     return {
       letter: '',
-      title: `Red ${a ? formatDate(a.mjd, 'month') : '–'} · Cyan ${b ? formatDate(b.mjd, 'month') : '–'}`,
+      title: tr('pic.twoTitle', {
+        a: a ? formatDate(a.mjd, 'month') : '–',
+        b: b ? formatDate(b.mjd, 'month') : '–',
+      }),
       // Measure names the detector and wavelengths, as the badge does for one date (H2).
       lines: measure
-        ? [`D${S.det} ${lamRange(framesOf(field, [a, b].filter((x): x is Group => !!x)).map((x) => x.lam))}`]
+        ? [
+            `D${S.det} ${lamRange(
+              framesOf(
+                field,
+                [a, b].filter((x): x is Group => !!x),
+              ).map((x) => x.lam),
+            )}`,
+          ]
         : [],
       warn: sim,
     };
@@ -262,19 +274,19 @@ export function hud(): Hud | null {
     if (!st)
       return {
         letter: '',
-        title: 'Stacking every exposure…',
-        lines: ['Along the catalogue motion'],
+        title: tr('pic.stacking'),
+        lines: [tr('pic.alongCat')],
         warn: sim,
       };
     const count = st.frames;
     const lines = [st.label];
     if (st.result) {
       const [c1, c2] = st.result.controls;
-      lines.push(`Checks: ${c1.label.toLowerCase()}, ${c2.label.toLowerCase()}`);
+      lines.push(tr('pic.checks', { a: c1.label.toLowerCase(), b: c2.label.toLowerCase() }));
     }
     return {
       letter: '',
-      title: `Stack of ${count} exposure${count === 1 ? '' : 's'}`,
+      title: tr('pic.stackOf', { n: String(count) }),
       lines,
       warn: sim,
     };
@@ -284,12 +296,13 @@ export function hud(): Hud | null {
       letter: g.letter,
       title: formatDate(groupDate(field, g), 'month'),
       lines: [measure ? passName(field, g.window) : ''].filter(Boolean),
-      warn: `No D${g.det} exposure on this date: nothing is filled in`,
+      warn: tr('pic.noExp', { det: `D${g.det}` }),
     };
   }
   const frames = framesOf(field, [g]);
   // Discover and phones: the date alone; how many shots are blended is in the data line's tooltip.
-  if (!measure) return { letter: g.letter, title: formatDate(g.mjd, 'month'), lines: [], warn: sim };
+  if (!measure)
+    return { letter: g.letter, title: formatDate(g.mjd, 'month'), lines: [], warn: sim };
   // One line under the date: pass, detector and wavelength, "· reference" on the reference date.
   // A different colour from the reference is the only other line (redesign item 2: few words; what
   // each view shows is in the frame's "About this picture").
@@ -298,18 +311,24 @@ export function hud(): Hud | null {
   const refFrame = ref ? framesOf(field, [ref])[0] : undefined;
   const lam =
     frames.length > 1
-      ? `D${g.det} ${lamRange(frames.map((x) => x.lam))} · ${frames.length} shots`
+      ? tr('pic.shots', {
+          lam: `D${g.det} ${lamRange(frames.map((x) => x.lam))}`,
+          n: String(frames.length),
+        })
       : f
         ? `D${g.det} ${f.lam.toFixed(2)} µm`
         : `D${g.det}`;
-  const lines = [`${passName(field, g.window)} · ${lam}${ref === g ? ' · reference' : ''}`];
+  const lines = [
+    `${passName(field, g.window)} · ${lam}${ref === g ? ` · ${tr('pic.reference')}` : ''}`,
+  ];
   const differs = !!f && !!refFrame && ref !== g && !colourMatch(f, refFrame);
   return {
     letter: g.letter,
     title: formatDate(g.mjd, 'time'),
     lines,
     warn: sim,
-    note: differs && refFrame ? `Reference was ${refFrame.lam.toFixed(2)} µm` : undefined,
+    note:
+      differs && refFrame ? tr('pic.refWas', { lam: `${refFrame.lam.toFixed(2)} µm` }) : undefined,
   };
 }
 
@@ -320,44 +339,45 @@ export function hud(): Hud | null {
 export function exif(): string {
   const f = S.field;
   if (!f || !S.groups.length) {
-    if (S.source === 'loading') return 'Loading real SPHEREx exposures…';
-    return S.source === 'simulated'
-      ? 'Simulated: no practice pictures in this build'
-      : 'No pictures here: nothing is shown as data';
+    if (S.source === 'loading') return tr('pic.loading');
+    return S.source === 'simulated' ? tr('pic.noPractice') : tr('pic.noPictures');
   }
   const groups = shownGroups();
   const frames = framesOf(f, groups);
   const releases = [...new Set(frames.map((x) => release(x.release)))].join(' + ');
   const det = S.color ? 'D1–D6' : `D${S.det}`;
   const parts: string[] = [];
-  if (f.simulated) parts.push('Simulated pictures for practice, not real data');
-  else if (S.source === 'live' || S.set?.origin === 'live')
-    parts.push(`Real SPHEREx data, ${liveWords(S.set?.data.live)}${releases ? `, ${releases}` : ''}`);
-  else parts.push(`Real SPHEREx data${releases ? `, ${releases}` : ''}`);
+  if (f.simulated) parts.push(tr('pic.simData'));
+  else {
+    const real =
+      S.source === 'live' || S.set?.origin === 'live'
+        ? tr('pic.realHow', { how: liveWords(S.set?.data.live) })
+        : tr('pic.real');
+    parts.push(releases ? tr('pic.comma', { a: real, b: releases }) : real);
+  }
   const mjds = frames.map((x) => x.mjd).filter(Number.isFinite);
   const count = frames.length;
-  const noun = f.simulated ? 'picture' : 'exposure';
+  const counted = tr(f.simulated ? 'pic.nPictures' : 'pic.nExposures', { n: String(count) });
   if (S.mode === 'two' && groups.length === 2) {
-    parts.push(
-      `${groups.map((g) => formatDate(g.mjd, 'month')).join(' and ')}, ${count} ${noun}${count === 1 ? '' : 's'}`,
-    );
+    const dates = fmtList(groups.map((g) => formatDate(g.mjd, 'month')));
+    parts.push(tr('pic.comma', { a: dates, b: counted }));
   } else if (mjds.length) {
-    parts.push(
-      `${dayRange(Math.min(...mjds), Math.max(...mjds))}, ${count} ${noun}${count === 1 ? '' : 's'}`,
-    );
+    const dates = dayRange(Math.min(...mjds), Math.max(...mjds));
+    parts.push(tr('pic.comma', { a: dates, b: counted }));
   } else {
-    parts.push(`no D${S.det} exposure on this date`);
+    parts.push(tr('pic.noExpShort', { det: `D${S.det}` }));
   }
   const lams = lamRange(frames.map((x) => x.lam));
   parts.push(lams && !S.color ? `${det} ${lams}` : det);
   const covered = (f.n * f.scale) / 60;
-  const rest = aroundMapReady(f, S.fov, S.lam) ? ', the sky map (all dates averaged) the rest' : '';
-  if (covered < S.fov - 0.05) parts.push(`real exposures cover the middle ${covered.toFixed(1)}′${rest}`);
+  const rest = aroundMapReady(f, S.fov, S.lam);
+  if (covered < S.fov - 0.05)
+    parts.push(tr(rest ? 'pic.coverMidRest' : 'pic.coverMid', { v: `${covered.toFixed(1)}′` }));
   else if (!f.simulated && S.set && coverageMask(S.set, f)) {
-    parts.push(`real exposures cover part of the field${rest}`);
+    parts.push(tr(rest ? 'pic.coverPartRest' : 'pic.coverPart'));
   }
   const steps = S.original ? [] : cleanupSteps(pic());
-  if (steps.length) parts.push(`Processed: ${steps.join(', ')}`);
+  if (steps.length) parts.push(tr('pic.processed', { steps: steps.join(tr('pic.sep')) }));
   return parts.join(' · ');
 }
 
@@ -370,21 +390,28 @@ export function exif(): string {
  */
 export function dataLine(): string {
   const f = S.field;
-  if (!f || !S.groups.length) return S.source === 'loading' ? 'Loading real SPHEREx exposures…' : '';
+  if (!f || !S.groups.length) return S.source === 'loading' ? tr('pic.loading') : '';
   const groups = shownGroups();
   const frames = framesOf(f, groups);
   const parts: string[] = [];
   const releases = [...new Set(frames.map((x) => release(x.release)))].join(' + ');
-  parts.push(f.simulated ? 'made-up pictures for practice' : releases ? `SPHEREx ${releases}` : 'SPHEREx');
+  parts.push(f.simulated ? tr('pic.madeUp') : releases ? `SPHEREx ${releases}` : 'SPHEREx');
   const mjds = frames.map((x) => x.mjd).filter(Number.isFinite);
   if (S.mode === 'two' && groups.length === 2) {
     const [a, b] = groups.map((g) => formatDate(g.mjd, 'month'));
-    parts.push(`red ${a} · cyan ${b}`);
+    parts.push(tr('pic.redCyan', { a: a!, b: b! }));
   } else if (S.mode === 'stack') {
     const n = stackShown()?.frames ?? frames.length;
-    parts.push(`stack of ${n}${mjds.length ? `, ${shortRange(Math.min(...mjds), Math.max(...mjds))}` : ''}`);
+    parts.push(
+      mjds.length
+        ? tr('pic.stackNRange', {
+            n: String(n),
+            range: shortRange(Math.min(...mjds), Math.max(...mjds)),
+          })
+        : tr('pic.stackN', { n: String(n) }),
+    );
   } else if (mjds.length) parts.push(shortRange(Math.min(...mjds), Math.max(...mjds)));
-  else parts.push(`no D${S.det} exposure on this date`);
+  else parts.push(tr('pic.noExpShort', { det: `D${S.det}` }));
   const lams = lamRange(frames.map((x) => x.lam));
   parts.push(S.color ? 'D1–D6' : lams || `D${S.det}`);
   return parts.join(' · ');
@@ -448,7 +475,8 @@ function stackNow() {
   const field = S.field;
   if (!field || S.mode !== 'stack') return null;
   // The motion handle's trial stack (motion.ts, O-V6) when its arrow is off the catalogue motion.
-  stackCache = trialView() ?? stackPicture(field, S.groups, S.det, S.set?.data.catalogue ?? null, pic(), draw);
+  stackCache =
+    trialView() ?? stackPicture(field, S.groups, S.det, S.set?.data.catalogue ?? null, pic(), draw);
   return stackCache;
 }
 
@@ -462,7 +490,13 @@ function paint(now = false): void {
   if (!p) return;
   // A new picture of the patch on screen waits for its pictures to be made off the page's thread
   // (TLS-8); the one on screen stays until then. A new patch, or drawNow, paints at once.
-  if (!now && S.field && S.field === view?.field && !picturesReady(S.field, neededGroups(S.field), pic(), draw)) return;
+  if (
+    !now &&
+    S.field &&
+    S.field === view?.field &&
+    !picturesReady(S.field, neededGroups(S.field), pic(), draw)
+  )
+    return;
   const { canvas, host } = p;
   const size = Math.round(host.clientWidth) || 1;
   const dpr = devicePixelRatio || 1;

@@ -17,6 +17,7 @@
 import { S } from './state.ts';
 import { pause, setEpoch } from './playback.ts';
 import { groupDate, passName, pair } from './render.ts';
+import { t as tr } from '../shell/i18n.ts';
 import { formatDate } from '../core/astro.ts';
 import type { Group } from '../core/types.ts';
 
@@ -120,7 +121,9 @@ export function paintDates(el: HTMLElement, why = ''): void {
       const label =
         S.field?.monthly && first
           ? formatDate(at(first), 'month')
-          : passName(S.field, w).replace('Survey p', 'P');
+          : S.field?.monthly
+            ? passName(S.field, w)
+            : tr('pic.passShort', { n: String(w + 1) });
       parts.push(`<span class="ds-passname" style="left:${x(c)}">${label}</span>`);
     });
     groups.forEach((g, i) => {
