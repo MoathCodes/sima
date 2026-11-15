@@ -211,8 +211,17 @@ export const flows: Flow[] = [
             fov: await state<number>(page, 'fov'),
             det: await state<number>(page, 'det'),
             mode: await state<string>(page, 'mode'),
-            epoch: await state<number>(page, 'epoch'),
           };
+          // The dates on screen, not their index: the link opens Expert (ui=expert) at the Measure
+          // level, whose groups are single exposures, so the picture after the link must lie
+          // within the dates that were on screen (a day's slack: the link carries a day).
+          const span = () =>
+            page.evaluate(() => {
+              const S = (window as unknown as { sima: { S: { groups: { mjd: number; mjd0: number; mjd1: number }[]; epoch: number } } }).sima.S;
+              const g = S.groups[S.epoch];
+              return g ? [g.mjd0, g.mjd1, g.mjd] : null;
+            });
+          const was = await span();
           const link = await page.locator(guide('share-link')).inputValue();
           for (const k of ['target=', 'fov=', 'det=', 'view=', 'date='])
             expect(link.includes(k), `the link to hold ${k}`);
@@ -236,6 +245,10 @@ export const flows: Flow[] = [
             const now = await state<unknown>(page, k);
             expect(now === v, `${k} to be ${String(v)} after the link, not ${String(now)}`);
           }
+          await until(async () => {
+            const now = await span();
+            return !!was && !!now && now[2]! >= was[0]! - 1 && now[2]! <= was[1]! + 1;
+          }, 'the picture after the link to be within the dates on screen before');
         },
       },
     ],
