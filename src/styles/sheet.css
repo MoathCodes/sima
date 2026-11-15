@@ -112,6 +112,9 @@ html:not([data-layout^='phone']) .sheet:not([data-height='page']) {
 .sheet-head:not([hidden]) + .sheet-body {
   padding-top: 0;
 }
+.sheet-item [tabindex='-1']:focus {
+  outline: none; /* a heading that took focus when the content opened */
+}
 .sheet-item[hidden] {
   display: none !important;
 }
@@ -137,10 +140,6 @@ html:not([data-layout^='phone']) .sheet:not([data-height='page']) {
 
 /* ----- Phones: what every phone layout shares --------------------------------------------------- */
 
-/* The note "Sima is made for a desktop screen" goes once phones work (lane F removes it). */
-html[data-layout^='phone'] #narrow-note {
-  display: none !important;
-}
 /* Picture tools, several frames and workspaces need a computer (11.5): not shown on phones.
    The frame's resize grip has nothing to do on a phone. */
 html[data-layout^='phone'] :is(#tools, #frames, #frame-grip, #rail, #sky-coords) {
@@ -159,6 +158,10 @@ html[data-layout='phone-fit'] #frame {
   translate: none !important;
   --pic-max: var(--pic) !important;
 }
+/* The fit layout has no bar: the Discover frame carries Play and the date chips (11.1). */
+html[data-layout='phone-fit'] #bar {
+  display: none !important;
+}
 html[data-layout='phone-fit'] .sheet:not([data-height='page']) {
   position: fixed;
   top: var(--sheet-top, auto);
@@ -166,15 +169,11 @@ html[data-layout='phone-fit'] .sheet:not([data-height='page']) {
   bottom: 0;
   left: 0;
   z-index: calc(var(--z-popover) + 2); /* the phone sheet: above popovers, under pages */
-  padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
   border-radius: var(--v2-r-sheet) var(--v2-r-sheet) 0 0;
   border-top: 1px solid var(--v2-rule);
-  transition: top var(--v2-settle) var(--v2-ease);
-}
-@media (prefers-reduced-motion: reduce) {
-  html[data-layout='phone-fit'] .sheet {
-    transition: none;
-  }
+  /* No slide between heights: the picture grows at once, so a sliding sheet would cross it. */
 }
 
 /* ----- Phone scroll: one column that scrolls (rotation, short screens, 400% zoom, Expert) -------- */

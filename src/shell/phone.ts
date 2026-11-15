@@ -18,7 +18,14 @@
  *   `html[data-layout]`, `--pic`, `--sheet-h` and `--sheet-top`. In phone-fit, the sheet's top is
  *   set from the frame's real bottom edge, so the picture is never covered (MOB-3).
  */
-import { onSheet, setLayout, sheetContent, sheetHeight, type Layout, type SheetHeight } from './sheet.ts';
+import {
+  onSheet,
+  setLayout,
+  sheetContent,
+  sheetHeight,
+  type Layout,
+  type SheetHeight,
+} from './sheet.ts';
 
 /** The numbers of section 11.1, in CSS pixels. */
 export const PHONE = {
@@ -61,6 +68,8 @@ export interface LayoutInput {
   content?: number;
   /** The top row and frame without the picture; defaults to the spec's 244 px. */
   fixed?: number;
+  /** The widest the picture can be inside the frame (the frame's inner width), when known. */
+  maxPic?: number;
   /** Expert view: on a phone it is the scroll layout, always (11.5). */
   expert?: boolean;
 }
@@ -72,9 +81,10 @@ export function decide(input: LayoutInput): Layout {
   const s = input.safe ?? NO_SAFE;
   const w = Math.max(0, input.w - s.left - s.right);
   const h = Math.max(0, input.h - s.top - s.bottom);
-  if (w >= PHONE.minDesktopW && h >= PHONE.minDesktopH) return { kind: 'desktop', pic: 0, sheetH: 0 };
+  if (w >= PHONE.minDesktopW && h >= PHONE.minDesktopH)
+    return { kind: 'desktop', pic: 0, sheetH: 0 };
   const fixed = input.fixed ?? PHONE.fixed;
-  const maxW = w - PHONE.sideRoom;
+  const maxW = Math.min(w - PHONE.sideRoom, input.maxPic ?? Infinity);
   const atPeek = Math.floor(Math.min(maxW, h - fixed - PHONE.peek));
   if (atPeek < PHONE.picMin || input.expert) {
     const pic = Math.floor(Math.min(maxW, Math.max(PHONE.picMin, h - PHONE.scrollRoom)));
@@ -117,7 +127,8 @@ function viewport(): { w: number; h: number } {
   return { w: Math.round(vv.width * vv.scale), h: Math.round(vv.height * vv.scale) };
 }
 
-const shown = (el: HTMLElement | null): el is HTMLElement => !!el && !el.hidden && el.checkVisibility();
+const shown = (el: HTMLElement | null): el is HTMLElement =>
+  !!el && !el.hidden && el.checkVisibility();
 
 /** The sheet content's own height plus the sheet's grabber, head and padding. */
 function contentHeight(): number {
@@ -131,13 +142,21 @@ function contentHeight(): number {
   return chrome + pad + el.offsetHeight;
 }
 
-/** The top row and the frame without its picture, measured, or undefined when not shown. */
-function frameFixed(top: number): number | undefined {
+/**
+ * The frame as it is: the top row and the frame without its picture (`fixed`), and the widest
+ * the picture can be inside it (`maxPic`). Undefined when the frame is not shown.
+ */
+function frameParts(top: number): { fixed?: number; maxPic?: number } {
   const frame = document.getElementById('frame');
   const pic = document.getElementById('frame-pic');
-  if (!shown(frame) || !shown(pic)) return undefined;
-  const chrome = frame.offsetHeight - pic.offsetHeight;
-  return top + chrome + PHONE.gap;
+  if (!shown(frame) || !shown(pic)) return {};
+  const cs = getComputedStyle(frame);
+  const inner =
+    frame.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  return {
+    fixed: top + frame.offsetHeight - pic.offsetHeight + PHONE.gap,
+    maxPic: Math.floor(inner),
+  };
 }
 
 const set = (k: string, v: string) => {
@@ -157,11 +176,19 @@ function apply(): void {
   // The frame's real parts (a header on two lines, a task line) decide the fixed part; it is only
   // known once the phone styles apply, so the kind is set first.
   if (root.dataset.layout !== first.kind) root.dataset.layout = first.kind;
-  const fixed = first.kind === 'phone-fit' ? frameFixed(PHONE.topRow) : undefined;
+  const measured = first.kind === 'desktop' ? {} : frameParts(PHONE.topRow);
   const l =
     first.kind === 'desktop'
       ? first
-      : decide({ w, h, safe, height: height === 'page' ? null : height, content: contentHeight(), fixed, expert });
+      : decide({
+          w,
+          h,
+          safe,
+          height: height === 'page' ? null : height,
+          content: contentHeight(),
+          expert,
+          ...(first.kind === 'phone-fit' ? measured : { maxPic: measured.maxPic }),
+        });
   if (root.dataset.layout !== l.kind) root.dataset.layout = l.kind;
   set('--pic', l.kind === 'desktop' ? '' : `${l.pic}px`);
   let sheetH = l.sheetH;
@@ -170,7 +197,8 @@ function apply(): void {
     const frame = document.getElementById('frame');
     const vh = h - safe.bottom;
     let top = vh - sheetH;
-    if (shown(frame)) top = Math.max(top, Math.ceil(frame.getBoundingClientRect().bottom) + PHONE.gap);
+    if (shown(frame))
+      top = Math.max(top, Math.ceil(frame.getBoundingClientRect().bottom) + PHONE.gap);
     sheetH = Math.max(0, Math.floor(vh - top));
     set('--sheet-top', `${top}px`);
     set('--sheet-h', `${sheetH}px`);
@@ -217,8 +245,14 @@ export function startPhone(): void {
   watch();
   onSheet(watch);
   // The frame opening or closing moves the sheet.
-  new MutationObserver(schedule).observe(root, { attributes: true, attributeFilter: ['data-view'] });
+  new MutationObserver(schedule).observe(root, {
+    attributes: true,
+    attributeFilter: ['data-view'],
+  });
   const frame = document.getElementById('frame');
   if (frame)
-    new MutationObserver(schedule).observe(frame, { attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
+    new MutationObserver(schedule).observe(frame, {
+      attributes: true,
+      attributeFilter: ['hidden', 'class', 'style'],
+    });
 }

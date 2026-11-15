@@ -15,14 +15,22 @@ test('desktop sizes keep the desktop layout', () => {
 });
 
 test("the spec's examples (11.1): 390×750 and 360×650", () => {
-  assert.deepEqual(decide({ w: 390, h: 750, height: 'peek' }), { kind: 'phone-fit', pic: 366, sheetH: 140 });
+  assert.deepEqual(decide({ w: 390, h: 750, height: 'peek' }), {
+    kind: 'phone-fit',
+    pic: 366,
+    sheetH: 140,
+  });
   // At half, with plenty of content, the picture stops at 240 and the sheet takes the rest.
   assert.deepEqual(decide({ w: 390, h: 750, height: 'half', content: 900 }), {
     kind: 'phone-fit',
     pic: 240,
     sheetH: 266,
   });
-  assert.deepEqual(decide({ w: 360, h: 650, height: 'peek' }), { kind: 'phone-fit', pic: 286, sheetH: 120 });
+  assert.deepEqual(decide({ w: 360, h: 650, height: 'peek' }), {
+    kind: 'phone-fit',
+    pic: 286,
+    sheetH: 120,
+  });
   assert.deepEqual(decide({ w: 360, h: 650, height: 'half', content: 900 }), {
     kind: 'phone-fit',
     pic: 240,
@@ -36,9 +44,16 @@ test('at half, short content leaves the picture larger', () => {
   assert.equal(l.pic, 844 - 244 - 300);
   assert.equal(l.sheetH, 300);
   // Narrow and tall: the width limits the picture, and the sheet takes the rest.
-  assert.deepEqual(decide({ w: 390, h: 844, height: 'half', content: 200 }), { kind: 'phone-fit', pic: 366, sheetH: 234 });
+  assert.deepEqual(decide({ w: 390, h: 844, height: 'half', content: 200 }), {
+    kind: 'phone-fit',
+    pic: 366,
+    sheetH: 234,
+  });
   // Content under the peek height is laid out as peek.
-  assert.deepEqual(decide({ w: 390, h: 844, height: 'half', content: 40 }), decide({ w: 390, h: 844, height: 'peek' }));
+  assert.deepEqual(
+    decide({ w: 390, h: 844, height: 'half', content: 40 }),
+    decide({ w: 390, h: 844, height: 'peek' }),
+  );
 });
 
 test('the sheet never takes more than half the height unless the picture is at 240', () => {
@@ -49,7 +64,10 @@ test('the sheet never takes more than half the height unless the picture is at 2
 });
 
 test('an empty sheet is laid out as peek', () => {
-  assert.deepEqual(decide({ w: 390, h: 844, height: null }), decide({ w: 390, h: 844, height: 'peek' }));
+  assert.deepEqual(
+    decide({ w: 390, h: 844, height: null }),
+    decide({ w: 390, h: 844, height: 'peek' }),
+  );
 });
 
 test('rotated phones, short screens and 400% zoom use the scroll layout', () => {
@@ -98,7 +116,10 @@ test('safe areas come off the space first', () => {
   assert.equal(l.kind, 'phone-fit');
   assert.equal(l.pic + l.sheetH + PHONE.fixed, 844 - 47 - 34);
   // A landscape phone's side insets narrow it.
-  assert.equal(decide({ w: 720, h: 700, safe: { top: 0, right: 30, bottom: 0, left: 30 } }).kind, 'phone-fit');
+  assert.equal(
+    decide({ w: 720, h: 700, safe: { top: 0, right: 30, bottom: 0, left: 30 } }).kind,
+    'phone-fit',
+  );
 });
 
 test('a measured frame replaces the spec’s 244 px', () => {
@@ -115,7 +136,11 @@ test('Expert on a phone is always the scroll layout (11.5)', () => {
 
 // ----- The Back history -------------------------------------------------------------------------
 
-const entry = (content: string, height: 'peek' | 'half' | 'page' = 'peek', opener: string | null = null) => ({
+const entry = (
+  content: string,
+  height: 'peek' | 'half' | 'page' = 'peek',
+  opener: string | null = null,
+) => ({
   content,
   height,
   label: content,
@@ -188,7 +213,10 @@ test('the same content opened again moves to the top, not twice', () => {
     s.all().map((e) => e.content),
     ['hint', 'mission'],
   );
-  assert.deepEqual(s.open(entry('mission'), false).map((e) => e.content), ['hint']);
+  assert.deepEqual(
+    s.open(entry('mission'), false).map((e) => e.content),
+    ['hint'],
+  );
   assert.equal(s.all().length, 1);
 });
 

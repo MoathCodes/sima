@@ -210,7 +210,8 @@ function release(el: HTMLElement): void {
 function wrapFor(el: HTMLElement, body: HTMLElement): HTMLElement {
   let w = wraps.get(el);
   if (!w) {
-    if (el.parentNode && !body.contains(el)) homes.set(el, { parent: el.parentNode, next: el.nextSibling });
+    if (el.parentNode && !body.contains(el))
+      homes.set(el, { parent: el.parentNode, next: el.nextSibling });
     w = document.createElement('div');
     w.className = 'sheet-item';
     w.append(el);
@@ -241,6 +242,10 @@ function show(): void {
     p.root.setAttribute('role', 'region');
     p.root.removeAttribute('aria-modal');
   }
+  // A card for the smoke test's overlap check (the frame and the sheet never overlap, MOB-3);
+  // a page covers everything on purpose, so it is not one.
+  if (t && !page) p.root.dataset.card = 'sheet';
+  else delete p.root.dataset.card;
   if (t) p.root.setAttribute('aria-label', t.label);
   else p.root.removeAttribute('aria-label');
   p.title.textContent = page ? t.label : '';
@@ -283,7 +288,10 @@ function focusIn(el: HTMLElement): void {
     el.querySelector<HTMLElement>('h1, h2, h3, [autofocus]') ??
     el.querySelector<HTMLElement>('button, a[href], input, select, textarea, [tabindex]');
   if (!target) return;
-  if (!target.matches('button, a[href], input, select, textarea') && !target.hasAttribute('tabindex'))
+  if (
+    !target.matches('button, a[href], input, select, textarea') &&
+    !target.hasAttribute('tabindex')
+  )
     target.tabIndex = -1;
   target.focus({ preventScroll: true });
 }
@@ -302,7 +310,10 @@ export function openSheet(el: HTMLElement, opts: SheetOptions): void {
   const p = build();
   const opener = activeOpener();
   const hadFocus = !!p && !!opener && p.root.contains(opener);
-  const gone = stack.open({ content: el, height: opts.height, label: opts.label, opener }, !!opts.back);
+  const gone = stack.open(
+    { content: el, height: opts.height, label: opts.label, opener },
+    !!opts.back,
+  );
   for (const e of gone) release(e.content);
   show();
   if (opts.back || hadFocus) focusIn(el);
