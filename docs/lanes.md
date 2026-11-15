@@ -83,6 +83,48 @@ in `app.css`. `backdrop-filter` is written only in `app.css` (GLS-1).
 
 **Requests between lanes** follow AGENTS.md: write the exact patch in your report.
 
+## Night Glass materials (v2.0, for every lane)
+
+Lane F switched the whole app to Night Glass (DESIGN-v2.md). What that means for your files:
+
+- **The v1 token names still work and are now Night.** `--card` is the opaque Night tint, `--card-2`,
+  `--card-3`, `--card-4` are white 7%, 12% and 18% fills, `--ink`, `--ink-2`, `--ink-3` are
+  `on-glass`, `-2` and `-3`, `--rule` is white 10%, and `--good`, `--warn`, `--bad` and their
+  `-soft` fills are the Night values. New: `--on-action-soft` (text on `--action-soft`), `--path`,
+  `--skill`, `--lift-1`, `--lift-2`. The `--v2-*` names are the same values.
+- **Never ultramarine or magenta text on glass.** `color: var(--action)` fails 4.5:1 on Night. Use
+  `--ink` (with an underline for a link, as `.link` does) or `--on-action-soft` on `--action-soft`.
+- **Pick a material by job and give your element one class** (they are in app.css, "Materials"):
+
+  | Class | Material | For |
+  |---|---|---|
+  | `.glass-thin` | Thin | Chips, labels and tags on the sky |
+  | `.glass` | Regular | Chrome that stays (top row, rail, bar, the mission list). Every `.card` is Regular unless listed below |
+  | `.glass-raised` | Raised | What opens: popovers, menus, the mission, success, welcome and coach cards, toasts, tooltips |
+  | `.slate` | Slate (opaque) | Anything holding a picture or chart, and reading panels: the frame, Measure, tools, dialogs, the phone sheet |
+  | `.well` (`.well.chart`) | Well | The opaque black (or `st-bg`) box a picture or chart sits in, with its 1 px inner line |
+
+  These mount points already have their material, so their lane need not add a class:
+  Regular: `#wordmark`, `#search`, `#actions`, `#view-switch`, `#rail`, `#bar`, `#discover-list`,
+  `#sky-loading`, `#frame-show`. Raised: `.popover`, `.tooltip`, toasts, `#places-list`,
+  `#place-card`, `#finds`, `#sandbox`, `#welcome`, `#mission`, `#mission-success`, `#coach`,
+  `#settings`, `#sky-click`, `#tip`, `#places-menu`, `#guide-menu`. Slate: `.card.panel`,
+  `.dialog`, `#frame`, `#measure`, `#tools`, `#sheet`, `.wf`.
+- **The material sets the background and the shadow.** The rules weigh nothing (`:where`), so
+  your own `background` or `box-shadow` on that element wins and the element stops being glass.
+  Leave them off. If a shared class gives your element a background (a `.btn` chip), write
+  `background: var(--mat-bg)` to take the material back. To change only the tint, set
+  `--mat-tint` on the element.
+- **Never write `backdrop-filter`** outside app.css (GLS-1, tested). Never fade, filter, mask or clip
+  a parent of a glass element: fade the glass element itself (GLS-4, smoke). Never put a picture
+  or chart under or inside glass (GLS-6, smoke).
+- **Glass or Solid** is `html[data-glass="glass" | "solid"]`, set once by `shell/glass.ts`. Read it
+  with `glassLevel()` and `onGlass()`; never read the media queries yourself. Solid is the default
+  on phones and on software renderers (the smoke browser is one: flows that need glass choose it in
+  Settings, `panels-glass`).
+- **Arabic names** go in a `<bdi lang="ar" dir="rtl">` (lane F's `arabicSpan` in
+  `shell/places/state.ts`), at 14 px or more; `:lang(ar)` sets the Arabic text face.
+
 ## The lanes (v1, for reference)
 
 | Lane | Builds | Requirements (SPEC 5) |
@@ -250,7 +292,7 @@ fills the element and styles what is inside it; lane F (app.css, "Page skeleton"
 | `share`, `about` | F | Dialogs, opened with `showModal()`. |
 | `toasts` | F | Short messages above the bar. |
 | `tooltip` | F | The one tooltip, for every element with `data-tip`. |
-| `narrow-note` | F | "Open it on a computer" under 700 px (O-W3). v2.0 removes it once lane M's phone layout lands. |
+| `phone-menu` (v2.0) | F | The phone menu under 700 px: Find, Settings, Share, About. (`narrow-note` is gone.) |
 | `view-switch` (v2.0) | F | Discover \| Expert, in the top row. Empty and hidden in step 0. |
 | `discover-list` (v2.0) | K | Discover's mission list, "Try another object", the skills record. |
 | `mission` (v2.0) | K | The mission card. Escape 30. |
@@ -285,7 +327,7 @@ Names in `index.html` are listed with the mount points above. Names inside parts
 | C | `move-frame-here` |
 | D | `play`, `dates`, `wavelength`, `wavelength-handle`, `measure` (the frame's Measure button), `tools-button`, `fov-smaller`, `fov-larger`, `frame-hide`, `view-flip`, `view-swipe`, `view-two`, `view-diff`, `view-stack`, `view-trail` |
 | E | `original`, `all-numbers`, `chart`, `detectors`, `tools-tab-picture`, `tools-tab-clean`, `tools-tab-find`, `tools-tab-layers` |
-| F | `guide-button`, `places-button`, `share-button`, `about-button`, `zoom-in`, `zoom-out`, `sky-map-button`, `grid-button`, `sky-map-spherex`, `sky-map-wise-w1`, `sky-map-wise-w2` |
+| F | `guide-button`, `places-button`, `share-button`, `about-button`, `zoom-in`, `zoom-out`, `sky-map-button`, `grid-button`, `sky-map-spherex`, `sky-map-wise-w1`, `sky-map-wise-w2`; v2.0: `view-switch`, `view-discover`, `view-expert`, `settings-button`, `settings`, `settings-back`, `panels-glass`, `panels-solid`, `panels-try-glass`, `settings-reset`, `settings-reset-yes`, `phone-menu`, `phone-menu-list`, `phone-find`, `phone-settings`, `phone-share`, `phone-about`, `find-back` |
 | G | `chip-stars`, `chip-nearby`, `chip-changing`, `chip-clusters`, `chip-nebulae`, `chip-galaxies`, `chip-tours`, `chip-surprise-me` |
 | Intro | `intro`, `intro-skip`, `play-intro` (in About) |
 | H | `starter-runaway`, `starter-made-of`, `starter-ghost` (was `starter-too-faint`), `welcome-own`, `hint` |
@@ -324,6 +366,7 @@ Wrap every read and write in `try`; storage can be blocked.
 | `sima-view` | v2.0: the view, `discover` or `expert` | F |
 | `sima-missions` | v2.0: mission progress. Reset clears only this key; never in a link | H |
 | `sima-panels` | v2.0: the visitor's Panels choice, `glass` or `solid` | F |
+| `sima-panels-auto` | v2.0: `solid` when the governor found the sky slow with glass on ("Try glass again" clears it) | F |
 | `frame-box` | The frame's position and size | F |
 | `sky-places` | Saved places | G |
 | `sima-guide` | Tour progress, seen tips, "all numbers" | H (E writes `allNumbers`). Always merge into this entry, never overwrite it |

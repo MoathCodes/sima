@@ -73,3 +73,27 @@ test('gaps from a hidden tab or a resume are ignored; too few frames keep Glass'
   assert.equal(judgeFrames([...Array(90).fill(16.7), 5000, 1200]), 'glass');
   assert.equal(judgeFrames([16.7, 80, 90]), 'glass');
 });
+
+test('GLS-1: backdrop-filter is written only in app.css, and no blur is over 32 px', async () => {
+  const { readdirSync, readFileSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (/\.(css|ts)$/.test(e.name)) files.push(p);
+    }
+  };
+  walk('src');
+  // glass.ts only asks whether the browser supports it (CSS.supports); it styles nothing.
+  const allowed = [join('styles', 'app.css'), join('shell', 'glass.ts')];
+  const offenders = files.filter(
+    (f) => !allowed.some((a) => f.endsWith(a)) && /backdrop-filter|backdropFilter/.test(readFileSync(f, 'utf8')),
+  );
+  assert.deepEqual(offenders, []);
+  const app = readFileSync('src/styles/app.css', 'utf8');
+  const blurs = [...app.matchAll(/blur\((\d+(?:\.\d+)?)px\)/g)].map((m) => Number(m[1]));
+  assert.ok(blurs.length >= 3, 'the three glass blurs are in app.css');
+  assert.ok(blurs.every((b) => b <= 32), `every blur at most 32 px: ${blurs.join(', ')}`);
+});
