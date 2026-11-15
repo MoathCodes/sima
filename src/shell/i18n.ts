@@ -211,3 +211,11 @@ export function ltrEl(text: string): HTMLElement {
 export function localName(name: string, arabic?: string | null): string {
   return current === 'ar' && arabic ? arabic : name;
 }
+
+/**
+ * A left-to-right run for plain text (`textContent`, toasts, `aria-label`, canvas): wrapped in
+ * Unicode isolate marks (LRI … PDI), so coordinates keep their order inside Arabic sentences.
+ */
+export function ltrText(text: string): string {
+  return `⁦${text}⁩`;
+}
