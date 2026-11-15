@@ -31,6 +31,14 @@ const nearest = (id: string, at: string) =>
 
 const start: Step[] = [
   {
+    // Expert opens with Measure, which covers the middle of the sky where the frames drop.
+    name: 'Close Measure',
+    async run(page) {
+      await press(page, 'measure');
+      await page.locator('#measure').waitFor({ state: 'hidden' });
+    },
+  },
+  {
     name: 'Pause the main frame',
     async run(page) {
       await page.waitForFunction(`window.sima.S.playing`);

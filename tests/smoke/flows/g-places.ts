@@ -62,7 +62,7 @@ export const flows: Flow[] = [
     name: 'Places: chips, lists and cards',
     owner: 'G',
     steps: [
-      pressStep('chip-stars', 'Open Stars'),
+      chipStep('stars', 'Open Stars'),
       pressStep('list-filter-1', 'Only stars with Arabic names'),
       pressStep('list-in-view', 'In this view'),
       pressStep('list-whole-sky', 'Whole sky'),
@@ -70,7 +70,7 @@ export const flows: Flow[] = [
       pressStep('card-zoom', 'Zoom to it'),
       keyStep('Escape', 'Escape closes the card'),
       expectHidden('place-card', 'The card is closed'),
-      pressStep('chip-nebulae', 'Open Nebulae'),
+      chipStep('nebulae', 'Open Nebulae'),
       pressStep('list-filter-4', 'Only shells of dying stars'),
       keyStep('Escape', 'Escape closes the list (O-I12)'),
       expectHidden('places-list', 'The list is closed'),
@@ -101,7 +101,7 @@ export const flows: Flow[] = [
     name: 'Places: tours (PLC-6)',
     owner: 'G',
     steps: [
-      pressStep('chip-tours', 'Open Tours'),
+      chipStep('tours', 'Open Tours'),
       pressStep('tour-galaxies', 'Open "Beyond our galaxy"'),
       pressStep('tour-play', 'Play the tour'),
       {
@@ -120,7 +120,7 @@ export const flows: Flow[] = [
     name: 'Places: Surprise me and saved places (PLC-7)',
     owner: 'G',
     steps: [
-      pressStep('chip-surprise-me', 'Surprise me'),
+      chipStep('surprise-me', 'Surprise me'),
       keyStep('Escape', 'Escape closes the card'),
       pressStep('places-button', 'Open Places'),
       {

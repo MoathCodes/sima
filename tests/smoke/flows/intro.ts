@@ -20,6 +20,30 @@ async function introGone(page: Page, ms: number): Promise<void> {
   });
 }
 
+/**
+ * Does `act` and checks the intro is gone within 3 s of it, timed in the page: right after the
+ * intro, the sky reads its map back once (sky.ts brightGrid), which on the smoke test's software
+ * renderer holds the page for seconds, so a wait timed from here would see the end late.
+ */
+async function skipsQuickly(page: Page, act: () => Promise<void>): Promise<void> {
+  const before = await page.evaluate(() => {
+    const w = window as unknown as { introGoneAt?: number };
+    delete w.introGoneAt;
+    new MutationObserver((_, o) => {
+      if (document.getElementById('intro')) return;
+      w.introGoneAt = performance.now();
+      o.disconnect();
+    }).observe(document.body, { childList: true });
+    return performance.now();
+  });
+  await act();
+  await introGone(page, 30_000);
+  const gone = await page.evaluate(
+    () => (window as unknown as { introGoneAt?: number }).introGoneAt ?? performance.now(),
+  );
+  expect(gone - before < 3_000, `the intro gone within 3 s, took ${Math.round(gone - before)} ms`);
+}
+
 /** The page as on a first visit (DSC-1): no intro, Discover's welcome card up over the globe,
  * with nothing left of the intro on the cards. */
 const firstVisit: Step = {
@@ -64,6 +88,9 @@ const workspaceFrame = '.wf[data-frame="f1"]';
 const dropFrame: Step = {
   name: 'Drop a second frame from the tray (autosaved)',
   async run(page, size) {
+    // Expert opens with Measure, which covers the middle of the sky where the frame drops.
+    await press(page, 'measure');
+    await page.locator('#measure').waitFor({ state: 'hidden' });
     // Paused: while the frame plays, the autosave waits (src/workspace/store.ts, reported).
     if (
       await page.evaluate(
@@ -119,8 +146,7 @@ export const flows: Flow[] = [
         async run(page) {
           await openWithIntro(page);
           await page.waitForTimeout(1_500);
-          await page.keyboard.press('Space');
-          await introGone(page, 2_000);
+          await skipsQuickly(page, () => page.keyboard.press('Space'));
         },
       },
       firstVisit,
@@ -131,8 +157,7 @@ export const flows: Flow[] = [
           await press(page, 'play-intro');
           await page.waitForSelector('#intro', { timeout: 2_000 });
           await page.waitForTimeout(1_000);
-          await press(page, 'intro-skip');
-          await introGone(page, 2_000);
+          await skipsQuickly(page, () => press(page, 'intro-skip'));
         },
       },
       firstVisit,
