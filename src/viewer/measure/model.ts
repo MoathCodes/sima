@@ -164,17 +164,17 @@ function spectrumHeadline(t: TargetInput): Headline {
   if (!t.spectrum) return measuring('spectrum', 'Measuring the light at each colour…');
   const good = t.spectrum.filter((c) => Number.isFinite(c.flux) && !c.weak);
   if (good.length < 3)
-    return notMeasured('spectrum', `Only ${good.length} of 102 colours have a clear measurement, too few for a spectrum.`);
+    return notMeasured('spectrum', tr('hl.fewColours', { n: good.length }));
   const peak = good.reduce((a, b) => (b.flux > a.flux ? b : a));
   return {
-    value: `Brightest at ${num(peak.lam, 2)} µm`,
-    valueTip: 'The colour (wavelength) where the most light was measured, from the pixels.',
-    pill: { text: 'measured', tone: '' },
-    sub: `${good.length} of 102 ${term('colours', 'SPHEREx splits light into 102 narrow colours (channels), 17 per detector, from 0.75 to 5.0 µm.')} measured from the pixels of real exposures`,
+    value: tr('hl.brightestAt', { lam: `${num(peak.lam, 2)} µm` }),
+    valueTip: tr('hl.brightestTip'),
+    pill: { text: tr('hl.measured'), tone: '' },
+    sub: `${tr('hl.nOf102', { n: good.length })} ${term(tr('hl.colours'), tr('hl.coloursTip'))} ${tr('hl.fromPixels')}`,
     chart: 'spectrum',
     para:
-      'Each point is the light at one of SPHEREx’s 102 colours, building up as the pictures play. ' +
-      `Cold failed stars absorb light where ${term('water', 'Water vapour in a cool atmosphere absorbs near 1.4, 1.9 and 2.7 µm.')} and ${term('methane', 'Methane forms only below about 1,500 K and absorbs near 2.2 and 3.3 µm.')} do: look for dips in the shaded bands (where they absorb, not a model of this star).`,
+      `${tr('hl.specPara1')} ` +
+      `${tr('hl.specPara2')} ${term(tr('hl.water'), tr('hl.waterTip'))} ${tr('hl.and')} ${term(tr('hl.methane'), tr('hl.methaneTip'))} ${tr('hl.specPara3')}`,
     det: null,
     best: null,
   };
@@ -182,30 +182,29 @@ function spectrumHeadline(t: TargetInput): Headline {
 
 function stackHeadline(t: TargetInput): Headline {
   if (t.error) return notMeasured('cutouts', t.error);
-  if (!t.stacks) return measuring('cutouts', 'Stacking the pictures along the catalogue motion…');
+  if (!t.stacks) return measuring('cutouts', tr('hl.stacking'));
   const measured = t.stacks.filter((s) => Number.isFinite(s.along.snr));
   if (!measured.length)
-    return notMeasured('cutouts', t.stacks[0]?.note || 'The stacks could not be measured.');
+    return notMeasured('cutouts', t.stacks[0]?.note || tr('hl.noStacks'));
   const best = measured.reduce((a, b) => (b.along.snr > a.along.snr ? b : a));
   const det = t.det ?? best.det;
   const per = measured.map((s) => `D${s.det} ${num(s.along.snr, 1)}σ`).join(', ');
-  const stacked = `${term('Stacked', 'Each exposure is shifted so the moving target stays put, then all are added. Something too faint for any one picture adds up.')} along the catalogue motion: ${esc(per)}`;
-  const toBest = det !== best.det ? `. Strongest in D${best.det}: ${showDet(best.det)}` : '';
+  const stacked = `${term(tr('hl.stacked'), tr('hl.stackedTip'))} ${tr('hl.alongCat')}: ${esc(per)}`;
+  const toBest = det !== best.det ? `. ${tr('hl.strongest', { det: `D${best.det}` })}: ${showDet(best.det)}` : '';
   const mine = measured.find((s) => s.det === det);
   if (!mine) {
-    const why = t.stacks.find((s) => s.det === det)?.note || `D${det} has no exposures of this spot.`;
-    return notMeasured('cutouts', `Not measured in D${det}: ${why.replace(/\.+$/, '')}. `, '', det, best.det, `${stacked}${toBest}`);
+    const why = t.stacks.find((s) => s.det === det)?.note || tr('hl.noExpSpot', { det: `D${det}` });
+    return notMeasured('cutouts', `${tr('hl.nmIn', { det: `D${det}`, why: why.replace(/\.+$/, '') })} `, '', det, best.det, `${stacked}${toBest}`);
   }
   const seen = mine.along.snr >= 5;
   return {
-    value: `${num(mine.along.snr, 1)}σ in D${det}`,
-    valueTip: 'Signal-to-noise of the stacked picture at the target: how many times the noise its light stands out. 5σ or more is a clear detection.',
-    pill: seen ? { text: 'seen only when stacked', tone: 'good' } : { text: 'not seen', tone: '' },
+    value: tr('hl.snrIn', { v: `${num(mine.along.snr, 1)}σ`, det: `D${det}` }),
+    valueTip: tr('hl.snrTip'),
+    pill: seen ? { text: tr('hl.seenStacked'), tone: 'good' } : { text: tr('hl.notSeen'), tone: '' },
     sub: `${stacked}${toBest}`,
     chart: 'cutouts',
     para:
-      'Too faint for any single picture, so every exposure of a detector is shifted along the catalogue motion and added. ' +
-      'Two controls, the same exposures not shifted and shifted the opposite way, should not show it. ' +
+      `${tr('hl.stackPara')} ` +
       neighbours(mine.note),
     det,
     best: best.det,
@@ -222,10 +221,10 @@ export function neighbours(note: string): string {
 
 function brightnessHeadline(t: TargetInput): Headline {
   if (t.error) return notMeasured('brightness', t.error);
-  if (!t.curves) return measuring('brightness', 'Measuring the brightness on every exposure…');
+  if (!t.curves) return measuring('brightness', tr('hl.measuringBright'));
   const shown = t.curves.filter((c) => c.shown && c.visits.length >= 2);
   if (!shown.length) {
-    const why = t.curves.find((c) => c.note)?.note ?? 'No detector has two visits with a clean measurement.';
+    const why = t.curves.find((c) => c.note)?.note ?? tr('hl.noTwoVisits');
     return notMeasured('brightness', why);
   }
   const amp = (c: DetectorCurve) => {
@@ -235,28 +234,28 @@ function brightnessHeadline(t: TargetInput): Headline {
   const top = shown.reduce((a, b) => (amp(b) > amp(a) ? b : a));
   const det = t.det ?? top.det;
   const best = shown.find((c) => c.det === det);
-  const toBest = det !== top.det ? ` Biggest in D${top.det}, ${num(amp(top), 2)} mag: ${showDet(top.det)}` : '';
+  const toBest = det !== top.det ? ` ${tr('hl.biggest', { det: `D${top.det}`, v: `${num(amp(top), 2)} mag` })}: ${showDet(top.det)}` : '';
   if (!best) {
     const c = t.curves.find((x) => x.det === det);
-    const why = c?.note ?? (c ? 'it has fewer than two visits with a clean measurement' : 'no exposure of this detector has a clean measurement');
-    return notMeasured('brightness', `Not measured in D${det}: ${why.replace(/\.+$/, '')}.`, '', det, top.det, toBest);
+    const why = c?.note ?? (c ? tr('hl.fewVisits') : tr('hl.noCleanDet'));
+    return notMeasured('brightness', `${tr('hl.nmIn', { det: `D${det}`, why: why.replace(/\.+$/, '') })}`, '', det, top.det, toBest);
   }
   const verdict = verdictOf(best.test);
   return {
     value: `${num(amp(best), 2)} mag`,
-    valueTip: 'The biggest change in brightness between visit averages, in magnitudes: 1 mag is a factor of 2.5 in light, 0.1 mag about 10%. Each detector is compared only with itself.',
+    valueTip: tr('hl.ampTip'),
     pill:
       verdict === 'changed'
-        ? { text: 'changed beyond noise', tone: '' }
+        ? { text: tr('hl.changed'), tone: '' }
         : verdict === 'steady'
-          ? { text: 'steady within noise', tone: '' }
-          : { text: 'not tested', tone: '' },
-    sub: `Up to ${num(amp(best), 2)} mag change in D${best.det}, ${term('measured', 'From the pixels: the light in a fixed circle, or the outer glow when the star’s centre is saturated.')} between ${best.visits.length} visits.${toBest}`,
+          ? { text: tr('hl.steady'), tone: '' }
+          : { text: tr('hl.untested'), tone: '' },
+    sub: `${tr('hl.upTo', { v: `${num(amp(best), 2)} mag`, det: `D${best.det}` })} ${term(tr('hl.measured'), tr('hl.measuredGlowTip'))} ${tr('hl.betweenVisits', { n: best.visits.length })}${toBest}`,
     chart: 'brightness',
     para:
       // The chart shows the detector on screen; its own note (glow, widened errors, Folded) is
       // written under the chart (detail.ts).
-      'Each point is one exposure, compared only with the same detector’s own average, with the star’s colour taken out. Squares are visit averages.',
+      tr('hl.brightPara'),
     det: best.det,
     best: top.det,
   };
@@ -265,22 +264,22 @@ function brightnessHeadline(t: TargetInput): Headline {
 /** The headline for a fixed spot (a candidate, a catalogue source or a tapped spot). */
 export function spotHeadline(points: SpotPoint[] | null, det: number, error: string | null, test: Chi2 | null, mean: { mean: number; err: number } | null): Headline {
   if (error) return notMeasured('brightness', error);
-  if (!points || !mean) return measuring('brightness', 'Measuring the light here on every exposure…');
+  if (!points || !mean) return measuring('brightness', tr('hl.measuringHere'));
   const mine = points.filter((p) => p.det === det);
   const ok = mine.filter((p) => !p.flagged && Number.isFinite(p.flux));
   if (!ok.length)
-    return notMeasured('brightness', mine.length ? `All ${mine.length} exposures of D${det} have a flagged pixel in the circle here.` : `No exposure of D${det} covers this spot.`, '', det, null);
+    return notMeasured('brightness', mine.length ? tr('hl.allFlagged', { n: mine.length, det: `D${det}` }) : tr('hl.noCover', { det: `D${det}` }), '', det, null);
   const verdict = verdictOf(test);
   return {
     value: `${sig(mean.mean, 3)} µJy`,
-    valueTip: 'The light in a fixed 25″ circle, averaged over the exposures (weighted by their errors), in microjanskys: a unit of brightness used for faint infrared light.',
+    valueTip: tr('hl.spotTip'),
     pill:
       verdict === 'changed'
-        ? { text: 'changed beyond noise', tone: '' }
+        ? { text: tr('hl.changed'), tone: '' }
         : verdict === 'steady'
-          ? { text: 'steady within noise', tone: '' }
-          : { text: 'not tested', tone: '' },
-    sub: `± ${sig(mean.err, 2)} µJy in D${det}, from ${ok.length} of ${mine.length} exposures${mine.length > ok.length ? ` (${mine.length - ok.length} left out: a flagged pixel in the circle)` : ''}`,
+          ? { text: tr('hl.steady'), tone: '' }
+          : { text: tr('hl.untested'), tone: '' },
+    sub: `${tr('hl.spotSub', { err: `± ${sig(mean.err, 2)} µJy`, det: `D${det}`, ok: ok.length, of: mine.length })}${mine.length > ok.length ? ` ${tr('hl.leftOut', { n: mine.length - ok.length })}` : ''}`,
     chart: 'brightness',
     para: `The light in a fixed circle 2 pixels (12″) in radius, with the sky taken from a ring 6 to 12 pixels out, on every original exposure${test && Number.isFinite(test.p) ? `; noise alone would scatter it this much ${esc(chance(test.p))} times` : ''}. A moving source walks out of a fixed circle.`,
     det,
