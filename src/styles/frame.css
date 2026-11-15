@@ -535,32 +535,75 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
 
 /* ----- Views and lines ------------------------------------------------------------------------ */
 
+/* The views: a segmented control with one pill that slides under the chosen view (redesign
+   item 4). Equal columns, so the pill's place is the view's index (--i of --n, frame.ts). Words
+   when the row has room; icons alone below that, named by their tooltip, never both squeezed. */
 .frame-views {
-  display: flex;
-  margin-top: 6px;
+  container: views / inline-size;
+  position: relative;
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 0;
+  margin-top: 8px;
 }
 .frame-views > button {
+  position: relative;
+  z-index: 1;
   min-width: 0;
-  padding: 0 6px;
+  height: 30px;
+  padding: 0 4px;
+  transition: color var(--dur-1, 120ms) var(--ease-out);
+}
+.frame-views > button > span {
+  display: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.frame-views > button > .icon {
+  width: 17px;
+  height: 17px;
+}
+@container views (min-width: 440px) {
+  .frame-views > button > .icon {
+    display: none;
+  }
+  .frame-views > button > span {
+    display: inline;
+    font: var(--text-label);
+    font-size: 13px;
+  }
+}
+/* The pill, under the buttons; the chosen button itself stays clear. */
+:is(#frame, #bar, #measure, #tools) .frame-views > button[aria-pressed='true'] {
+  background: transparent;
+  box-shadow: none;
+}
+.fv-pill {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / var(--n, 6));
+  border-radius: var(--r-window);
+  background: var(--v2-fill-3, var(--card-4));
+  box-shadow: var(--shadow-chosen);
+  transform: translateX(calc(var(--i, 0) * 100%));
+  transition: transform var(--dur-2, 200ms) var(--ease-out);
+  pointer-events: none;
+}
+.frame-views[data-none] .fv-pill,
+.frame-views:has(> button:disabled) .fv-pill {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fv-pill {
+    transition: none;
+  }
 }
 .frame-views > button:disabled {
   opacity: 0.4;
   cursor: default;
-}
-/* Six views in the 1366 frame: in Measure they drop their icons when narrow, and wrap into two
-   rows of three so every label stays whole and apart. */
-@media (max-width: 1420px) {
-  .frame-views.six {
-    flex-wrap: wrap;
-    margin-top: 2px;
-  }
-  .frame-views.six > button {
-    flex: 1 0 30%;
-    height: 26px;
-  }
-  .frame-views.six > button > .icon {
-    display: none;
-  }
 }
 .frame-exif {
   /* Two lines kept, so the frame does not change height from one date to the next (O-I5). */
