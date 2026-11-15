@@ -433,8 +433,8 @@ class Patch:
         try:
             r = catalog_radius(fov)
             with ThreadPoolExecutor(max_workers=2) as pool:
-                fg = pool.submit(pb.gaia_rows, ra, dec, r, CATALOG_LIMIT)
-                fc = pool.submit(pb.catwise_rows, ra, dec, r, CATALOG_LIMIT)
+                fg = pool.submit(pb.carry(pb.gaia_rows), ra, dec, r, CATALOG_LIMIT)
+                fc = pool.submit(pb.carry(pb.catwise_rows), ra, dec, r, CATALOG_LIMIT)
                 g_rows, g_src = fg.result()
                 c_rows, c_src = fc.result()
             rows = []
@@ -527,7 +527,8 @@ class Service:
         while True:
             p = self.cat_queue.get()
             try:
-                p.run_catalog()
+                with pb.priority(p.priority):
+                    p.run_catalog()
             finally:
                 self.cat_queue.task_done()
 
