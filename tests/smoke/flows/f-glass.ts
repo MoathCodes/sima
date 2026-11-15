@@ -380,9 +380,17 @@ const switchSteps: Step[] = [
       const sw = page.locator(guide('view-switch'));
       expect((await sw.getAttribute('role')) === 'radiogroup', 'role radiogroup');
       expect(await sw.isVisible(), 'the switch on screen in Expert');
+      // Paused, so the date on screen only changes if the switch changes it.
+      await page.waitForFunction(() => (window as unknown as { sima: { S: { groups: unknown[] } } }).sima.S.groups.length > 0);
+      if (await page.evaluate(() => (window as unknown as { sima: { S: { playing: boolean } } }).sima.S.playing)) {
+        await press(page, 'play');
+      }
+      // The date as the date on screen, not its index: Expert steps through single visits and
+      // Discover through date windows, so the index changes while the date stays.
+      type View2 = { S: { target: unknown; det: unknown; fov: unknown; epoch: number; groups: { mjd: number }[] } };
       const before = await page.evaluate(() => {
-        const S = (window as unknown as { sima: { S: Record<string, unknown> } }).sima.S;
-        return JSON.stringify([S.target, S.det, S.fov, S.epoch]);
+        const S = (window as unknown as { sima: View2 }).sima.S;
+        return { kept: JSON.stringify([S.target, S.det, S.fov]), mjd: S.groups[S.epoch]!.mjd };
       });
       await page.locator(guide('view-expert')).focus();
       await page.keyboard.press('ArrowLeft');
@@ -392,11 +400,16 @@ const switchSteps: Step[] = [
       );
       expect(await sw.isVisible(), 'the switch on screen in Discover');
       expect((await page.getAttribute(guide('view-discover'), 'aria-checked')) === 'true', 'Discover checked');
-      const after = await page.evaluate(() => {
-        const S = (window as unknown as { sima: { S: Record<string, unknown> } }).sima.S;
-        return JSON.stringify([S.target, S.det, S.fov, S.epoch]);
-      });
-      expect(before === after, `target, detector, field size and date kept (${before} → ${after})`);
+      const after = await page.evaluate((mjd) => {
+        const S = (window as unknown as { sima: View2 }).sima.S;
+        const on = Math.abs(S.groups[S.epoch]!.mjd - mjd);
+        return {
+          kept: JSON.stringify([S.target, S.det, S.fov]),
+          nearest: S.groups.every((g) => Math.abs(g.mjd - mjd) >= on),
+        };
+      }, before.mjd);
+      expect(before.kept === after.kept, `target, detector and field size kept (${before.kept} → ${after.kept})`);
+      expect(after.nearest, `the date kept: the date on screen is the nearest to MJD ${before.mjd}`);
       await page.keyboard.press('ArrowRight');
       await until(
         async () => (await page.evaluate(() => document.documentElement.dataset.view)) === 'expert',
@@ -428,15 +441,15 @@ export const flows: Flow[] = [
           await press(page, 'panels-glass');
           await until(async () => (await glassAttr(page)) === 'glass', 'Glass after choosing it');
           await page.keyboard.press('Escape');
+          await until(async () => !(await page.isVisible(guide('settings'))), 'Escape to close Settings');
         },
       },
       areaStep('first screen'),
       flatStep,
       wellStep,
       {
-        name: 'Close the welcome card and open a place card',
+        name: 'Open a place card',
         async run(page) {
-          await page.locator(guide('welcome-own')).click();
           await page.locator(guide('chip-stars')).click();
           await page.locator(`${guide('places-list')} .pl-row`).first().click();
           await page.locator(guide('place-card')).waitFor();

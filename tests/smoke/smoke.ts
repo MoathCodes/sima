@@ -43,6 +43,12 @@ export interface Flow {
   path?: string;
   /** True when the page may scroll (embed mode lays the frame, bar and Measure in the page flow). */
   scrolls?: boolean;
+  /**
+   * True for a cold first visit (it opens Discover, VIEW-1). Every other flow starts as a
+   * visitor who chose Expert before (run.ts presets `sima-view=expert`, VIEW-3); a `ui=` link
+   * still wins.
+   */
+  firstVisit?: boolean;
   /** Run only at these sizes; default both. Use it sparingly: both sizes must work. */
   sizes?: Size[];
   steps: Step[];
@@ -110,4 +116,18 @@ export async function settle(page: Page, timeout = 10_000): Promise<void> {
     () =>
       new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))),
   );
+}
+
+/**
+ * Opens Measure and waits until it shows. In Expert it is already open at the Measure level
+ * (S.measureOpen), where pressing the button would close it; elsewhere the button opens it.
+ */
+export async function openMeasure(page: Page): Promise<void> {
+  if (await page.locator('#measure').isHidden()) await press(page, 'measure');
+  await page.locator('#measure').waitFor({ state: 'visible' });
+}
+
+/** A step that opens Measure (see openMeasure). */
+export function openMeasureStep(label = 'Open Measure'): Step {
+  return { name: label, run: openMeasure };
 }

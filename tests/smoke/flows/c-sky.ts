@@ -8,7 +8,6 @@
 import { guide, keyStep, pressStep, type Flow, type Step } from '../smoke.ts';
 import type { Page } from 'playwright-core';
 
-const ownWay = pressStep('welcome-own', 'Close the welcome card');
 
 async function viewOf(page: Page): Promise<number[]> {
   const v = await page.locator('#sky').getAttribute('data-view');
@@ -71,13 +70,13 @@ export const flows: Flow[] = [
     name: 'Sky map, patch and click card (C)',
     owner: 'C',
     steps: [
-      ownWay,
       skyReady,
       {
         name: 'The wheel zooms the sky toward the pointer (SKY-3)',
         async run(page, size) {
           const before = await viewOf(page);
-          await page.mouse.move(size.width * 0.33, size.height * 0.55);
+          // Left of the frame and Measure, which Expert opens with.
+          await page.mouse.move(size.width * 0.2, size.height * 0.55);
           await page.mouse.wheel(0, -240);
           await page.waitForFunction(
             (fov) =>
@@ -105,12 +104,17 @@ export const flows: Flow[] = [
       {
         name: 'A click by the bottom-right corner puts the card clear of the bar (O-I9)',
         async run(page, size) {
-          // At 1366×768 this is (1200, 700): every spot beside it touches the bar or the frame.
-          await page.mouse.click(size.width - 166, size.height - 68);
+          // At 1366×768 this is just right of the bar: every spot beside it touches the bar or
+          // Measure (Expert's bar reaches 1250 there).
+          const bar = await page.locator(guide('bar')).boundingBox();
+          const x = Math.max(size.width - 166, (bar ? bar.x + bar.width : 0) + 24);
+          await page.mouse.click(x, size.height - 68);
           await page.locator(guide('move-frame-here')).waitFor({ state: 'visible' });
         },
       },
       keyStep('Escape', 'Escape closes it again'),
+      // Expert opens with Measure, which covers the patch in the middle of the sky.
+      pressStep('measure', 'Close Measure'),
       {
         name: 'The patch is grabbed from inside and dropped; the sky stays still (FRM-2)',
         async run(page) {
@@ -140,7 +144,6 @@ export const flows: Flow[] = [
     name: 'Sky map chooser and wavelength (C)',
     owner: 'C',
     steps: [
-      ownWay,
       skyReady,
       pressStep('sky-map-button', 'Open the sky map chooser'),
       pressStep('sky-map-wise-w2', 'AllWISE 4.6 µm (SKY-4)'),

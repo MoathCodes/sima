@@ -30,7 +30,14 @@ const nearest = (id: string, at: string) =>
   `((f, t) => f.groups.length > 0 && f.groups.every((g) => Math.abs(g.mjd - t) >= Math.abs(f.groups[f.epoch].mjd - t)))(${WS}.frameById('${id}'), ${at})`;
 
 const start: Step[] = [
-  pressStep('welcome-own', 'Close the welcome card'),
+  {
+    // Expert opens with Measure, which covers the middle of the sky where the frames drop.
+    name: 'Close Measure',
+    async run(page) {
+      await press(page, 'measure');
+      await page.locator('#measure').waitFor({ state: 'hidden' });
+    },
+  },
   {
     name: 'Pause the main frame',
     async run(page) {

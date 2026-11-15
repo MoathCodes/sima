@@ -201,7 +201,7 @@ function place(opts: { glide?: boolean; closing?: boolean } = {}): void {
       right + nextShift,
       measureOpen ? measureLeft : vw - GUTTER,
     );
-    placeShowButton(frame);
+    placeShowButton(frame, nextShift);
   } finally {
     placing = false;
   }
@@ -239,14 +239,14 @@ function placeTools(frameLeft: number, frameRight: number, limit: number): void 
   set(root, '--tools-width', `${width}px`);
 }
 
-/** While the frame is hidden, a small card in its place shows it again (FRM-5). */
-function placeShowButton(frame: HTMLElement): void {
+/** While the frame is hidden, a small card in its place (left of Measure) shows it again (FRM-5). */
+function placeShowButton(frame: HTMLElement, shift: number): void {
   const show = byId('frame-show');
   if (!show) return;
   hide(show, !frame.hidden);
   if (!frame.hidden) return;
   set(show, 'top', `${clamp(box.top, FRAME_TOP, innerHeight)}px`);
-  set(show, 'right', `${Math.max(GUTTER, box.right)}px`);
+  set(show, 'right', `${Math.max(GUTTER, box.right - shift)}px`);
 }
 
 function measureWidth(): number {

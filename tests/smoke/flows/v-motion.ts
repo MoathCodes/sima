@@ -5,14 +5,13 @@
  * same handle works on a bright, saturated star. Owner: V.
  */
 import type { Page } from 'playwright-core';
-import { guide, press, pressStep, type Flow, type Step } from '../smoke.ts';
+import { guide, pressStep, type Flow, type Step, openMeasure } from '../smoke.ts';
 
-const ownWay = pressStep('welcome-own', 'Close the welcome card');
 
 const toStack: Step = {
   name: 'Open Measure, then the Stack view',
   async run(page) {
-    await press(page, 'measure');
+    await openMeasure(page);
     await page.locator(guide('view-stack')).first().click();
     await page.locator(`${guide('motion-handle')}:not([hidden])`).waitFor({ timeout: 20_000 });
   },
@@ -80,7 +79,6 @@ export const flows: Flow[] = [
     owner: 'V',
     path: '/?target=wise-0855',
     steps: [
-      ownWay,
       toStack,
       expectReadout('At the catalogue motion, with both checks', /Catalogue motion[\s\S]*Along[\s\S]*Not shifted[\s\S]*Opposite/),
       expectReadout('It is seen along the motion', /Along\s*1[3-9]\.\d×/),
@@ -95,6 +93,6 @@ export const flows: Flow[] = [
     name: 'Motion handle on Barnard’s Star',
     owner: 'V',
     path: '/?target=barnard',
-    steps: [ownWay, toStack, keys, drag, pressStep('motion-snap', 'Snap to catalogue motion')],
+    steps: [toStack, keys, drag, pressStep('motion-snap', 'Snap to catalogue motion')],
   },
 ];

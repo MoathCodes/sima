@@ -14,7 +14,6 @@ type Sima = {
   };
 };
 
-const ownWay = pressStep('welcome-own', 'Close the welcome card');
 
 function expectStep(name: string, fn: string, timeout = 8000): Step {
   return {
@@ -57,7 +56,6 @@ export const flows: Flow[] = [
     owner: 'D',
     path: '/?target=barnard',
     steps: [
-      ownWay,
       stillReal('at the start'),
       pressStep('fov-larger', 'Field 12′'),
       pressStep('fov-larger', 'Field 24′'),
@@ -115,7 +113,8 @@ export const flows: Flow[] = [
     owner: 'D',
     path: '/?target=barnard',
     steps: [
-      ownWay,
+      // Expert opens with Measure, which covers the patch in the middle of the sky.
+      pressStep('measure', 'Close Measure'),
       stillReal('at the start'),
       pressStep('fov-larger', 'Field 12′'),
       pressStep('fov-larger', 'Field 24′'),
@@ -168,7 +167,6 @@ export const flows: Flow[] = [
     owner: 'D',
     path: '/?target=barnard',
     steps: [
-      ownWay,
       stillReal('at the start'),
       pressStep('frame-hide', 'Hide the frame'),
       {
