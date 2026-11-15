@@ -16,7 +16,14 @@
  */
 import { MISSIONS, MISSION_IDS, currentStep, type CheckResult, type MissionId, type MissionInputs } from '../explore/missions.ts';
 import { progress, startMission, stepDone } from '../explore/progress.ts';
-import { nextHint, nextHintLabel, onFound, openStarter, showMissionStep } from '../explore/game.ts';
+import {
+  nextHint,
+  nextHintLabel,
+  onFound,
+  openStarter,
+  setDiscoverPick,
+  showMissionStep,
+} from '../explore/game.ts';
 import { setMarks } from '../explore/closeup.ts';
 import { focusPicture } from '../explore/keypick.ts';
 import { targetAt } from '../explore/track.ts';
@@ -123,6 +130,15 @@ export function startMissions(opts: { onFinish: typeof finished; onLeave: () => 
     run.tap = view.toPic(p.x, p.y);
     evaluate();
   });
+}
+
+/** GATE-2: on the runaway's tap step, a keyboard pick (keypick.ts) is a tap at the crosshair. */
+function keyPick(p: { x: number; y: number; ra: number; dec: number }): boolean {
+  const view = currentView();
+  if (!run || step() !== 'tap' || !view) return false;
+  run.tap = view.toPic(p.x, p.y);
+  evaluate();
+  return run.now.state !== 'failed';
 }
 
 /** Opens a mission: records it as in progress and opens its target, paused. */
@@ -294,6 +310,7 @@ function inputs(k: string): MissionInputs {
 
 /** Runs lane H's check for the step now; records a pass and moves on (several if they pass). */
 function evaluate(): void {
+  setDiscoverPick(run && step() === 'tap' ? keyPick : null);
   if (!run) return;
   setUp();
   const before = index();
