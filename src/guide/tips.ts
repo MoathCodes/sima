@@ -12,6 +12,7 @@ import { find } from './ring.ts';
 import { placeBeside, type Box, type Side } from './place.ts';
 import { readStore, saveStore } from './store.ts';
 import { touring } from './tour.ts';
+import { getView } from '../shell/view.ts';
 
 interface Tip {
   id: string;
@@ -129,6 +130,12 @@ function quiet(): boolean {
 }
 
 function check(): void {
+  // Discover's mission card already guides each step; the one-time tips are for Expert.
+  if (getView() === 'discover') {
+    if (shown) hide();
+    candidate = null;
+    return;
+  }
   if (shown) {
     if (shown.heeded?.()) {
       markSeen(shown.id);

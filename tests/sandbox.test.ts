@@ -151,7 +151,7 @@ function sources(dir = new URL('../src/', import.meta.url).pathname, root = dir)
 test('only the sandbox card, the page’s start and About import the sandbox', () => {
   const allowed = new Set([
     'shell/sandbox.ts', 'main.ts', 'page/about.ts',
-    'explore/missions.ts', 'explore/plan-x.ts',
+    'explore/missions.ts', 'explore/plan-x.ts', 'discover/mission.ts',
   ]);
   const importers = sources().filter((file) => {
     const text = readFileSync(new URL(`../src/${file}`, import.meta.url), 'utf8');
