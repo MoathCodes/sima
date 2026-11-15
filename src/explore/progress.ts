@@ -6,7 +6,7 @@
  *   visit (MSN-8). Never in a link (B-10). Nothing in Expert depends on it (VIEW-3).
  * - No locks (B-4): progress only records; it never decides what may be used.
  *
- * Step 0: a working implementation of the contract. Lane H may change the insides freely.
+ * Only defined mission steps are loaded or recorded.
  */
 import { MISSIONS, MISSION_IDS, isMissionId, type MissionId } from './missions.ts';
 
@@ -54,7 +54,9 @@ function load(): Stored {
       for (const id of MISSION_IDS) {
         const s = v.steps?.[id];
         if (!s || typeof s !== 'object') continue;
-        for (const [k, how] of Object.entries(s)) if (how === 'done' || how === 'unavailable') state.steps[id][k] = how;
+        for (const [k, how] of Object.entries(s))
+          if (MISSIONS[id].steps.includes(k) && (how === 'done' || how === 'unavailable'))
+            state.steps[id][k] = how;
       }
     }
   } catch {
@@ -121,6 +123,7 @@ export function leaveMission(): void {
  * @param how `done` when it passed; `unavailable` when it was finished without its check (MSN-6).
  */
 export function stepDone(id: MissionId, step: string, how: StepState): void {
+  if (!MISSIONS[id].steps.includes(step)) return;
   const s = load().steps[id];
   if (s[step] === 'done' && how === 'unavailable') return;
   s[step] = how;
