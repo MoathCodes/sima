@@ -9,7 +9,7 @@
  * `viewFor` for which view a link opens. Progress is never in a link (B-10).
  * A parameter or value that is not understood is named in a note, never ignored silently.
  */
-import { S, VIEWS } from './state.ts';
+import { S, VIEWS, watch } from './state.ts';
 import { aimAt, loadTarget } from './load.ts';
 import { pause, setEpoch } from './playback.ts';
 import { showColour } from './strip.ts';
@@ -18,7 +18,7 @@ import { emit, on } from '../shell/bus.ts';
 import { toast } from '../shell/toast.ts';
 import { setLevel } from '../explore/game.ts';
 import { progress } from '../explore/progress.ts';
-import { getView } from '../shell/view.ts';
+import { getView, onView } from '../shell/view.ts';
 import type { Group } from '../core/types.ts';
 import { MJD_UNIX, dayToMjd, viewParams, type Link } from './link.ts';
 
@@ -57,10 +57,33 @@ export async function startUrl(link: Link): Promise<void> {
     });
   }
 
+  const follow = on('patch', (p) => {
+    if (p.source === 'loading') return;
+    follow();
+    followAddress();
+  });
+
   if (link.target) void loadTarget(link.target, { fov: link.fov ?? undefined });
   else if (link.ra !== null && link.dec !== null) {
     void aimAt(link.ra, link.dec, link.fov ?? undefined);
   } else void loadTarget('barnard');
+}
+
+/**
+ * Keeps the address bar on what is on screen, so a copied address or a reload opens the same
+ * place (GEN-2). Starts with the first pictures, after the opening link has been applied.
+ * An embed keeps the address it was given.
+ */
+function followAddress(): void {
+  if (S.embed) return;
+  let timer = 0;
+  const write = (): void => {
+    clearTimeout(timer);
+    timer = window.setTimeout(() => history.replaceState(history.state, '', linkFor() + location.hash), 400);
+  };
+  watch(['ra', 'dec', 'fov', 'target', 'epoch', 'mode', 'det', 'color', 'pic'], write);
+  onView(write);
+  write();
 }
 
 /** The parts of a link that need the pictures: view, detector, date. */
