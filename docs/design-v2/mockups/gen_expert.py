@@ -66,6 +66,7 @@ TOP = f'''
     <span class="btn">{i("compass")}Guide</span><span class="btn">{i("pin")}Places</span>
     <span class="btn icon-only">{i("share")}</span><span class="btn icon-only">{i("info")}</span>
   </nav>
+  <nav class="glass cluster m-only"><span class="btn icon-only" aria-label="Menu">{i("menu")}</span></nav>
   <div class="glass switch2" data-guide="view-switch"><span>{i("sun", "icon d-only")}Discover</span><span class="on">{i("chart", "icon d-only")}Expert</span></div>
 </header>
 <div class="chips d-only">
@@ -149,33 +150,33 @@ BAR = f'''
 </section>'''
 
 COACH = f'''
-<section class="coach glass-raised d-only" style="right:16px;top:70px" role="dialog" aria-labelledby="c-h">
+<section class="coach glass-raised d-only" style="left:74px;top:112px;width:min(340px, calc(100vw - 16px - clamp(380px, 40vw, 760px) - 16px - min(480px, calc(100vh - 440px)) - 20px - 74px - 16px))" role="dialog" aria-labelledby="c-h">
   <h3 id="c-h">You're in Expert view</h3>
-  <p>Every number, picture tool, frame and workspace. You are looking at the same star, date and wavelength as before.</p>
+  <p>Every number, picture tool, frame and workspace. Same star, date and wavelength as before.</p>
   <ul>
-    <li>{i("check")}Your missions, skills and field guide are kept.</li>
-    <li>{i("check")}Switch back to Discover here, any time.</li>
+    <li>{i("check")}Your missions are kept.</li>
+    <li>{i("check")}Switch back with Discover, top right.</li>
   </ul>
   <div class="actions"><button class="btn primary">Tour the numbers (3 steps)</button><button class="btn">Got it</button></div>
 </section>'''
 
-# ---- phone: Expert on a phone ----
+# ---- phone: Expert on a phone, the scroll layout: one column, no sheet ----
 PHONE = f'''
-<section class="pframe slate m-only" aria-label="Frame: Barnard's Star">
-  <div class="fh"><div><div class="name">Barnard's Star</div><div class="src"><span class="dot"></span>Real data · QR3 · D3 1.77 µm</div></div></div>
+<div class="pcol m-only">
+<section class="pframe slate" aria-label="Frame: Barnard's Star">
+  <div class="fh"><div><div class="name">Barnard's Star</div><div class="src"><span class="dot"></span>Real data · NASA SPHEREx QR3 · 17 Aug 2026 · D3, 1.77 µm</div></div></div>
   <div class="well ppic"><img class="px" src="img/pic-barnard-2.png" alt="Barnard's Star, 17 August 2026">
     <div class="badge" style="left:8px;top:8px"><b style="display:flex;gap:7px;align-items:center"><span class="letter" style="background:var(--p3)">C</span>17 Aug 2026</b>Pass 3 · D3, 1.77 µm</div></div>
-  <div class="pbar"><span class="icon-btn" style="width:44px;height:44px">{i("prev")}</span><span class="play" style="width:48px;height:48px;border-radius:50%;background:var(--action);color:#fff;display:grid;place-items:center">{i("pause")}</span><span class="icon-btn" style="width:44px;height:44px">{i("next")}</span><div style="flex:1;min-width:0;padding:0 6px">{mini_dates()}</div><span style="font-size:12px;color:var(--on-glass-2)">12/12</span></div>
+  <div class="pbar"><span class="icon-btn" style="width:48px;height:48px">{i("prev")}</span><span class="play" style="width:48px;height:48px;border-radius:50%;background:var(--action);color:#fff;display:grid;place-items:center">{i("pause")}</span><span class="icon-btn" style="width:48px;height:48px">{i("next")}</span><div style="flex:1;min-width:0;padding:0 6px" aria-hidden="true">{mini_dates()}</div><span style="font-size:12px;color:var(--on-glass-2)">12 of 12</span></div>
 </section>
-<section class="msheet glass-raised m-only PSHEET">
-  <div class="grabber"></div>
+<section class="pmeasure slate" aria-label="Measure">
   PHONEBODY
-</section>'''
+</section>
+</div>'''
 
 PHONE_COACH = f'''
-  <h3 style="margin:8px 0 0;font:600 17px/1.2 var(--font)">Expert view on a phone</h3>
-  <p style="font-size:14px;color:var(--on-glass-2);line-height:1.5;margin:8px 0 0">Here you get the frame, every date and every number. Picture tools, several frames and workspaces need a computer.</p>
-  <div class="actions" style="margin-top:14px"><button class="btn primary lg" style="flex:1">{i("laptop")}Send this to my computer</button><button class="btn lg">Got it</button></div>'''
+  <div class="pcoach"><b>Expert view on a phone.</b> Frame, dates and every number. Picture tools, several frames and workspaces need a computer.
+  <div class="actions" style="margin-top:10px"><button class="btn primary lg" style="flex:1">{i("laptop")}Send this to my computer</button><button class="btn lg">Got it</button></div></div>'''
 
 PHONE_MEASURE = f'''
   <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:6px"><div class="obj" style="font:600 17px/1.2 var(--font)">Measure</div><span class="faint" style="font-size:12px">Red dwarf (M4V), 1.83 pc</span></div>
@@ -183,12 +184,12 @@ PHONE_MEASURE = f'''
   <div style="font-size:12px;color:var(--on-glass-2);margin-top:8px">Measured ±0.26″ from 71 of 72 real exposures · catalogue 10.39″/yr</div>
   <div class="tabs" style="overflow:hidden"><span class="on">Path</span><span>Spectrum</span><span>Brightness</span><span>Cutouts</span><span>Exposure</span></div>
   <div style="margin-top:10px;background:var(--st-bg);border-radius:10px;overflow:hidden"><img src="img/chart-barnard-0.png" style="width:100%;display:block" alt="Path chart"></div>
-  <div style="display:flex;gap:8px;margin-top:12px;font-size:12px;color:var(--on-glass-3);align-items:center">{i("laptop","icon","width:18px;height:18px")}Picture tools and workspaces open on a computer.</div>'''
+  <div style="display:flex;gap:8px;margin-top:12px;font-size:12px;color:var(--on-glass-3);align-items:center;flex-wrap:wrap">{i("laptop","icon","width:18px;height:18px")}<span style="flex:1">Picture tools, several frames and workspaces need a computer.</span><span class="textlink" style="font-size:14px;height:48px">Send this to my computer</span></div>'''
 
 def page(title, coach, tools):
     frame_left = 'calc(100vw - 16px - clamp(380px, 40vw, 760px) - 16px - min(480px, calc(100vh - 440px)) - 20px)'
     body = TOP + (TOOLS if tools else '') + frame(frame_left).replace('TOOLSON', 'on' if tools else '') + MEASURE + BAR + (COACH if coach else '')
-    phone = PHONE.replace('PHONEBODY', PHONE_COACH if coach else PHONE_MEASURE).replace('PSHEET', 'coachsheet' if coach else 'msheetx')
+    phone = PHONE.replace('PHONEBODY', (PHONE_COACH if coach else '') + PHONE_MEASURE)
     return f'''<!doctype html>
 <html lang="en" data-theme="night">
 <head>
@@ -209,14 +210,18 @@ def page(title, coach, tools):
   @media (max-width: 1420px) {{ .xframe .seg span {{ font-size: 12px; padding: 0 4px; white-space: nowrap; }} .xframe .fov, .xframe .fh .icon-btn.fovb {{ display: none; }} }}
   .icon-btn.on {{ background: var(--action-soft); color: var(--on-action-soft); }}
   @media (max-width: 699px) {{
-    .pframe {{ position: fixed; left: 12px; right: 12px; top: 64px; border-radius: 20px; padding: 8px; }}
+    .sky {{ display: none; }}
+    .pcol {{ position: absolute; left: 12px; right: 12px; top: 72px; display: grid; gap: 8px; padding-bottom: 24px; }}
+    .pframe {{ border-radius: 20px; padding: 8px; }}
+    .pmeasure {{ border-radius: 20px; padding: 14px 14px 16px; }}
+    .pcoach {{ font-size: 14px; color: var(--on-glass-2); line-height: 1.45; padding-bottom: 12px; margin-bottom: 4px; border-bottom: 1px solid var(--rule); }}
+    .pcoach b {{ color: var(--on-glass); }}
+    .pframe .src {{ flex-wrap: wrap; line-height: 1.35; }}
     .pframe .fh {{ padding: 2px 4px 8px; }} .pframe .name {{ font: 600 17px/1.2 var(--font); }}
     .pframe .src {{ font: 500 12px/1 var(--font); color: var(--on-glass-2); display: flex; gap: 6px; align-items: center; margin-top: 4px; }}
     .ppic {{ width: 100%; aspect-ratio: 1; }}
     .pbar {{ display: flex; align-items: center; gap: 6px; padding: 8px 2px 0; }}
     .pbar svg.scale text {{ font: 400 11px var(--font); fill: var(--on-glass-3); }}
-    .msheetx {{ height: 36vh; overflow: hidden; }}
-    .coachsheet {{ padding-bottom: 24px; }}
   }}
 </style>
 </head>
@@ -225,7 +230,7 @@ def page(title, coach, tools):
 <div class="sky" style="background-image:url(img/sky-barnard-1900.jpg)"></div>
 {body}
 {phone}
-<div class="sky-note glass-thin d-only"><b>Average of all dates:</b> moving things blur here · SPHEREx 2.00 µm</div>
+<div class="sky-note glass-thin d-only"><b>Average of all dates:</b> moving things blur here · SPHEREx D3, near infrared, 2.00 µm</div>
 </body>
 </html>
 '''

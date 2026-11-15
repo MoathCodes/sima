@@ -67,22 +67,6 @@
 .path .foot { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--rule); display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--on-glass-2); }
 .path .foot a { color: var(--on-glass); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgb(255 255 255 / .35); }
 
-/* ---------- Discover: dock ---------- */
-.dock { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); border-radius: var(--r-bar); padding: 12px; display: flex; align-items: center; gap: 16px; z-index: 10; }
-.dock .thumb { width: 76px; height: 76px; border-radius: 12px; flex: none; }
-.dock .next-up { display: flex; align-items: center; gap: 14px; }
-.dock .next-up .eyebrow { font: 600 12px/1 var(--font); color: var(--on-glass-3); white-space: nowrap; }
-.dock .next-up .name { font: 600 17px/1.2 var(--font); margin: 5px 0 3px; }
-.dock .next-up .line { font-size: 14px; color: var(--on-glass-2); max-width: 300px; }
-.dock .vr { width: 1px; align-self: stretch; background: var(--rule); margin: 0 2px; }
-.shelf { display: flex; gap: 6px; align-items: flex-start; padding-right: 4px; }
-.shelf .lbl { font: 600 12px/1 var(--font); color: var(--on-glass-3); writing-mode: horizontal-tb; align-self: center; margin-right: 6px; width: 46px; }
-.skill { width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 500 12px/1.2 var(--font); color: var(--on-glass-3); text-align: center; }
-.skill .g { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .12); color: var(--on-glass-3); }
-.skill.on { color: var(--on-glass); }
-.skill.on .g { color: var(--skill); background: radial-gradient(circle at 50% 30%, rgb(255 255 255 / .30), rgb(255 255 255 / .08)); box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .85), 0 0 18px rgb(190 210 255 / .35); }
-.skill .g .icon { width: 22px; height: 22px; }
-
 /* ---------- Sheets and cards ---------- */
 .card { border-radius: var(--r-card); }
 .sheet-h { font: 600 25px/1.15 var(--font); letter-spacing: -.02em; margin: 0; }
@@ -164,14 +148,6 @@
 .result .num { font: 600 25px/1.1 var(--font); letter-spacing: -.01em; }
 .result p { margin: 8px 0 0; font-size: 14px; color: var(--on-glass-2); line-height: 1.5; }
 .result .src { margin-top: 8px; font-size: 12px; color: var(--on-glass-3); }
-.unlock { margin-top: 12px; display: grid; grid-template-columns: 56px 1fr; gap: 14px; align-items: center; padding: 14px; border-radius: 16px; background: linear-gradient(135deg, rgb(255 255 255 / .14), rgb(255 255 255 / .04)); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .32); }
-.unlock .g { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; color: var(--skill); background: radial-gradient(circle at 50% 30%, rgb(255 255 255 / .35), rgb(255 255 255 / .08)); box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .7), 0 0 26px rgb(255 255 255 / .3); }
-.unlock .g .icon { width: 28px; height: 28px; }
-.unlock .t { font: 600 16px/1.2 var(--font); }
-.unlock .t small { display: block; font: 600 12px/1 var(--font); color: var(--skill); margin-bottom: 5px; }
-.unlock .d { font-size: 14px; color: var(--on-glass-2); margin-top: 4px; line-height: 1.4; }
-.added { margin-top: 10px; display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--on-glass-2); }
-.added .mini { width: 32px; height: 32px; border-radius: 8px; }
 .win .actions { margin-top: 16px; }
 
 /* ---------- Expert ---------- */
@@ -238,7 +214,7 @@
 .place h1 { margin: 0; font: 600 25px/1.15 var(--font); letter-spacing: -.02em; }
 .place .kindl { font-size: 14px; color: var(--on-glass-2); margin-top: 4px; }
 .place .arname { margin-top: 12px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; font-size: 14px; color: var(--on-glass-2); }
-.place .arname .ar { font: 500 17px/1.2 var(--arabic-display); color: var(--on-glass); }
+.place .arname .ar { font: 500 17px/1.4 var(--arabic-text); color: var(--on-glass); }
 .place .about { font-size: 14px; line-height: 1.55; color: var(--on-glass); margin: 14px 0 0; }
 .place .from { font-size: 12px; color: var(--on-glass-3); margin-top: 6px; }
 .facts { margin-top: 14px; border-top: 1px solid var(--rule); }
@@ -248,12 +224,6 @@
 .try { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: rgb(255 255 255 / .05); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .08); font-size: 14px; line-height: 1.5; }
 .try .eyebrow { display: block; margin-bottom: 6px; }
 
-/* ---------- Narrower desktops ---------- */
-@media (max-width: 1500px) and (min-width: 700px) {
-  .dock { left: calc(50% + 202px); }
-  .dock .next-up .line { display: none; }
-  .dock .next-up .name { white-space: nowrap; }
-}
 
 /* ---------- Phones (< 700px) ---------- */
 .m-only { display: none; }
@@ -294,3 +264,43 @@
 .gat { position: fixed; left: calc(var(--gcx) - var(--gd) / 2 + var(--px) / 1200 * var(--gd)); top: calc(var(--gcy) - var(--gd) / 2 + var(--py) / 1200 * var(--gd)); }
 .limb-tag { position: fixed; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 999px; font: 500 12px/1 var(--font); color: var(--on-glass); white-space: nowrap; }
 .limb-tag .icon { width: 16px; height: 16px; }
+
+/* ===================== v2.0 after challenge ===================== */
+/* Skills record: text and check marks, no tiles, no glow. */
+.skills-rec { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 0 12px; font: 500 12px/1.4 var(--font); color: var(--on-glass-3); }
+.skills-rec .on { color: var(--on-glass); display: inline-flex; align-items: center; gap: 4px; }
+.skills-rec .on .icon { width: 14px; height: 14px; stroke-width: 2.2; }
+.objs-h { margin: 14px 0 6px; padding-top: 12px; border-top: 1px solid var(--rule); font: 600 14px/1 var(--font); color: var(--on-glass); display: flex; justify-content: space-between; align-items: baseline; }
+.objs-h small { font: 500 12px/1 var(--font); color: var(--on-glass-3); }
+.obj-row { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; padding: 6px 8px 6px 0; }
+.obj-row .onode { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--fill-1); color: var(--on-glass-2); }
+.obj-row .ogo { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--fill-2); }
+.obj-row .t { font: 600 14px/1.25 var(--font); }
+.obj-row .d { font: 400 12px/1.35 var(--font); color: var(--on-glass-2); font-weight: 500; }
+.learned { margin-top: 12px; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: rgb(255 255 255 / .05); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .08); font-size: 14px; color: var(--on-glass-2); line-height: 1.4; }
+.learned b { color: var(--on-glass); font-weight: 600; }
+.learned .icon { color: var(--skill); width: 18px; height: 18px; stroke-width: 2.2; flex: none; }
+.result .cat { margin-top: 6px; font: 500 14px/1.3 var(--font); color: var(--on-glass); }
+.result .cat span { color: var(--on-glass-2); font-weight: 400; }
+.menu-btn { display: none; }
+
+@media (max-width: 699px) {
+  /* Phones start Solid; the sheet and phone pages are Slate. */
+  .glass, .glass-thin, .glass-raised { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgb(var(--tint) / var(--solid-a)); }
+  .msheet, .mission, .win, .place, .welcome { background: rgb(var(--tint) / var(--slate-a)); }
+  /* Top row: 48 px hit areas. */
+  .top { top: 8px; }
+  .brand { height: 48px; }
+  .cluster { height: 48px; padding: 0; }
+  .cluster .btn.icon-only { width: 48px; height: 48px; }
+  .switch2 { height: 56px; padding: 4px; }
+  .switch2 span { height: 48px; padding: 0 12px; }
+  .sky-note { top: 72px; display: block; height: auto; padding: 5px 10px; white-space: normal; text-align: center; line-height: 1.35; width: max-content; max-width: calc(100vw - 24px); }
+  /* Fit layout: the frame first; the sheet is placed under it by phone-fit.js. */
+  .dframe { top: 72px; }
+  .dframe .pic { margin: 0 auto; }
+  .fitsheet { top: var(--sheet-top, auto); bottom: 0; overflow: auto; }
+  .dframe .fh .src { flex-wrap: wrap; line-height: 1.35; }
+  .step-btn { width: 48px; height: 48px; }
+  .grabber-btn { display: block; width: 100%; height: 24px; border: 0; background: none; padding: 0; }
+}
