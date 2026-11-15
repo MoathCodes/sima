@@ -2,6 +2,104 @@
    controls, date scale, wavelength scale, detector strip). Style only lane D's own classes here.
    Tokens and shared components are in app.css. */
 
+/* ----- Night Glass materials (v2.0, DESIGN-v2 §4) -------------------------------------------
+   Lane DE's panels: the frame, Measure and the picture tools are Slate (opaque, no blur: they
+   hold science, D-3); the bar is Regular glass. The blur itself comes from lane F's `.glass`
+   class in app.css (GLS-1: no backdrop-filter outside app.css); here the bar gets its tint, so
+   without that class it reads as Solid. Inside these panels v1's tokens take their Night values,
+   so the shared components (buttons, segments, links, pills) read on the dark surface. */
+:is(#frame, #frame-show, #bar, #measure, #tools) {
+  --card: rgb(var(--v2-tint));
+  --card-2: var(--v2-fill-1);
+  --card-3: var(--v2-fill-2);
+  --rule: var(--v2-rule);
+  --ink: var(--v2-on-glass);
+  --ink-2: var(--v2-on-glass-2);
+  --ink-3: var(--v2-on-glass-3);
+  --action: var(--v2-action);
+  --action-hi: var(--v2-action-hi);
+  --action-soft: var(--v2-action-soft);
+  --mark-ink: var(--v2-mark);
+  --good: var(--v2-good);
+  --good-soft: var(--v2-good-soft);
+  --warn: var(--v2-warn);
+  --warn-soft: var(--v2-warn-soft);
+  --bad: var(--v2-bad);
+  --bad-soft: var(--v2-bad-soft);
+  --badge-bg: var(--v2-badge-bg);
+  --shadow-chosen: 0 1px 3px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.12);
+  isolation: isolate;
+  color: var(--ink);
+  color-scheme: dark;
+}
+/* Slate: tint 96%, a 4% white sheen at the top, lift-2. */
+:is(#frame, #frame-show, #measure, #tools) {
+  background: var(--v2-slate-sheen), var(--v2-slate-tint);
+  box-shadow: var(--v2-lift-2);
+}
+#frame,
+#measure,
+#tools {
+  border-radius: var(--v2-r-frame);
+}
+/* Regular (the bar): its tint and lift-1; Solid when glass is off. */
+#bar {
+  background: var(--v2-regular-tint);
+  box-shadow: var(--v2-lift-1);
+  border-radius: var(--v2-r-bar);
+}
+[data-glass='solid'] #bar {
+  background: var(--v2-solid-tint);
+}
+/* Grain (3.5% noise, behind the content) and the specular rim (1px, light on the top edge). */
+:is(#frame, #frame-show, #bar, #measure, #tools)::before,
+:is(#frame, #frame-show, #bar, #measure, #tools)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+:is(#frame, #frame-show, #bar, #measure, #tools)::before {
+  z-index: -1;
+  opacity: var(--v2-grain);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+:is(#frame, #frame-show, #bar, #measure, #tools)::after {
+  padding: 1px;
+  background: var(--v2-rim);
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+/* In the page flow (embed) the panels are not positioned: no grain or rim there. */
+html[data-embed] :is(#frame, #bar, #measure)::before,
+html[data-embed] :is(#frame, #bar, #measure)::after {
+  display: none;
+}
+/* On glass, text is never ultramarine: links are ink with an underline, a pressed control's
+   text is the wash's own ink (DESIGN-v2 §9). */
+:is(#frame, #bar, #measure, #tools) .link {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: rgb(255 255 255 / 0.35);
+  text-underline-offset: 4px;
+}
+:is(#frame, #bar, #measure, #tools)
+  :is(.btn, .icon-btn):is([aria-pressed='true'], [aria-expanded='true'], .on) {
+  color: var(--v2-on-action-soft);
+}
+:is(#frame, #bar, #measure, #tools) .seg > button:is([aria-pressed='true'], [aria-checked='true']) {
+  background: var(--v2-fill-3);
+}
+:is(#frame, #bar, #measure, #tools) .btn.primary,
+:is(#frame, #bar) .play-btn {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    0 6px 18px -6px rgb(63 92 245 / 0.7);
+}
+
 /* ----- The frame card ------------------------------------------------------------------------ */
 
 #frame {

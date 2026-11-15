@@ -27,7 +27,7 @@ import {
 import { on } from '../shell/bus.ts';
 import { icon, type IconName } from '../shell/icons.ts';
 import { hideFrame } from '../shell/shell.ts';
-import { setLevel } from '../explore/game.ts';
+import { measureShown, setMeasureOpen } from './detail.ts';
 import { BAND_EDGES } from '../core/instrument.ts';
 import { TARGETS } from '../core/targets.ts';
 import { SCENARIOS } from '../core/field.ts';
@@ -100,7 +100,7 @@ export function startFrame(): void {
     preview: (ra, dec) => previewPatch(ra, dec),
     wheel: (steps) => void setFov(nextFov(steps)),
   });
-  watch(['label', 'source', 'set', 'fov', 'level', 'tools', 'target'], header);
+  watch(['label', 'source', 'set', 'fov', 'level', 'measureOpen', 'tools', 'target'], header);
   watch(['level', 'mode', 'groups', 'source', 'field'], views);
   watch(['level', 'sameColour'], () => regroup());
   let combined = S.pic.combinePass;
@@ -161,6 +161,10 @@ function header(): void {
   const head = document.getElementById('frame-head');
   if (!head) return;
   const measure = S.level === 'measure';
+  const open = measureShown();
+  const view = document.documentElement.dataset.view;
+  const discover = view === 'discover';
+  const expert = view === 'expert';
   // A test target's wider field comes from the live service: say so (H2).
   const kind = S.source === 'real' && S.set?.origin === 'live' ? 'live' : S.source;
   const base = SOURCE[kind] ?? SOURCE.none;
@@ -186,7 +190,7 @@ function header(): void {
       <span class="frame-fov term" tabindex="0" data-tip="Field size: the frame shows ${S.fov} arcminutes of sky. The wheel over the picture changes it too">${S.fov}′</span>
       <button class="icon-btn sm" data-fov="1" aria-label="Larger field" data-tip="Larger field (${FOVS[Math.min(FOVS.length - 1, i + 1)]}′)" data-guide="fov-larger" ${i >= FOVS.length - 1 ? 'disabled' : ''}>${icon('plus')}</button>
       ${measure ? `<button class="icon-btn sm" data-tools aria-pressed="${S.tools}" aria-label="Picture tools" data-tip="Picture tools" data-guide="tools-button">${icon('sliders')}</button>` : ''}
-      <button class="btn text frame-measure" data-measure aria-pressed="${measure}" data-guide="measure" data-tip="${measure ? 'Back to the simple view' : 'Measure: numbers, charts and all six views'}">${icon('chart')}<span>Measure</span></button>
+      ${discover ? '' : `<button class="btn text frame-measure" data-measure aria-pressed="${open}" data-guide="measure" data-tip="${open ? (expert ? 'Close Measure' : 'Back to the simple view') : 'Measure: numbers, charts and all six views'}">${icon('chart')}<span>Measure</span></button>`}
       ${embedded ? '' : `<button class="icon-btn sm" data-hide aria-label="Hide the frame" data-tip="Hide the frame" data-guide="frame-hide">${icon('close')}</button>`}
     </div>`;
   // Redrawn only when it changes: a redraw while the user presses − or + would lose the press.
@@ -205,7 +209,7 @@ function header(): void {
   head.querySelector('[data-tools]')?.addEventListener('click', () => (S.tools = !S.tools));
   head
     .querySelector('[data-measure]')
-    ?.addEventListener('click', () => setLevel(measure ? 'explore' : 'measure'));
+    ?.addEventListener('click', () => setMeasureOpen(!open));
   head.querySelector('[data-hide]')?.addEventListener('click', () => hideFrame(true));
 }
 

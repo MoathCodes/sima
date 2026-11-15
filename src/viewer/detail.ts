@@ -68,9 +68,32 @@ let lastField: unknown = null;
 let openOn: number | null = null;
 let shownBefore = false;
 
+/** True when the Measure panel shows: the Measure level, unless Expert closed it (S.measureOpen). */
+export function measureShown(): boolean {
+  return S.level === 'measure' && S.measureOpen !== false;
+}
+
+/**
+ * Opens or closes the Measure panel (v2.0 contract 2). In Expert the level stays Measure: only
+ * the panel opens and closes (`S.measureOpen`). Elsewhere (Discover, or v1's Explore level) it
+ * switches the level as before.
+ */
+export function setMeasureOpen(open: boolean): void {
+  const expert = document.documentElement.dataset.view === 'expert';
+  if (open) {
+    if (S.level !== 'measure') setLevel('measure');
+    S.measureOpen = true;
+  } else if (expert && S.level === 'measure') S.measureOpen = false;
+  else setLevel('explore');
+}
+
 /** Fills Measure and shows it with the Measure level. Called once by main.ts. */
 export function startMeasure(): void {
   restoreAllNumbers();
+  // Arriving at the Measure level (the view switch, a link, the guide) opens the panel.
+  watch(['level'], () => {
+    if (S.level === 'measure') S.measureOpen = true;
+  });
   onTap((p) => {
     if (S.level === 'measure' && S.field && !S.field.simulated) detail(tapped(p.ra, p.dec));
   });
@@ -82,7 +105,7 @@ export function startMeasure(): void {
     openOn = S.det;
     S.selected = S.field?.target && !S.field.simulated ? { kind: 'target' } : null;
   });
-  watch(['level', 'selected', 'measureTab', 'allNumbers', 'field', 'set', 'label', 'det', 'color', 'source'], render);
+  watch(['level', 'measureOpen', 'selected', 'measureTab', 'allNumbers', 'field', 'set', 'label', 'det', 'color', 'source'], render);
   watch(['epoch', 'groups', 'pic'], () => {
     if (!panel()?.hidden) chart();
   });
@@ -181,7 +204,7 @@ function skeleton(p: HTMLElement): void {
       <div class="ms-main">
         <header class="ms-headrow">
           <div class="ms-title"><h2 data-title></h2><p class="ms-kind" data-kind></p></div>
-          <button type="button" class="icon-btn sm" data-close aria-label="Close Measure" data-tip="Back to Explore (Esc)">${icon('close')}</button>
+          <button type="button" class="icon-btn sm" data-close aria-label="Close Measure" data-tip="Close Measure (Esc)">${icon('close')}</button>
         </header>
         <div class="ms-headline" data-headline></div>
         <div class="tabs ms-tabs" role="tablist" aria-label="Charts" data-tabs>${TABS.map(
@@ -209,7 +232,7 @@ function skeleton(p: HTMLElement): void {
         <p class="ms-foot-line" data-all-line></p>
       </div>
     </div>`;
-  p.querySelector('[data-close]')?.addEventListener('click', () => setLevel('explore'));
+  p.querySelector('[data-close]')?.addEventListener('click', () => setMeasureOpen(false));
   p.querySelector('[data-all]')?.addEventListener('click', () => {
     S.allNumbers = !S.allNumbers;
     if (!S.allNumbers) S.measureTab = null;
@@ -273,7 +296,7 @@ function ensure(): void {
 function render(): void {
   const p = panel();
   if (!p) return;
-  p.hidden = S.level !== 'measure';
+  p.hidden = !measureShown();
   if (p.hidden) {
     shownBefore = false;
     return;
