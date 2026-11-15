@@ -93,112 +93,109 @@ const step = (
   line: string,
   hints: readonly string[],
   guide: string,
-  label = 'Show me',
+  label = t('ms.showMe'),
   done?: string,
 ): MissionStep => ({ id, title, line, hints, showMe: { guide, label }, done });
 
 export const MISSIONS: Readonly<Record<MissionId, Mission>> = Object.freeze({
   runaway: {
     id: 'runaway',
-    skill: 'Blink',
+    skill: t('skill.blink'),
     simulated: false,
     steps: ['play', 'tap'],
     title: t('mission.runaway'),
     target: 'barnard',
     det: 3,
-    band: 'Near infrared · 1.67–1.79 µm',
-    heading: 'You caught a runaway star.',
-    lesson: 'Flip between dates to catch what moves.',
+    band: `${t('bar.lamNear')} · 1.67–1.79 µm`,
+    heading: t('mis.r.heading'),
+    lesson: t('mis.r.lesson'),
     instructions: [
       step(
         'play',
-        'Press Play.',
-        'These pictures were taken months apart.',
-        ['Press Play, or step through the dates one by one.'],
+        t('mis.r.play'),
+        t('mis.r.playLine'),
+        [t('mis.r.playHint')],
         'play',
       ),
       step(
         'tap',
-        'One star jumps. Tap it.',
-        "Stars stay put. Look for the one that doesn't.",
-        ['Look near the middle.', 'Step from the first date to the last and watch closely.'],
+        t('mis.r.tap'),
+        t('mis.r.tapLine'),
+        [t('mis.r.tapHint1'), t('mis.r.tapHint2')],
         'picture',
-        "It's inside the ring. Tap it.",
+        t('mis.r.tapShow'),
       ),
     ],
   },
   ghost: {
     id: 'ghost',
-    skill: 'Stack',
+    skill: t('skill.stack'),
     simulated: false,
     steps: ['play', 'stack', 'motion'],
     title: t('mission.ghost'),
     target: 'wise-0855',
     det: 5,
-    band: 'Deep infrared · 3.83–4.41 µm',
-    heading: 'You made a faint brown dwarf appear.',
-    lesson: 'Add pictures up along a path to see faint movers.',
+    band: `${t('mis.deep')} · 3.83–4.41 µm`,
+    heading: t('mis.g.heading'),
+    lesson: t('mis.g.lesson'),
     instructions: [
       step(
         'play',
-        'Press Play and look inside the circle.',
-        'Where the catalogue says it is.',
-        ['Watch one full loop of the pictures.'],
+        t('mis.g.play'),
+        t('mis.g.playLine'),
+        [t('mis.g.playHint')],
         'play',
-        'Show me',
-        'It is hard to pick out in a single picture. Adding pictures up can help.',
+        t('ms.showMe'),
+        t('mis.g.playDone'),
       ),
       step(
         'stack',
-        'Press Stack.',
-        'Add pictures up along a trial motion. Both checks stay visible.',
-        ['Start with no motion.'],
+        t('mis.g.stack'),
+        t('mis.g.stackLine'),
+        [t('mis.g.stackHint')],
         'view-stack',
       ),
       step(
         'motion',
-        'It moves. Turn and stretch the arrow until the stack beats both checks.',
-        'Compare the stack with not shifted and opposite motion.',
-        [
-          'It moves west: to the right in these pictures (north up, east left), and fast.',
-          'Make the arrow long: it moves more than 8″ a year.',
-        ],
+        t('mis.g.motion'),
+        t('mis.g.motionLine'),
+        [t('mis.g.motionHint1'), t('mis.g.motionHint2')],
         'motion-snap',
-        'Snap to the catalogue motion',
+        t('mis.g.snap'),
       ),
     ],
   },
   'planet-x': {
     id: 'planet-x',
-    skill: 'What-if',
+    skill: t('skill.whatIf'),
     simulated: true,
     steps: ['check', 'closer', 'bigger'],
     title: t('mission.planetX'),
     target: 'barnard',
     det: 3,
-    band: 'Model against measured patch noise',
-    heading: 'Simulated: you tested a pretend Planet X.',
-    lesson: 'Ask the model what SPHEREx could see.',
+    band: t('mis.px.band'),
+    heading: t('mis.px.heading'),
+    lesson: t('mis.px.lesson'),
     instructions: [
       step(
         'check',
-        'Simulated: could SPHEREx see a Neptune-sized planet 500 times farther from the Sun than Earth?',
-        'Press Check. Nothing here was observed.',
-        ['This is a model compared with measured noise.'],
+        t('mis.px.check'),
+        t('mis.px.checkLine'),
+        [t('mis.px.checkHint')],
         'sandbox',
       ),
       step(
         'closer',
-        'Simulated: bring it closer until one picture would show it.',
-        'Model: change the distance.',
-        ['Move the distance slider toward the Sun.'],
+        t('mis.px.closer'),
+        t('mis.px.closerLine'),
+        [t('mis.px.closerHint')],
         'sandbox-distance',
       ),
       step(
         'bigger',
-        'Simulated: or keep it at 500 AU and make it bigger.',
-        "Model: change the size, in times Earth's width.",
-        ['Set the distance to 500 AU, then increase the size.'],
+        t('mis.px.bigger'),
+        t('mis.px.biggerLine'),
+        [t('mis.px.biggerHint')],
         'sandbox-radius',
       ),
     ],
@@ -242,15 +239,15 @@ export function checkStep(id: MissionId, stepId: string, i: MissionInputs): Chec
   if (i.unavailable) return result('unavailable', i.unavailable);
   if (stale) return stale;
   if (!MISSIONS[id].steps.includes(stepId))
-    return result('failed', 'This step is not part of the mission.');
+    return result('failed', t('mis.notStep'));
   if (id === 'runaway') {
     if (stepId === 'play') return result(i.acted && (i.dateChanges ?? 0) >= 3 ? 'done' : 'waiting');
     if (!i.tap) return result('waiting');
     if (!i.points?.length || !(i.radius! > 0))
-      return result('unavailable', 'The catalogue track is not available on this picture.');
+      return result('unavailable', t('mis.noTrack'));
     return hits(i.points, i.tap, i.radius!)
       ? result('done')
-      : result('failed', 'Not that one. That star stays put.');
+      : result('failed', t('mis.notThat'));
   }
   if (id === 'ghost') {
     if (stepId === 'play') return result(i.acted && (i.loops ?? 0) >= 1 ? 'done' : 'waiting');
@@ -258,19 +255,19 @@ export function checkStep(id: MissionId, stepId: string, i: MissionInputs): Chec
     if (i.mode !== 'stack') return result('waiting');
     if (!i.trial || i.trial.key !== i.keyNow) return result('checking');
     const s = i.trial.result;
-    if (s.frames < 2) return result('unavailable', 'Too few pictures to make the stack.');
+    if (s.frames < 2) return result('unavailable', t('mis.fewPics'));
     // Exactly core/stack.ts's "moves with" rule, including its finite-value requirement.
     const [still, opposite] = s.controls;
     if (![s.along.snr, still.snr, opposite.snr].every(Number.isFinite))
-      return result('unavailable', 'The pixels at this place are flagged or missing.');
+      return result('unavailable', t('mis.flagged'));
     return s.along.snr >= 5 && s.along.snr >= still.snr + 2 && s.along.snr >= opposite.snr + 2
       ? result('done')
-      : result('failed', 'The stack does not yet beat both checks. Try another motion.');
+      : result('failed', t('mis.notYet'));
   }
   if (!i.sandbox || i.sandbox.patchKey !== i.keyNow) return result('checking');
   const { planet, verdict } = i.sandbox;
   if (verdict.kind === 'unknown')
-    return result('unavailable', 'This patch has no measured noise to compare with.');
+    return result('unavailable', t('mis.noNoise'));
   if (stepId === 'check') return result(i.acted ? 'done' : 'waiting');
   if (stepId === 'closer')
     return result(verdict.kind === 'one' && planet.distance < 500 ? 'done' : 'waiting');
@@ -285,7 +282,7 @@ export function checkMotion(i: MissionInputs): CheckResult {
   if (stale || !i.fit) return result('checking');
   return i.fit.ok
     ? result('done')
-    : result('unavailable', i.fit.reason ?? 'Motion could not be measured.');
+    : result('unavailable', i.fit.reason ?? t('mis.noMotion'));
 }
 
 /** Lane K: first unrecorded step, its check, hints and Show me instruction. Null means finished.
@@ -302,7 +299,7 @@ export function currentStep(
     ? {
         ...instruction,
         check: checkStep(id, instruction.id, inputs),
-        continueLabel: 'Continue without it',
+        continueLabel: t('mis.continue'),
       }
     : null;
 }
@@ -313,35 +310,35 @@ export const OBJECTS = [
     target: 'rw-aur',
     title: 'RW Aurigae',
     det: 3 as Det,
-    skill: 'Try Blink',
+    skill: t('mis.tryBlink'),
     tab: 'brightness',
-    look: 'Play the pictures. Does its light change from date to date? Expert shows what Sima measured.',
+    look: t('mis.o.rw'),
   },
   {
     target: 'r-dra',
     title: 'R Draconis',
     det: 6 as Det,
     tab: 'brightness',
-    look: 'Step from the first date to the last. Expert shows its measured brightness over time.',
+    look: t('mis.o.rdra'),
   },
   {
     target: 'eps-indi-b',
     title: 'Epsilon Indi B',
     det: 3 as Det,
     tab: 'spectrum',
-    look: "Try Two dates: it moves, like Barnard's Star. Expert shows its colours.",
+    look: t('mis.o.eps'),
   },
 ] as const;
 
 export function objectLine(key: string, field: Field, plainType: string | null): string {
-  const type = plainType || 'Type not available from the catalogue';
+  const type = plainType || t('mis.noType');
   const n = field.frames.length;
-  if (key === 'eps-indi-b') return `${type}, next to the star Epsilon Indi A.`;
+  if (key === 'eps-indi-b') return t('mis.o.epsLine', { type });
   if (key === 'r-dra') {
     const dates = field.frames.map((f) => f.mjd).filter(Number.isFinite);
-    if (!dates.length) return `${type}. No dated pictures available.`;
+    if (!dates.length) return t('mis.o.noDates', { type });
     const months = Math.round((Math.max(...dates) - Math.min(...dates)) / (365.25 / 12));
-    return `${type}. ${n} pictures over ${months} months.`;
+    return t('mis.o.over', { type, n, months });
   }
-  return `${type}. ${n} real pictures.`;
+  return t('mis.o.real', { type, n });
 }
