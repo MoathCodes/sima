@@ -92,6 +92,11 @@ Lane F switched the whole app to Night Glass (DESIGN-v2.md). What that means for
   `on-glass`, `-2` and `-3`, `--rule` is white 10%, and `--good`, `--warn`, `--bad` and their
   `-soft` fills are the Night values. New: `--on-action-soft` (text on `--action-soft`), `--path`,
   `--skill`, `--lift-1`, `--lift-2`. The `--v2-*` names are the same values.
+- **Which text on which fill** (GLS-2, tested over white, Betelgeuse and the Milky Way): Thin
+  carries only short labels (`--ink`, `--ink-2`, `--ink-3` bare; `--on-action-soft` on a pressed
+  chip), never a fill or a pill. On Regular a fill takes only `--ink` (and `--ink-2` on
+  `--card-2`). Status and skill pills (`.pill.good`, `.warn`, `.bad`, `.skill`) sit on Raised,
+  Slate or Solid only.
 - **Never ultramarine or magenta text on glass.** `color: var(--action)` fails 4.5:1 on Night. Use
   `--ink` (with an underline for a link, as `.link` does) or `--on-action-soft` on `--action-soft`.
 - **Pick a material by job and give your element one class** (they are in app.css, "Materials"):
