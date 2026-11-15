@@ -12,16 +12,20 @@
   .viewrow { display: flex; gap: 8px; align-items: center; padding: 12px 2px 2px; }
   .viewrow .seg { flex: 1; } .viewrow .seg span { flex: 1; justify-content: center; }
   @media (max-width: 699px) {
-    :root { --pic: calc(100vw - 40px); }
-    .win { max-height: 62vh; overflow: hidden; }
-    .win .result p { display: none; }
-    .win .added, .win .textlink { display: none; }
-    .win .actions .btn { flex: 1; height: 48px; }
-    .viewrow { display: none; }
+    /* Nothing in the result is hidden on phones; the sheet scrolls inside if it must. */
+    .win { padding-top: 0; }
+    .win .big { font-size: 25px; margin-top: 8px; }
+    .win .actions .btn { flex: 1 1 100%; height: 48px; }
+    .viewrow { padding-top: 8px; }
+    .viewrow .seg span { height: 48px; }
+    .picnote.mark { left: calc(50% - 64px); top: calc(50% + 38px); }
+    /* The primary action stays pinned at the sheet's bottom edge; the result scrolls above it. */
+    .win { padding-bottom: 0; }
+    .win .actions { position: sticky; bottom: 0; margin: 12px -16px 0; padding: 10px 16px 18px; background: rgb(var(--tint) / .98); border-top: 1px solid var(--rule); }
   }
 </style>
 </head>
-<body>
+<body data-sheet-h="330">
 <div class="sky" style="background-image:url(img/sky-barnard-1900.jpg)"></div>
 <div class="at patch d-only" style="--x:902;--y:435;width:calc(100 * var(--k));height:calc(100 * var(--k))"><span class="patch-label">Barnard's Star</span></div>
 <div class="tether tether-x d-only"></div>
@@ -31,48 +35,48 @@
   <div class="glass-thin find d-only"><svg class="icon"><use href="icons.svg#search"/></svg>Find a star, galaxy or nebula<span class="kbd">/</span></div>
   <div class="spacer"></div>
   <nav class="glass cluster d-only">
-    <span class="btn"><svg class="icon"><use href="icons.svg#book"/></svg>Field guide</span>
-    <span class="btn icon-only"><svg class="icon"><use href="icons.svg#gear"/></svg></span>
-    <span class="btn icon-only"><svg class="icon"><use href="icons.svg#info"/></svg></span>
+    <span class="btn icon-only" aria-label="Settings"><svg class="icon"><use href="icons.svg#gear"/></svg></span>
+    <span class="btn icon-only" aria-label="About"><svg class="icon"><use href="icons.svg#info"/></svg></span>
   </nav>
+  <nav class="glass cluster m-only"><span class="btn icon-only" aria-label="Menu"><svg class="icon"><use href="icons.svg#menu"/></svg></span></nav>
   <div class="glass switch2"><span class="on"><svg class="icon d-only"><use href="icons.svg#sun"/></svg>Discover</span><span><svg class="icon d-only"><use href="icons.svg#chart"/></svg>Expert</span></div>
 </header>
 
-<section class="win glass-raised" role="status" aria-live="polite">
-  <div class="grabber m-only"></div>
+<section class="win glass-raised fitsheet" role="status" aria-live="polite">
+  <button class="grabber-btn m-only" aria-label="Show less"><span class="grabber" style="display:block"></span></button>
   <span class="pill skill"><svg class="icon" style="width:14px;height:14px"><use href="icons.svg#check"/></svg>Mission 1 complete</span>
   <h1 class="big">You caught a runaway star.</h1>
   <div class="result">
-    <div class="num">About 1.7 pixels a year</div>
-    <p>Barnard's Star crossed 10.5 arcseconds of sky in a year. Sima measured that from 71 of 72 real pictures.</p>
-    <div style="margin-top:10px"><span class="pill good"><span class="dot"></span>Matches Gaia's star catalogue: 10.4″ a year</span></div>
+    <div class="eyebrow">Measured by Sima, from 71 of 72 pictures</div>
+    <div class="num" style="margin-top:6px">10.50 ± 0.26″ a year</div>
+    <div class="cat">10.39″ a year <span>· Gaia's star catalogue (ESA Gaia DR3)</span></div>
+    <div style="margin-top:10px"><span class="pill good"><span class="dot"></span>Matches within the error</span></div>
+    <p>″ is an arcsecond: 1/3600 of a degree. No known star crosses the sky faster (Wikipedia: Barnard's Star).</p>
     <div class="src">Measured from SPHEREx pixels · Catalogue: ESA Gaia DR3</div>
   </div>
-  <div class="unlock">
-    <span class="g"><svg class="icon"><use href="icons.svg#blink"/></svg></span>
-    <div><div class="t"><small>New skill</small>Blink</div><div class="d">Play the pictures of any spot in the sky. Tap the sky, then “Look here”.</div></div>
-  </div>
-  <div class="added"><div class="well mini"><img class="px" src="img/pic-barnard-2.png" alt=""></div>Barnard's Star is in your field guide now.</div>
+  <div style="margin-top:12px"><a class="textlink"><svg class="icon" style="width:18px;height:18px"><use href="icons.svg#chart"/></svg>How was this measured? Open Expert view</a></div>
+  <div class="learned"><svg class="icon"><use href="icons.svg#check"/></svg><span><b>Skill learned: Blink.</b> Flip between dates to catch what moves.</span></div>
   <div class="actions">
-    <button class="btn primary lg">Next: The breather<svg class="icon"><use href="icons.svg#arrow"/></svg></button>
-    <button class="btn lg">Try Blink</button>
+    <button class="btn primary lg">Next: The ghost<svg class="icon"><use href="icons.svg#arrow"/></svg></button>
+    <button class="btn lg">Try Blink on RW Aurigae</button>
   </div>
-  <div style="margin-top:14px"><a class="textlink"><svg class="icon" style="width:18px;height:18px"><use href="icons.svg#chart"/></svg>How was this measured? Open Expert view</a></div>
 </section>
 
 <section class="dframe slate" aria-label="Barnard's Star, two dates in one picture">
   <div class="fh">
-    <div><div class="name">Barnard's Star</div><div class="src"><span class="dot"></span>Real data · NASA SPHEREx<span class="m-only">· D3 1.7 µm</span></div></div>
+    <div><div class="name">Barnard's Star</div><div class="src"><span class="dot"></span>Real data · NASA SPHEREx<span class="m-only">Two dates combined: 16 Aug 2025 (red, DR1) · 17 Aug 2026 (cyan, QR3) · D3, 1.67–1.79 µm</span></div></div>
   </div>
   <div class="well pic">
     <img class="px" src="img/pic-barnard-two.png" alt="Two dates in one picture: red is August 2025, cyan is August 2026. Barnard's Star shows as a red and cyan pair.">
     <div class="found-ring"></div>
     <div class="picnote mark">Found · moved north</div>
+    <span class="badge orig" style="right:8px;bottom:8px">Original</span>
   </div>
   <div class="viewrow"><div class="seg"><span><svg class="icon"><use href="icons.svg#blink"/></svg>Flip</span><span class="on"><svg class="icon"><use href="icons.svg#eye"/></svg>Two dates</span></div></div>
   <div class="dataline d-only">Real SPHEREx data, DR1 and QR3 · red 16 Aug 2025, cyan 17 Aug 2026 · D3, 1.67–1.79 µm</div>
 </section>
 
-<div class="sky-note glass-thin d-only"><b>Average of all dates:</b> moving things blur here · SPHEREx 2.00 µm</div>
+<div class="sky-note glass-thin d-only"><b>Average of all dates:</b> moving things blur here · SPHEREx D3, near infrared, 2.00 µm</div>
+<script src="phone-fit.js"></script>
 </body>
 </html>

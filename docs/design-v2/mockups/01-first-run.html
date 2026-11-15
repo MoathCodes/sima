@@ -4,9 +4,10 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sima v2: first run after the intro</title>
 <link rel="stylesheet" href="glass.css"><link rel="stylesheet" href="discover.css">
-<style>:root { --gcx: calc(50% + 330px); --gcy: 50%; --gd: min(880px, calc(100vh - 140px)); }
-@media (max-width: 1500px) { :root { --gcx: calc(50% + 250px); --gd: min(640px, calc(100vh - 120px)); } }
-@media (max-width: 699px) { :root { --gcx: 50%; --gcy: 250px; --gd: calc(100vw - 48px); } .limb-tag { display: none; } }
+<style>:root { --gcx: calc(50% + 310px); --gcy: 50%; --gd: min(880px, calc(100vh - 140px)); }
+/* The welcome card overlaps the globe's edge by about 40 px, so the glass shows the sky through it. */
+@media (max-width: 1500px) { :root { --gcx: calc(50% + 190px); --gd: min(640px, calc(100vh - 120px)); } }
+@media (max-width: 699px) { :root { --gcx: 50%; --gcy: 248px; --gd: calc(100vw - 120px); } .limb-tag { display: none; } }
 </style>
 </head>
 <body>
@@ -28,23 +29,24 @@
 <header class="top">
   <div class="glass brand"><span class="wordmark"><span class="ar">سيما</span><span class="la">Sima</span></span></div>
   <div class="spacer"></div>
-  <div class="glass switch2"><span class="on"><svg class="icon"><use href="icons.svg#sun"/></svg>Discover</span><span><svg class="icon"><use href="icons.svg#chart"/></svg>Expert</span></div>
+  <nav class="glass cluster m-only"><span class="btn icon-only" aria-label="Menu"><svg class="icon"><use href="icons.svg#menu"/></svg></span></nav>
+  <div class="glass switch2"><span class="on"><svg class="icon d-only"><use href="icons.svg#sun"/></svg>Discover</span><span><svg class="icon d-only"><use href="icons.svg#chart"/></svg>Expert</span></div>
 </header>
 
 <section class="welcome glass-raised" role="dialog" aria-labelledby="w-h">
   <div class="grabber m-only"></div>
   <div class="wm d-only"><span class="ar">سيما</span><span class="la">Sima</span></div>
   <h1 class="sheet-h" id="w-h">This is the real infrared sky.</h1>
-  <p class="lead">NASA's SPHEREx telescope photographs the whole sky again and again. Put its pictures side by side and you can catch stars that move, breathe and hide.</p>
-  <button class="btn primary start"><span><span class="s1">Start your first mission</span><span class="s2">The runaway · about 2 minutes</span></span><svg class="icon"><use href="icons.svg#arrow"/></svg></button>
+  <p class="lead">NASA's SPHEREx telescope photographs the whole sky again and again. Put its pictures side by side and you can catch stars that move.</p>
+  <button class="btn primary start"><span><span class="s1">Start your first mission</span><span class="s2">One star jumps · about 1 minute</span></span><svg class="icon"><use href="icons.svg#arrow"/></svg></button>
   <div class="row2">
     <button class="btn">Look around first</button>
-    <button class="btn"><svg class="icon"><use href="icons.svg#chart"/></svg>I know astronomy</button>
+    <button class="btn"><svg class="icon"><use href="icons.svg#chart"/></svg>Show me every number</button>
   </div>
-  <div class="fine">Every picture here is real and says where it came from. Your progress stays in this browser.</div>
+  <div class="fine">Pictures here are real and say where they came from. Anything made up says “Simulated” first. Your progress stays in this browser.</div>
 </section>
 
-<div class="sky-note glass-thin"><b>Average of all dates:</b> moving things blur here · SPHEREx 2.00 µm</div>
+<div class="sky-note glass-thin"><b>Average of all dates:</b> moving things blur here · SPHEREx D3, near infrared, 2.00 µm</div>
 <div class="limb-tag glass-thin d-only" style="left:calc(var(--gcx) + var(--gd) / 2 - 150px);top:calc(var(--gcy) - var(--gd) / 2 + 10px)">Drag to turn the sky</div>
 </body>
 </html>

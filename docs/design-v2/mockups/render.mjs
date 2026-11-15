@@ -1,9 +1,9 @@
-// Renders each mockup to png/<name>-<width>.png. Usage: node render.mjs [name-filter]
+// Renders each mockup to png/<name>-<width>.png; then run to_webp.py to make the committed WebP files. Usage: node render.mjs [name-filter]
 import { chromium } from '../../../node_modules/playwright-core/index.mjs';
 import { readdirSync } from 'node:fs';
 const only = process.argv[2] ?? '';
-const DESKTOP_ONLY = ['08-materials'];
-const sizes = [[1900, 1030], [1366, 768], [390, 844]];
+const DESKTOP_ONLY = ['08-materials', '05-switch-expert'];
+const sizes = [[1366, 768], [390, 844]];
 const b = await chromium.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 for (const f of readdirSync('.').filter((f) => /^\d\d-.*\.html$/.test(f) && f.includes(only)).sort()) {
   const name = f.replace('.html', '');

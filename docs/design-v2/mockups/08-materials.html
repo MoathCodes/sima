@@ -8,10 +8,10 @@
  .intro { border-radius: 22px; padding: 22px; align-self: start; }
  .intro h1 { font: 600 25px/1.15 var(--font); margin: 0; letter-spacing: -.02em; }
  .intro p { font-size: 14px; color: var(--on-glass-2); line-height: 1.5; margin: 10px 0 0; }
- .intro dl { margin: 14px 0 0; font-size: 13px; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; }
+ .intro dl { margin: 14px 0 0; font-size: 12px; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; }
  .intro dt { color: var(--on-glass-3); } .intro dd { margin: 0; color: var(--on-glass); }
  .rows { display: grid; gap: 18px; align-content: start; }
- .rowh { display: inline-block; font: 600 13px/1 var(--font); color: var(--on-glass); padding: 6px 10px; border-radius: 999px; margin-bottom: 8px; }
+ .rowh { display: inline-block; font: 600 12px/1 var(--font); color: var(--on-glass); padding: 6px 10px; border-radius: 999px; margin-bottom: 8px; }
  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
  .tile { color: var(--on-glass); border-radius: 18px; padding: 14px 14px 12px; min-height: 150px; display: flex; flex-direction: column; }
  .tn { font: 600 17px/1.2 var(--font); } .tu { font-size: 12px; color: var(--on-glass-2); margin-top: 4px; min-height: 30px; }
@@ -28,54 +28,33 @@
   <h1>Night Glass materials</h1>
   <p>Each tile sits over Betelgeuse, the brightest glare the sky map has. The numbers are the measured contrast of each text strength against the brightest pixel behind the tile, after blur, dimming and tint (WCAG F83: test the least contrasting area).</p>
   <dl><dt>Recipe</dt><dd>blur · saturate · backdrop brightness · tint opacity</dd>
-  <dt>Tint</dt><dd>Night rgb(11 14 28) · Chart rgb(246 243 236)</dd>
+  <dt>Tint</dt><dd>Night rgb(11 14 28). Night is the only theme in v2.0</dd>
   <dt>Rim</dt><dd>1 px, white 30% at the top to 5%</dd>
   <dt>Grain</dt><dd>3.5% fractal noise, overlay</dd>
   <dt>Target</dt><dd>4.5:1 for every text strength on every material</dd></dl>
-  <p style="font-size:12px;color:var(--on-glass-3)">Measured in headless Chromium, 15 Nov 2026: tests/contrast.html, tests/measure_contrast.py.</p>
+  <p style="font-size:12px;color:var(--on-glass-3)">Material samples, measured in headless Chromium, 15 Nov 2026: tests/contrast.html, tests/measure_contrast.py. The build also tests final component states.</p>
  </section>
  <div class="rows">
-  <div><div class="rowh glass-thin">Night (default)</div><div class="grid"><div class="tile glass-thin" >
-  <div class="tn">Thin</div><div class="tu">chips, sky labels, sky note</div>
+  <div><div class="rowh glass-thin">Night · v2.0 ships Glass or Solid, chosen once</div><div class="grid"><div class="tile glass-thin" >
+  <div class="tn">Thin</div><div class="tu">chips, sky labels over bright sky</div>
   <div class="tr">16 px · 1.5 · 0.55 · 62%</div>
   <div class="ts"><span style="color:var(--on-glass)">Aa 9.5</span><span style="color:var(--on-glass-2)">Aa 6.3</span><span style="color:var(--on-glass-3)">Aa 4.9</span></div>
 </div><div class="tile glass" >
-  <div class="tn">Regular</div><div class="tu">top row, rail, bar, frame, dock</div>
+  <div class="tn">Regular</div><div class="tu">top row, rail, bar, mission list</div>
   <div class="tr">24 px · 1.6 · 0.50 · 62%</div>
   <div class="ts"><span style="color:var(--on-glass)">Aa 10.2</span><span style="color:var(--on-glass-2)">Aa 6.8</span><span style="color:var(--on-glass-3)">Aa 5.3</span></div>
 </div><div class="tile glass-raised" >
-  <div class="tn">Raised</div><div class="tu">popovers, sheets, cards, toasts</div>
+  <div class="tn">Raised</div><div class="tu">popovers, cards, toasts (desktop)</div>
   <div class="tr">32 px · 1.6 · 0.45 · 70%</div>
   <div class="ts"><span style="color:var(--on-glass)">Aa 12.4</span><span style="color:var(--on-glass-2)">Aa 8.3</span><span style="color:var(--on-glass-3)">Aa 6.4</span></div>
 </div><div class="tile slate" >
-  <div class="tn">Slate</div><div class="tu">Measure, tools, About, dialogs</div>
+  <div class="tn">Slate</div><div class="tu">frame, Measure, tools, the phone sheet</div>
   <div class="tr">no blur · 96%</div>
   <div class="ts"><span style="color:var(--on-glass)">Aa 16.1</span><span style="color:var(--on-glass-2)">Aa 10.7</span><span style="color:var(--on-glass-3)">Aa 8.3</span></div>
 </div><div class="tile glass solidx" data-glass-x>
-  <div class="tn">Solid</div><div class="tu">glass off: setting, slow GPU, no support</div>
+  <div class="tn">Solid</div><div class="tu">glass off: phones, setting, slow first seconds, no support</div>
   <div class="tr">no blur · 95%</div>
   <div class="ts"><span style="color:var(--on-glass)">Aa 15.7</span><span style="color:var(--on-glass-2)">Aa 10.5</span><span style="color:var(--on-glass-3)">Aa 8.1</span></div>
-</div></div></div>
-  <div data-theme="chart"><div class="rowh glass-thin">Chart glass (light)</div><div class="grid"><div class="tile glass-thin" >
-  <div class="tn">Thin</div><div class="tu">&nbsp;</div>
-  <div class="tr">16 px · 1.3 · 1.35 · 84%</div>
-  <div class="ts"><span style="color:var(--on-glass)">Aa 10.7</span><span style="color:var(--on-glass-2)">Aa 6.4</span><span style="color:var(--on-glass-3)">Aa 4.7</span></div>
-</div><div class="tile glass" >
-  <div class="tn">Regular</div><div class="tu">&nbsp;</div>
-  <div class="tr">24 px · 1.3 · 1.40 · 85%</div>
-  <div class="ts"><span style="color:var(--on-glass)">Aa 11.1</span><span style="color:var(--on-glass-2)">Aa 6.6</span><span style="color:var(--on-glass-3)">Aa 4.8</span></div>
-</div><div class="tile glass-raised" >
-  <div class="tn">Raised</div><div class="tu">&nbsp;</div>
-  <div class="tr">32 px · 1.3 · 1.45 · 88%</div>
-  <div class="ts"><span style="color:var(--on-glass)">Aa 11.8</span><span style="color:var(--on-glass-2)">Aa 7.1</span><span style="color:var(--on-glass-3)">Aa 5.2</span></div>
-</div><div class="tile slate" >
-  <div class="tn">Slate</div><div class="tu">&nbsp;</div>
-  <div class="tr">no blur · 96%</div>
-  <div class="ts"><span style="color:var(--on-glass)">Aa 14.1</span><span style="color:var(--on-glass-2)">Aa 8.4</span><span style="color:var(--on-glass-3)">Aa 6.1</span></div>
-</div><div class="tile glass solidx" data-glass-x>
-  <div class="tn">Solid</div><div class="tu">&nbsp;</div>
-  <div class="tr">no blur · 95%</div>
-  <div class="ts"><span style="color:var(--on-glass)">Aa 13.8</span><span style="color:var(--on-glass-2)">Aa 8.2</span><span style="color:var(--on-glass-3)">Aa 6.0</span></div>
 </div></div></div>
   <div class="key glass-thin"><span>Aa n = contrast of on-glass, on-glass-2, on-glass-3 at the worst spot</span><span>Pictures and charts are never on glass: they sit in opaque wells.</span></div>
  </div>
