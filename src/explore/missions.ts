@@ -219,6 +219,7 @@ export interface MissionInputs extends CheckInputs {
   mode?: string;
   tap?: { x: number; y: number } | null;
   points?: readonly { x: number; y: number }[];
+  /** How far a tap still counts, in the tap's units: tapReach (track.ts), as the tour uses. */
   radius?: number;
   trial?: { key: string; motion: Motion; atCatalogue: boolean; result: StackResult } | null;
   sandbox?: { planet: PretendPlanet; verdict: Verdict; patchKey: string } | null;

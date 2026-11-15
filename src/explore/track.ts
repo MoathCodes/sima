@@ -9,6 +9,7 @@
  */
 import { mjdToYear, propagate } from '../core/astro.ts';
 import { SCENARIOS, simSources, sourceAt, type SimSource } from '../core/field.ts';
+import { skyNoise } from '../core/display.ts';
 import type { Field } from '../core/types.ts';
 
 const special = new Map<string, SimSource | null>();
@@ -55,6 +56,53 @@ export function ringSource(field: Field | null): string {
   if (!t) return '';
   const cat = t.values.startsWith('Gaia DR3') ? 'Gaia DR3' : 'the catalogue';
   return `where ${cat}’s position and motion put ${t.name} on each date`;
+}
+
+/** Light counts as seen when it is this many noise units above the sky. */
+const SEEN = 5;
+
+/**
+ * How far from the object's path a tap still counts, CSS pixels: as far as its light reaches
+ * (the ring of pixels around it whose median is still `SEEN` noise units above the sky), so a tap
+ * anywhere on the star's glow hits. At least 18 px and three field pixels; the measured part at
+ * most a third of the picture.
+ *
+ * @param pix The date's picture, n × n; null if there is none.
+ * @param n Field pixels across.
+ * @param path The object on each date, field pixels.
+ * @param k CSS pixels per field pixel.
+ */
+export function tapReach(
+  pix: ArrayLike<number> | null,
+  n: number,
+  path: readonly { x: number; y: number }[],
+  k: number,
+): number {
+  const least = Math.max(18, 3 * k);
+  if (!pix || pix.length !== n * n || !path.length) return least;
+  const { sky, sigma } = skyNoise(pix);
+  if (!(sigma > 0)) return least;
+  const most = Math.floor(n / 3);
+  let glow = 0;
+  for (const c of path) {
+    // Each pixel's light in noise units, binned by whole field pixels from the object.
+    const rings: number[][] = Array.from({ length: most + 1 }, () => []);
+    for (let y = Math.max(0, Math.ceil(c.y - most)); y <= Math.min(n - 1, c.y + most); y++) {
+      for (let x = Math.max(0, Math.ceil(c.x - most)); x <= Math.min(n - 1, c.x + most); x++) {
+        const r = Math.round(Math.hypot(x - c.x, y - c.y));
+        const v = pix[y * n + x]!;
+        if (r <= most && Number.isFinite(v)) rings[r]!.push((v - sky) / sigma);
+      }
+    }
+    let r = 0;
+    while (r < most) {
+      const ring = rings[r + 1]!.sort((a, b) => a - b);
+      if (!ring.length || ring[ring.length >> 1]! < SEEN) break;
+      r++;
+    }
+    glow = Math.max(glow, r);
+  }
+  return Math.max(least, glow * k);
 }
 
 /**
