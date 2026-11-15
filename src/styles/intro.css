@@ -221,12 +221,12 @@
     font: var(--text-body);
   }
 }
-/* On a phone the disc is narrow: the word and Sima fill it, and the line sits under the disc,
+/* On a phone the disc is small: the word and Sima fill it, and the line sits under the disc,
    gutter to gutter, so it never crowds the ring. */
-@media (max-width: 699px) {
+@media (max-width: 699px), (max-height: 499px) {
   .intro-line {
     position: absolute;
-    top: calc(50% + var(--r0, 160px) + 22px);
+    top: calc(50% + var(--r0, 160px) + clamp(12px, 3.5vh, 22px));
     left: calc(50% - 50vw + var(--gutter));
     right: calc(50% - 50vw + var(--gutter));
     margin: 0;

@@ -483,6 +483,8 @@ The first visit opens with about seven and a half seconds of motion (7.45 s, the
 - **Reduced motion:** a still ring (the sky map's channel and detector hue), a still flare and the name, for 2.4 s, then a 0.6 s fade into the page.
 - **Smooth:** drawn live with WebGL 2 in a worker (an OffscreenCanvas), so the picture keeps moving while the page starts; the words and the constellation move only by transform, opacity and filter, on the compositor. No video.
 - **Stacking:** while it plays it covers every card. While the sky map glides in, the cards wait (`html[data-intro='land']`), then fade in. On phones (under 700px) it plays too, then gives way to the sky and its note.
+- **Phones** (under 700px wide, or under 500px tall): the disc sits from the start where Discover's globe will rest (centred above the sheet's third, as wide as the globe), so the landing is the turn alone. سيما and Sima fill the disc; the line sits under it, gutter to gutter. Skip and the source line keep clear of the safe areas.
+- **One clock:** the intro's time starts when its words first move, not when the page starts, so a slow phone delays the whole intro evenly and Sima still comes in as the pen finishes.
 
 ## Interaction
 

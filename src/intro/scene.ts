@@ -103,9 +103,12 @@ export function handFov(w: number, h: number, fov: number): number {
   return Math.max(fov, Math.min(HAND_FOV, fovOf(w / 2 / scale)));
 }
 
-/** The globe's radius while it is in shadow, CSS pixels. */
+/**
+ * The globe's radius while it is in shadow, CSS pixels. A short window (a phone held sideways)
+ * keeps room under it for the line and the source line (intro.css).
+ */
 export function globeRadius(w: number, h: number): number {
-  return Math.min(w * 0.4, h * 0.3, 330);
+  return Math.min(w * 0.4, h * (h < 500 ? 0.27 : 0.3), 330);
 }
 
 /**

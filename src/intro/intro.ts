@@ -190,18 +190,28 @@ function play(replay: boolean): void {
   el.addEventListener('pointerdown', skip);
   el.addEventListener('click', swallow);
   el.addEventListener('wheel', swallow, { passive: false });
-  // The painter starts in the next frame, not while the page's parts start: the first WebGL
-  // context of a page can take a couple of hundred ms to make. The intro's clock and its words
-  // start there too: the page's parts start in this same task, which on a phone can take a second
-  // or more, and the words' animations only begin at the first frame painted after it, so a clock
-  // started now would run the picture ahead of the words.
+  // The words start in the next frame, once the page has laid out its parts (the phone's disc
+  // sits where the page's globe will). The intro's clock and its painter start when the words'
+  // animations really begin: the page's parts start meanwhile, which on a phone can hold the
+  // first painted frame back a second or more, and a clock started earlier would run the picture
+  // ahead of the words (Sima late). The first WebGL context of a page can also take a couple of
+  // hundred ms to make, best not while the page's parts start.
   run.raf = requestAnimationFrame(() => {
     if (running !== run) return;
-    run.start = nowAbs() + lead;
     run.home = home();
+    run.start = nowAbs() + lead;
     showWords(run, lead);
-    run.painter = paint(run, el.querySelector('canvas')!);
-    run.raf = requestAnimationFrame(() => frame(run));
+    const go = () => {
+      if (running !== run) return;
+      run.painter = paint(run, el.querySelector('canvas')!);
+      run.raf = requestAnimationFrame(() => frame(run));
+    };
+    const words = el.querySelector('.intro-name')?.getAnimations({ subtree: true })[0];
+    if (!words) return go();
+    words.ready.then(() => {
+      if (words.startTime !== null) run.start = performance.timeOrigin + Number(words.startTime) + lead;
+      go();
+    }, go);
   });
 }
 
