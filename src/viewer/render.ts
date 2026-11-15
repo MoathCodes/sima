@@ -728,8 +728,8 @@ function aroundLabel(el: HTMLElement, bare: boolean, map: boolean): void {
   const known = !!w && w.state === 'busy' && w.total !== null && w.done !== null && w.total > 0;
   const pct = known && w ? Math.round((100 * (w.done ?? 0)) / (w.total ?? 1)) : 0;
   const head = map
-    ? '<b>Sky map (all dates averaged)</b><span>Outside the dashed line. Not a dated picture</span>'
-    : '<span>Outside the dashed line: no real exposures yet</span>';
+    ? '<b>Sky map (all dates averaged)</b><span>outside the dashed line</span>'
+    : '<span>No real exposures outside the dashed line yet</span>';
   const bar =
     w && w.state === 'busy'
       ? `<span class="pic-around-bar${known ? ' known' : ''}" style="--done:${pct}%"><span></span></span>`

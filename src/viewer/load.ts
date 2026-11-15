@@ -631,7 +631,11 @@ async function pollWider(
       case 'empty':
         return fail('SPHEREx has no released exposures of the wider field');
       case 'failed':
-        return fail(`NASA’s archive could not give them (${status.error || 'no reason given'})`);
+        return fail(
+          status.searchTimedOut && status.error
+            ? status.error
+            : `NASA’s archive could not give them (${status.error || 'no reason given'})`,
+        );
     }
     await wait(POLL_MS, signal);
   }

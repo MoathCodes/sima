@@ -41,10 +41,20 @@ Tests for the service's pure parts and its routes (no network):
    `spherex.artifact`, `spherex.plane` and `spherex.observation` as IRSA's SPHEREx cutout notebook,
    with `CONTAINS(POINT(ra, dec), plane.poly)` and the collection name). The old build searched one
    request at a time and spent 144 to 409 s here; one query per release takes about 10 to 30 s.
+   **The search has a budget** (`prebake.SEARCH_*`): each try may wait 40 s for an answer, there are
+   4 tries (waits of 3, 8 and 15 s between them), and the whole step stops after 180 s. IRSA's TAP
+   service sometimes takes a query and never answers; with the general limits (180 s a try, 7
+   tries) one search could hang for 20 minutes (seen on 15 November 2026: 1,135 s). While it
+   searches, the status says which try it is on and how long it has waited; when the budget runs
+   out, the patch fails with "NASA’s search did not answer within 3 min 1 s (4 tries)" and
+   `searchTimedOut: true`, and the viewer offers "Ask again". A failed search may be started again
+   3 s later (other failures: 30 s).
 3. **Plan.** Exposures are grouped into visits (a gap of more than 40 days starts a new one). Each
    exposure's wavelength at the patch centre is estimated from its footprint and the detector's
    wavelength table, and the plan keeps at most 2 exposures per detector per visit, 48 in all, chosen
-   so the same colour comes back in every visit (as for the shipped targets).
+   so the same colour comes back in every visit (as for the shipped targets). A 48′ field keeps 1
+   per detector per visit: its cutouts are 16 times the pixels of a 12′ one (about 3.6 MB each from
+   IRSA, 365 KB each to the page), so this halves the downloads.
 4. **First look.** One pass fetches the whole plan, but asks first for the oldest and the newest
    visit of each detector, side by side (detector 3 first, as the viewer opens on 2.0 µm). As soon as
    one detector has a picture at both visits (enough to blink), the service writes every frame it
@@ -75,12 +85,12 @@ What makes the first look fast:
 
 | Route | Answer |
 |---|---|
-| `GET /api/patch?ra=<deg>&dec=<deg>&fov=<3\|6\|12>` | Status of the patch (starts it if new). `fov` defaults to 12. `400` with `{"error": …}` on bad input; `503 {"error": "busy"}` when 8 patches already wait. |
+| `GET /api/patch?ra=<deg>&dec=<deg>&fov=<3\|6\|12\|24\|48>` | Status of the patch (starts it if new). `fov` defaults to 12. `400` with `{"error": …}` on bad input; `503 {"error": "busy"}` when 8 patches already wait. |
 | `GET /api/patch/<id>` | Status of a known patch, `404` if unknown. |
 | `GET /api/patch/<id>/first/frames.json`, `…/frames.bin.gz` | First look, same format as `public/data/<key>/` (`404` until written). |
 | `GET /api/patch/<id>/full/frames.json`, `…/frames.bin.gz` | Full set, same format. |
 | `GET /api/patch/<id>/catalog.json` | Gaia DR3 and CatWISE2020 sources in the patch (below). `202 {"state": "pending"}` while the query runs, `502 {"state": "failed", "error": …}` if both the primary service and the fallback failed. |
-| `GET /api/health` | `{"ok": true, "releases": [...], "fovs": [3, 6, 12]}` |
+| `GET /api/health` | `{"ok": true, "releases": [...], "fovs": [3, 6, 12, 24, 48]}` |
 
 `frames.bin.gz` is sent as `application/octet-stream` without `Content-Encoding`, so the browser does
 not unpack it; the loader unpacks it (and reads it as is if a proxy already unpacked it).
@@ -119,6 +129,12 @@ waited to be asked again in the last 20 s (a busy reply such as HTTP 503, a gate
 dropped connection). The viewer then says "NASA's archive is busy, so the service is asking again"
 in its loading words, so a long wait has a reason on screen. It is `false` (or absent) once the
 patch is finished.
+
+The search step adds `searchTry` (the try under way, the later of the two releases), `searchTries`
+(4), `searchElapsed` (seconds waited so far, while searching; 0 otherwise), `searchBudget` (180)
+and `searchTimedOut` (true when the patch failed because the search did not answer in time). The
+viewer turns them into "NASA’s search has not answered for 1 min 40 s (try 3 of 4)" after 20 s or
+from the second try.
 
 (SPEC 6.3 sketches the same answer with the names swapped: state `done` and count `ready`. This file
 is what the service sends.)
@@ -159,8 +175,8 @@ An answer for Proxima Centauri (first rows of each catalogue; Proxima is the fir
 ## Limits and safety
 
 - **No open proxy.** The client sends three numbers. Every IRSA address is built by the service from
-  IRSA's own search results. Inputs are checked: RA 0–360 (360 is 0), Dec −90–90, field 3, 6 or 12
-  arcmin; each a plain decimal number of at most 32 characters, given once. Only GET is answered; ids
+  IRSA's own search results. Inputs are checked: RA 0–360 (360 is 0), Dec −90–90, field 3, 6, 12,
+  24 or 48 arcmin; each a plain decimal number of at most 32 characters, given once. Only GET is answered; ids
   in paths must be 16 lowercase hex digits and file names one of the four above.
 - **Gentle on IRSA.** At most 8 requests to outside services at a time for the whole process (a shared
   semaphore in `prebake.fetch`), busy replies and dropped connections retried with growing waits (2,
@@ -215,6 +231,24 @@ What this shows:
 
 Open question for the team: whether IRSA limits busy replies per client. If it does, 4 requests at a
 time might give the same speed with fewer refusals. Not tested, to avoid loading IRSA further.
+
+### Wider fields (24′ and 48′)
+
+The viewer asks for a wider patch when the field outgrows the exposures on hand (a larger field
+size, or a pan): see "Fields wider than the exposures" in `src/viewer/surround.ts` and `load.ts`.
+For a shipped target it asks around the target's own centre. Measured on 15 November 2026 (search
+answers already cached; IRSA answering busy now and then):
+
+| Spot | Field | First look | Full set | Exposures | `frames.bin.gz` |
+|---|---|---|---|---|---|
+| Barnard's Star | 24′ | 3 to 5 s | 32 to 35 s | 36 | 3.6 MB |
+| Barnard's Star | 48′ | 7 to 9 s | 55 to 59 s | 18 | 6.2 MB |
+| WISE 0855−0714 | 12′ | 2 s | 47 s | 36 | 1.1 MB |
+| WISE 0855−0714 | 24′ | 5 s | 39 s | 36 | 3.8 MB |
+| WISE 0855−0714 | 48′ | 12 s | 50 s | 18 | 6.6 MB |
+
+(Times after the search. The WISE 0855 searches themselves took 905 and 1,135 s that morning,
+before the search budget above existed; now such a search stops after 180 s.)
 
 ## Hosting
 

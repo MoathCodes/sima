@@ -164,7 +164,7 @@ export function footLine(f: Live): string {
   const groups = shownGroups(f);
   const frames = framesOf(st.field, groups);
   const releases = [...new Set(frames.map((x) => releaseName(x.release)))].join(' + ');
-  const parts = [`Real SPHEREx data${st.source === 'live' ? ', fetched live' : ''}${releases ? `, ${releases}` : ''}`];
+  const parts = [`Real SPHEREx data${st.source === 'live' || st.set?.origin === 'live' ? ', fetched live' : ''}${releases ? `, ${releases}` : ''}`];
   const mjds = frames.map((x) => x.mjd).filter(Number.isFinite);
   if (!mjds.length) parts.push(`no D${f.s.det} exposure on this date`);
   else {

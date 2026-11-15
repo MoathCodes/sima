@@ -13,6 +13,7 @@ import { LIVE_API, POLL_MS, TARGET_RADIUS, centreOf, fetchSet, liveFov, releaseN
 import { buildField, keepPatch } from '../core/work.ts';
 import { TARGETS } from '../core/targets.ts';
 import { separation } from '../core/astro.ts';
+import { covers, widerPatch } from '../viewer/surround.ts';
 import { targetAt } from '../core/real.ts';
 import type { Field, LiveStatus, RealSet, Target } from '../core/types.ts';
 
@@ -131,7 +132,14 @@ export async function openPatch(
       report(loadingStatus(`Loading the real SPHEREx exposures of ${target.name}…`));
       const set = await shippedSet(target.key, signal);
       const field = await fieldFor(id, set, target, at, fov, signal);
-      report({ ...loadingStatus(''), source: 'real', set, field, target, centre: centreOf(set.data) });
+      const centre = centreOf(set.data);
+      report({ ...loadingStatus(''), source: 'real', set, field, target, centre });
+      // A field wider than the shipped exposures: the live service fetches real ones around the
+      // target, and they replace these when they arrive (as in the main frame, load.ts).
+      if (LIVE_API && !covers(set.data, at.ra, at.dec, fov)) {
+        const ask = widerPatch(centre, at.ra, at.dec, fov);
+        await pollLive(id, at, fov, report, signal, { ask, target, own: set, centre });
+      }
       return;
     }
     if (!LIVE_API) {
@@ -145,18 +153,28 @@ export async function openPatch(
   }
 }
 
+/**
+ * Follows a live patch for a frame. With `wider`, the frame already shows a shipped target's
+ * exposures: the patch asked for is `wider.ask`, its sets keep the target (its catalogue and
+ * neighbours go with them), and a wait or a failure leaves the shipped pictures on screen.
+ */
 async function pollLive(
   id: string,
   at: { ra: number; dec: number },
   fov: Fov,
   report: (s: PatchStatus) => void,
   signal: AbortSignal,
+  wider?: { ask: { ra: number; dec: number; fov: number }; target: Target; own: RealSet; centre: { ra: number; dec: number } },
 ): Promise<void> {
-  let url = `${LIVE_API}?ra=${at.ra.toFixed(4)}&dec=${at.dec.toFixed(4)}&fov=${liveFov(fov)}`;
-  let shown: 'first' | 'full' | null = null;
+  const ask = wider?.ask ?? { ...at, fov: liveFov(fov) };
+  let url = `${LIVE_API}?ra=${ask.ra.toFixed(4)}&dec=${ask.dec.toFixed(4)}&fov=${ask.fov}`;
+  let shown: 'first' | 'full' | null = wider ? 'first' : null; // the shipped pictures stand in
+  let got: 'first' | 'full' | null = null;
   let failures = 0;
-  report(loadingStatus('Asking for the real SPHEREx exposures of this spot…'));
-  const none = (why: string) => report({ ...loadingStatus(''), source: 'none', why });
+  if (!wider) report(loadingStatus('Asking for the real SPHEREx exposures of this spot…'));
+  const none = (why: string) => {
+    if (!wider) report({ ...loadingStatus(''), source: 'none', why });
+  };
   while (!signal.aborted) {
     let status: LiveStatus;
     try {
@@ -164,7 +182,7 @@ async function pollLive(
       const body = (await res.json()) as LiveStatus & { error?: string };
       if (!res.ok) {
         if (res.status === 503) {
-          report(loadingStatus('NASA’s archive is busy with other spots. Waiting for a turn…'));
+          if (!shown) report(loadingStatus('NASA’s archive is busy with other spots. Waiting for a turn…'));
           await wait(POLL_MS * 2, signal);
           continue;
         }
@@ -181,15 +199,25 @@ async function pollLive(
       return none(`The live service did not answer (${err instanceof Error ? err.message : String(err)}).`);
     }
     url = `${LIVE_API}/${status.id}`;
-    const step: 'first' | 'full' | null = status.full && shown !== 'full' ? 'full' : status.first && !shown ? 'first' : null;
+    const step: 'first' | 'full' | null = status.full && got !== 'full' ? 'full' : status.first && !got ? 'first' : null;
     const folder = step === 'full' ? status.full : step === 'first' ? status.first : null;
     if (step && folder) {
       try {
-        const set = await liveSet(folder, status.id, signal);
-        const field = await fieldFor(id, set, null, at, fov, signal);
+        const raw = await liveSet(folder, status.id, signal);
+        const set = wider ? withTarget(raw, wider.own) : raw;
+        const field = await fieldFor(id, set, wider?.target ?? null, at, fov, signal);
         shown = step;
+        got = step;
         const rest = status.state === 'rest' ? `First look. Fetching the rest: ${status.done} of ${status.total}` : step === 'first' ? 'First look' : '';
-        report({ ...loadingStatus(''), source: 'live', set, field, step: rest, centre: null });
+        report({
+          ...loadingStatus(''),
+          source: wider ? 'real' : 'live',
+          set,
+          field,
+          target: wider?.target ?? null,
+          step: rest,
+          centre: wider?.centre ?? null,
+        });
         if (step === 'full' && status.state === 'ready') return;
       } catch (err) {
         if (signal.aborted) return;
@@ -225,6 +253,18 @@ async function pollLive(
     }
     await wait(POLL_MS, signal);
   }
+}
+
+const grafted = new WeakMap<RealSet, RealSet>();
+/** A live set around a shipped target, carrying the target's catalogue and neighbours. */
+function withTarget(set: RealSet, own: RealSet): RealSet {
+  let out = grafted.get(set);
+  if (!out) {
+    const { catalogue, neighbours, neighboursFrom } = own.data;
+    out = { ...set, data: { ...set.data, catalogue, neighbours, neighboursFrom } };
+    grafted.set(set, out);
+  }
+  return out;
 }
 
 function wait(ms: number, signal: AbortSignal): Promise<void> {
