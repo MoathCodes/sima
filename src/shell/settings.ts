@@ -6,8 +6,8 @@
  * `sima-missions` through progress.ts), and "Your progress is kept in this browser only."
  *
  * On a desktop it is a Raised card under the Settings button (top right), closed by Escape
- * (order 30), the close button, the button again or a click outside. Under 700 px wide it is a
- * full-height Slate page with Back (section 11.2): modal, so the page behind is inert.
+ * (order 30), the close button, the button again or a click outside. In a phone layout it opens
+ * as a full-height Slate page through lane M's `openPage` (section 11.2), with M's Back.
  */
 import { icon } from './icons.ts';
 import {
@@ -21,9 +21,7 @@ import {
   type GlassReason,
 } from './glass.ts';
 import { resetProgress } from '../explore/progress.ts';
-
-/** True under 700 px: Settings is a full-height page. */
-const phone = () => matchMedia('(max-width: 699px)').matches;
+import { leavePage, onPhone, phonePage } from './pages.ts';
 
 let opener: HTMLElement | null = null;
 
@@ -42,7 +40,6 @@ export function startSettings(): void {
   el.classList.add('st-card', 'appear');
   el.innerHTML = `
     <header class="st-head">
-      <button type="button" class="btn quiet st-back" data-back data-guide="settings-back">${icon('back')}Back</button>
       <h2 id="settings-title" class="st-title">Settings</h2>
       <button type="button" class="icon-btn sm st-close" data-close aria-label="Close Settings" data-tip="Close">${icon('close')}</button>
     </header>
@@ -115,10 +112,9 @@ export function startSettings(): void {
   });
 
   q('[data-close]').addEventListener('click', () => closeSettings());
-  q('[data-back]').addEventListener('click', () => closeSettings());
   // A click outside closes the card on a desktop (as a popover does); the button toggles.
   document.addEventListener('pointerdown', (e) => {
-    if (el.hidden || phone()) return;
+    if (el.hidden || onPhone()) return;
     const t = e.target instanceof Element ? e.target : null;
     if (t && !t.closest('#settings, [data-open="settings"]')) closeSettings(false);
   });
@@ -130,14 +126,9 @@ export function startSettings(): void {
   });
 
   onGlass(() => fill(el));
-  for (const mq of ['(prefers-reduced-motion: reduce)', '(max-width: 699px)']) {
-    matchMedia(mq).addEventListener('change', () => {
-      fill(el);
-      if (!el.hidden) place(el);
-    });
-  }
+  matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => fill(el));
   addEventListener('resize', () => {
-    if (!el.hidden) place(el);
+    if (!el.hidden && !onPhone()) place(el);
   });
   fill(el);
 }
@@ -152,8 +143,9 @@ export function openSettings(from?: HTMLElement): void {
   opener = from ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
   fill(el);
   el.hidden = false;
-  place(el);
   setExpanded(true);
+  if (onPhone()) phonePage(el, 'Settings', () => hide(el));
+  else place(el);
   el.querySelector<HTMLElement>('[role="radio"][tabindex="0"]')?.focus();
 }
 
@@ -164,15 +156,22 @@ export function openSettings(from?: HTMLElement): void {
 export function closeSettings(refocus = true): void {
   const el = box();
   if (!el || el.hidden) return;
+  if (el.closest('#sheet')) {
+    leavePage(el); // M's Back: it returns focus and then hides the card (phonePage's onLeave)
+    return;
+  }
+  hide(el);
+  if (refocus) opener?.focus();
+  opener = null;
+}
+
+function hide(el: HTMLElement): void {
   el.hidden = true;
-  setInert(false);
   setExpanded(false);
   const confirm = el.querySelector<HTMLElement>('[data-confirm]');
   if (confirm) confirm.hidden = true;
   const reset = el.querySelector<HTMLElement>('[data-reset]');
   if (reset) reset.hidden = false;
-  if (refocus) opener?.focus();
-  opener = null;
 }
 
 function setExpanded(on: boolean): void {
@@ -181,16 +180,8 @@ function setExpanded(on: boolean): void {
   }
 }
 
-/** Desktop: under the Settings button, right-aligned with the top row. Phone: the whole page. */
+/** Under the Settings button, right-aligned with the top row (desktop). */
 function place(el: HTMLElement): void {
-  if (phone()) {
-    el.style.top = el.style.right = '';
-    el.setAttribute('aria-modal', 'true');
-    setInert(true);
-    return;
-  }
-  el.removeAttribute('aria-modal');
-  setInert(false);
   const row = [document.getElementById('actions'), document.getElementById('view-switch')]
     .filter((e): e is HTMLElement => !!e && e.checkVisibility())
     .map((e) => e.getBoundingClientRect());
@@ -198,23 +189,6 @@ function place(el: HTMLElement): void {
   const right = Math.max(0, ...row.map((r) => r.right));
   el.style.top = `${Math.round(bottom + 6)}px`;
   el.style.right = `${Math.round(innerWidth - (right || innerWidth - 16))}px`;
-}
-
-/** On phones Settings is modal: everything else is inert while it is open (11.2). */
-function setInert(on: boolean): void {
-  for (const child of document.body.children) {
-    if (!(child instanceof HTMLElement) || ['settings', 'toasts', 'tooltip'].includes(child.id)) continue;
-    if (child.tagName === 'SCRIPT') continue;
-    if (on) {
-      if (!child.inert) {
-        child.inert = true;
-        child.dataset.settingsInert = '';
-      }
-    } else if ('settingsInert' in child.dataset) {
-      child.inert = false;
-      delete child.dataset.settingsInert;
-    }
-  }
 }
 
 const PANELS_NOTE: Record<GlassReason, string> = {
@@ -258,6 +232,4 @@ function fill(el: HTMLElement): void {
       ? 'Follows your system: reduced. Panels fade instead of moving. To change it, turn off Reduce motion in your device’s accessibility settings.'
       : 'Follows your system: full motion. To reduce it, turn on Reduce motion in your device’s accessibility settings.';
   }
-  const back = el.querySelector<HTMLElement>('[data-back]');
-  if (back) back.hidden = !phone();
 }

@@ -6,6 +6,7 @@
  * Facts about the five targets are computed from core/targets.ts, which names the catalogue each
  * value came from (H4, H9). Nothing here is typed from memory.
  */
+import { leavePage, onPhone, phonePage } from '../shell/pages.ts';
 import { TARGETS } from '../core/targets.ts';
 import { icon } from '../shell/icons.ts';
 import { openSandbox } from '../shell/sandbox.ts';
@@ -42,6 +43,9 @@ export function startAbout(): void {
     </nav>
     <div class="about-body" data-scroll tabindex="0">${body()}</div>`;
   dialog.querySelector('[data-dialog-close]')?.addEventListener('click', () => dialog.close());
+  // Closed from inside (its close button, "Play the intro", "Open the sandbox") while it is a
+  // phone page: leave the page too.
+  dialog.addEventListener('close', () => leavePage(dialog));
   // "Open the sandbox" in the Planet X section (O-V7).
   dialog.querySelector('[data-open-sandbox]')?.addEventListener('click', () => {
     dialog.close();
@@ -64,11 +68,19 @@ export function startAbout(): void {
   });
 }
 
-/** Opens About at its top. */
+/**
+ * Opens About at its top: a modal dialog on a desktop, a full-height page with Back (lane M's
+ * `openPage`) in a phone layout (BEGINNER-AND-MOBILE.md 11.2).
+ */
 export function openAbout(): void {
   const dialog = document.getElementById('about');
   if (!(dialog instanceof HTMLDialogElement)) return;
-  dialog.showModal();
+  if (onPhone()) {
+    dialog.show();
+    phonePage(dialog, 'About Sima', () => {
+      if (dialog.open) dialog.close();
+    });
+  } else dialog.showModal();
   const body = dialog.querySelector('.about-body');
   if (body) body.scrollTop = 0;
 }

@@ -363,18 +363,16 @@
   width: 18px;
   height: 18px;
 }
-@media (max-width: 699px) {
-  #view-switch {
-    padding: 4px;
-  }
-  /* Two 48px segments: the whole switch is 56px tall on the phone top row. */
-  .vs-seg {
-    min-height: var(--v2-hit-phone);
-    padding: 0 8px;
-  }
-  .vs-seg > .icon {
-    display: none;
-  }
+html[data-layout^='phone'] #view-switch {
+  padding: 4px;
+}
+/* Two 48px segments on the phone top row. */
+html[data-layout^='phone'] .vs-seg {
+  min-height: var(--v2-hit-phone);
+  padding: 0 8px;
+}
+html[data-layout^='phone'] .vs-seg > .icon {
+  display: none;
 }
 @media (max-width: 339px) {
   .vs-seg {

@@ -67,32 +67,23 @@
   gap: 8px;
 }
 
-/* Phones: a full-height Slate page with Back, every hit area 48 px (sections 10, 11.2). */
-@media (max-width: 699px) {
-  #settings {
-    inset: 0;
-    width: auto;
-    max-height: none;
-    padding: 8px var(--v2-gutter-phone) 24px;
-    border-radius: 0;
-    align-content: start;
-    gap: 18px;
-    /* Slate on phones (D-13): the page is never glass. */
-    --mat-filter: none;
-    --mat-tint: var(--v2-slate-tint);
-    --mat-sheen: var(--v2-slate-sheen);
-  }
-  .st-head {
-    min-height: 56px;
-    margin: 0;
-  }
-  .st-close {
-    display: none;
-  }
-  #settings :is(.btn, .seg > button) {
-    min-height: var(--v2-hit-phone);
-  }
-  .st-back {
-    padding-left: 6px;
-  }
+/* Phones: M's full-height Slate page (sheet.ts openPage) holds it; M's head has the title and
+   Back, so the card lies flat in the page. Every hit area 48 px (sections 10, 11.2). */
+.sheet-body #settings {
+  position: static;
+  width: auto;
+  max-height: none;
+  overflow: visible;
+  padding: 4px 0 24px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  --mat-filter: none; /* no glass on M's Slate page */
+  gap: 18px;
+}
+.sheet-body #settings .st-head {
+  display: none;
+}
+.sheet-body #settings :is(.btn, .seg > button) {
+  min-height: var(--v2-hit-phone);
 }

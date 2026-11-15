@@ -9,7 +9,8 @@
  */
 import { emit } from './bus.ts';
 import { icon } from './icons.ts';
-import { RANK, closable, closeTop, nativeOpen, startEscape } from './escape.ts';
+import { closeTop, nativeOpen, startEscape } from './escape.ts';
+import { phonePage } from './pages.ts';
 import { startLayout } from './layout.ts';
 import { camera, flyTo, grid, retry, setLayer, type SkyLayer } from '../sky/sky.ts';
 import { openShare, startShare } from '../viewer/share.ts';
@@ -241,44 +242,19 @@ function setCard(card: HTMLElement, load: SkyLoad, pct: number): void {
 // ----- Find on phones (BEGINNER-AND-MOBILE.md 11.2, 11.3) ---------------------------------------
 
 /**
- * On phones the search field lives behind the menu's Find: a full-height Slate page with Back
- * (`html[data-find]`), the field at the top and the suggestions under it.
+ * In a phone layout the search field lives behind the menu's Find: lane M's full-height page with
+ * Back, the field at its top and the suggestions under it. Back puts the field back home.
  */
 function startFind(): void {
-  const top = document.getElementById('top-left');
-  if (!top) return;
-  const back = document.createElement('button');
-  back.type = 'button';
-  back.className = 'btn quiet find-back';
-  back.dataset.close = '';
-  back.dataset.guide = 'find-back';
-  back.innerHTML = `${icon('back')}Back`;
-  top.prepend(back);
-  // In the Escape order only while the page is open (top-left is always rendered).
-  let unregister: (() => void) | null = null;
-  const close = () => {
-    if (!('find' in document.documentElement.dataset)) return;
-    unregister?.();
-    unregister = null;
-    delete document.documentElement.dataset.find;
-    top.removeAttribute('role');
-    top.removeAttribute('aria-label');
-    document.getElementById('search-results')?.hidePopover?.();
-    document.querySelector<HTMLElement>('[data-guide="phone-menu"]')?.focus();
-  };
-  back.addEventListener('click', close);
   document.addEventListener('click', (e) => {
     if (!(e.target instanceof Element) || !e.target.closest('[data-find]')) return;
+    const search = document.getElementById('search');
+    if (!search) return;
     document.getElementById('phone-menu')?.hidePopover();
-    document.documentElement.dataset.find = '';
-    unregister ??= closable(top, RANK.list, close);
-    top.setAttribute('role', 'dialog');
-    top.setAttribute('aria-label', 'Find a star, galaxy or nebula');
-    document.querySelector<HTMLInputElement>('#search input')?.focus();
-  });
-  // Leaving the phone width closes the page.
-  matchMedia('(max-width: 699px)').addEventListener('change', (e) => {
-    if (!e.matches) close();
+    phonePage(search, 'Find a star, galaxy or nebula', () => {
+      document.getElementById('search-results')?.hidePopover();
+    });
+    search.querySelector<HTMLInputElement>('input')?.focus();
   });
 }
 

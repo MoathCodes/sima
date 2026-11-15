@@ -17,6 +17,7 @@
  *
  * Nothing here runs in embed mode (the cards are in the page flow) or under 700 px (O-W3).
  */
+import { layout } from './sheet.ts';
 import { keepClear } from '../sky/markers.ts';
 
 /** The frame's box, as remembered. CSS pixels. */
@@ -56,7 +57,7 @@ let moving = false;
 const moveFns = new Set<() => void>();
 
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-const off = () => document.documentElement.hasAttribute('data-embed') || innerWidth < 700;
+const off = () => document.documentElement.hasAttribute('data-embed') || layout().kind !== 'desktop';
 const byId = (id: string) => document.getElementById(id);
 
 /**
