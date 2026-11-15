@@ -173,7 +173,9 @@ export async function startSky(el: HTMLElement): Promise<void> {
       patch = p;
       if (
         dropped &&
-        (separation(p.ra, p.dec, dropped.ra, dropped.dec) < 1e-3 || Date.now() > dropped.until)
+        (separation(p.ra, p.dec, dropped.ra, dropped.dec) < 1e-3 ||
+          p.source === 'loading' ||
+          Date.now() > dropped.until)
       ) {
         dropped = null;
       }
@@ -1284,6 +1286,8 @@ function watchPointer(el: HTMLElement): void {
   let clickTimer = 0;
   let coordsQueued = false;
   let last: { x: number; y: number } | null = null;
+  /** Where the patch or a ring was picked up, and whether it has moved since (> 4 px). */
+  let grab: { x: number; y: number; moved: boolean } | null = null;
   const stop = (e: Event) => {
     e.stopPropagation();
     e.preventDefault();
@@ -1308,6 +1312,7 @@ function watchPointer(el: HTMLElement): void {
           dx: e.clientX - (box.x + box.width / 2),
           dy: e.clientY - (box.y + box.height / 2),
         };
+        grab = { x: e.clientX, y: e.clientY, moved: false };
         el.setPointerCapture(e.pointerId);
         setCursor('grabbing');
         requestDraw();
@@ -1317,6 +1322,7 @@ function watchPointer(el: HTMLElement): void {
       if (ring) {
         stop(e);
         dragging = { ra: ring.r.ra, dec: ring.r.dec, dx: e.clientX - (ring.box.x + ring.box.width / 2), dy: e.clientY - (ring.box.y + ring.box.height / 2), ring: ring.r.id };
+        grab = { x: e.clientX, y: e.clientY, moved: false };
         el.setPointerCapture(e.pointerId);
         setCursor('grabbing');
         requestDraw();
@@ -1331,8 +1337,20 @@ function watchPointer(el: HTMLElement): void {
     'pointermove',
     (e) => {
       last = { x: e.clientX, y: e.clientY };
+      if (e.pointerType === 'mouse' && (e.buttons & 1) === 0 && (dragging || down)) {
+        // The release never reached the page (the window lost the pointer mid-drag, e.g. to the
+        // window manager or a screen recorder). End the drag here, so neither the patch nor the
+        // sky follows a pointer with no button held. Aladin ends its own pan on a document mouseup.
+        if (down) document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+        down = null;
+        if (dragging) {
+          end(e);
+          return;
+        }
+      }
       if (dragging) {
         stop(e);
+        if (grab && Math.hypot(e.clientX - grab.x, e.clientY - grab.y) > 4) grab.moved = true;
         const w = toWorld(e.clientX - dragging.dx, e.clientY - dragging.dy);
         if (w) Object.assign(dragging, w);
         requestDraw();
@@ -1365,6 +1383,16 @@ function watchPointer(el: HTMLElement): void {
   );
 
   const end = (e: PointerEvent) => {
+    const moved = !!grab?.moved;
+    grab = null;
+    if (dragging && !moved) {
+      // A press without a drag moves nothing: the frame keeps its spot and its pictures.
+      stop(e);
+      dragging = null;
+      setCursor('grab');
+      requestDraw();
+      return;
+    }
     if (dragging?.ring) {
       stop(e);
       const id = dragging.ring;
@@ -1381,7 +1409,12 @@ function watchPointer(el: HTMLElement): void {
       const at = { ra: wrapRa(dragging.ra), dec: Math.max(-90, Math.min(90, dragging.dec)) };
       dragging = null;
       setCursor('grab');
-      dropped = { ...at, until: Date.now() + 4000 };
+      const drop = (dropped = { ...at, until: Date.now() + 4000 });
+      window.setTimeout(() => {
+        if (dropped !== drop) return;
+        dropped = null;
+        requestDraw();
+      }, 4000);
       hideClickCard();
       keepPatchClear();
       emit('aim', at); // FRM-2: the frame is aimed where the patch is put down
