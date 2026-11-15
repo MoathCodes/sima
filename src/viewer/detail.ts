@@ -610,14 +610,14 @@ function underText(tab: MeasureTab, h: Headline): string {
   const sel = S.selected!;
   const curve = curveFor();
   if (tab === 'spectrum') {
-    parts.push(`<p class="ms-note">Hollow points are under 2σ: too faint to trust on their own. <button type="button" class="link" data-do="all-at-once">${spectrumAll ? 'Build it as the pictures play' : 'Show all at once'}</button></p>`);
+    parts.push(`<p class="ms-note">${tr('ms.hollow')} <button type="button" class="link" data-do="all-at-once">${spectrumAll ? tr('ms.buildAsPlay') : tr('ms.allAtOnce')}</button></p>`);
   }
   if (tab === 'brightness') {
     if (sel.kind === 'target') {
       if (curve) {
         parts.push(
           // A curve that is not shown is not tested in words either: the chart says why.
-          `<p class="ms-note">${[curve.shown === false ? '' : plainP(curve.test), trendWords(curve.trend) ? `Trend: ${esc(trendWords(curve.trend))}.` : '', curve.note ? esc(curve.note) : '']
+          `<p class="ms-note">${[curve.shown === false ? '' : plainP(curve.test), trendWords(curve.trend) ? tr('ms.trend', { v: esc(trendWords(curve.trend)) }) : '', curve.note ? esc(curve.note) : '']
             .filter(Boolean)
             .join(' ')}</p>`,
         );
@@ -626,13 +626,13 @@ function underText(tab: MeasureTab, h: Headline): string {
       // headline already offers it when it leads with brightness.
       const other = curveDets().filter((d) => d !== S.det);
       if (res.target && (!curve || curve.shown === false) && other.length && h.chart !== 'brightness')
-        parts.push(`<p class="ms-note ms-keep">Measured in ${other.map((d) => `D${d}`).join(', ')}. ${showDet(other[0]!)}</p>`);
+        parts.push(`<p class="ms-note ms-keep">${tr('ms.measuredIn', { dets: other.map((d) => `D${d}`).join(', ') })} ${showDet(other[0]!)}</p>`);
     } else {
       const pts = (res.spot?.points ?? []).filter((p) => p.det === S.det && !p.flagged && Number.isFinite(p.flux));
       if (res.spot && pts.length) parts.push(`<p class="ms-note">${plainP(chi2Test(pts.map((p) => p.flux), pts.map((p) => p.err)))}</p>`);
       const sat = res.spot?.points.filter((p) => p.det === S.det && p.nearSaturated !== null) ?? [];
       if (sat.length)
-        parts.push(`<p class="ms-note">A saturated star about ${Math.round(sat[0]!.nearSaturated ?? 0)}″ away (on ${sat.length} of ${pts.length} exposures) adds its glow to the circle and the sky ring here, so these numbers include its light.</p>`);
+        parts.push(`<p class="ms-note">${tr('ms.saturated', { d: `${Math.round(sat[0]!.nearSaturated ?? 0)}″`, n: sat.length, of: pts.length })}</p>`);
     }
   }
   if (tab === 'folded') {
@@ -640,11 +640,11 @@ function underText(tab: MeasureTab, h: Headline): string {
     const t = field.target;
     const other = curveDets().filter((d) => d !== S.det);
     if (t?.period && res.target && !curve?.shown && other.length)
-      parts.push(`<p class="ms-note ms-keep">Not measured in D${S.det}; measured in ${other.map((d) => `D${d}`).join(', ')}. ${showDet(other[0]!)}</p>`);
+      parts.push(`<p class="ms-note ms-keep">${tr('ms.nmHereThere', { det: `D${S.det}`, dets: other.map((d) => `D${d}`).join(', ') })} ${showDet(other[0]!)}</p>`);
     parts.push(
       t?.period
-        ? `<p class="ms-note">Folded on the catalogue period of ${esc(num(t.period, 1))} days${t.periodFrom ? ` (${esc(t.periodFrom)})` : ''}. Each cycle is drawn twice, so it reads across the join.</p>`
-        : `<p class="ms-note">Folding needs a catalogue period, and a period is never guessed, so nothing is folded.${t?.periodFrom ? ` ${esc(t.periodFrom)}.` : ''}</p>`,
+        ? `<p class="ms-note">${tr('ms.foldedOn', { days: esc(num(t.period, 1)) })}${t.periodFrom ? ` (${esc(t.periodFrom)})` : ''}. ${tr('ms.twice')}</p>`
+        : `<p class="ms-note">${tr('ms.noPeriod')}${t?.periodFrom ? ` ${esc(t.periodFrom)}.` : ''}</p>`,
     );
   }
   if (tab === 'cutouts' && tab !== h.chart && sel.kind === 'target') {
@@ -657,16 +657,16 @@ function underText(tab: MeasureTab, h: Headline): string {
     parts.push(`<p class="ms-note">${pathLine(field.target, res.target?.fit ?? null)}</p>`);
   }
   if (tab === 'path' && sel.kind !== 'target' && !moverOf(sel)) {
-    parts.push('<p class="ms-note">A fixed spot has no path. Pick the target, or a mover from Found in this patch.</p>');
+    parts.push(`<p class="ms-note">${tr('ms.fixedSpot')}</p>`);
   }
-  if (tab === 'exposure') parts.push('<p class="ms-note">The exposures behind the picture on screen, as NASA’s archive gives them.</p>');
+  if (tab === 'exposure') parts.push(`<p class="ms-note">${tr('ms.expNote')}</p>`);
   // An empty chart other than the headline's points back to the one that has the measurement.
   if (tab !== h.chart && !h.pending && h.value !== tr('honest.notMeasured') && emptyTab(tab)) {
     const name = TABS.find(([k]) => k === h.chart)?.[1] ?? '';
-    parts.push(`<p class="ms-note ms-keep">The measurement is under <button type="button" class="link" data-do="tab" data-to="${h.chart}">${esc(name)}</button>.</p>`);
+    parts.push(`<p class="ms-note ms-keep">${tr('ms.under')} <button type="button" class="link" data-do="tab" data-to="${h.chart}">${esc(name)}</button>.</p>`);
   }
   if (sel.kind !== 'target' && field.target) {
-    parts.push(`<p class="ms-note ms-keep"><button type="button" class="link" data-do="target">Back to ${esc(field.target.name)}</button> · <button type="button" class="link" data-do="picture">The picture on screen</button></p>`);
+    parts.push(`<p class="ms-note ms-keep"><button type="button" class="link" data-do="target">${tr('ms.backTo', { name: esc(field.target.name) })}</button> · <button type="button" class="link" data-do="picture">${tr('ms.picture')}</button></p>`);
   }
   return parts.join('');
 }
