@@ -37,7 +37,7 @@ export function renderWelcome(el: HTMLElement): void {
   el.className = 'dsc-card dsc-welcome';
   el.dataset.material = 'raised';
   el.innerHTML = `
-    <p class="dsc-wm" aria-hidden="true"><span class="ar" lang="ar">سيما</span><span class="la">Sima</span></p>
+    <p class="dsc-wm" aria-hidden="true"><span class="ar wordmark-ar" lang="ar" dir="rtl">سيما</span><span class="la">Sima</span></p>
     <h2 class="dsc-title" tabindex="-1" data-k="title">${esc(WELCOME.heading)}</h2>
     <p class="dsc-lead">${esc(WELCOME.body)}</p>
     <button class="dsc-btn primary dsc-start" type="button" data-k="start" data-guide="mission-start" data-peek-end>
