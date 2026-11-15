@@ -266,6 +266,15 @@ function skeleton(p: HTMLElement): void {
     </div>`;
   p.querySelector('[data-close]')?.addEventListener('click', () => setMeasureOpen(false));
   p.querySelector('[data-send]')?.addEventListener('click', () => void sendToComputer(p));
+  // The chart is drawn at its box's size: draw it again when the box changes size ("Show all
+  // the numbers", a window resize), on the next frame so the drawing cannot feed back.
+  let sized = 0;
+  new ResizeObserver(() => {
+    cancelAnimationFrame(sized);
+    sized = requestAnimationFrame(() => {
+      if (!p.hidden) chart();
+    });
+  }).observe(p.querySelector('[data-chartbox]')!);
   p.querySelector('[data-all]')?.addEventListener('click', () => {
     S.allNumbers = !S.allNumbers;
     if (!S.allNumbers) S.measureTab = null;

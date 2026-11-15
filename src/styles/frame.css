@@ -601,6 +601,23 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
 .det-name {
   font-weight: 600;
 }
+/* No exposure in this detector on this date: dotted and empty, and it says so (H6). */
+.det-none {
+  display: none;
+  font: var(--text-scale);
+  color: var(--ink-3);
+}
+.det-thumb.none canvas {
+  background: transparent;
+  outline: 1.5px dotted var(--ink-3);
+  outline-offset: -1.5px;
+}
+.det-thumb.none .det-band {
+  display: none;
+}
+.det-thumb.none .det-none {
+  display: inline;
+}
 .det-band {
   font: var(--text-scale);
   color: var(--ink-3);
