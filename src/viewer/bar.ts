@@ -16,14 +16,15 @@ import { paintDates, watchDates } from './scrub.ts';
 import { icon } from '../shell/icons.ts';
 import { BAND_EDGES, detectorOf, LAM_MAX, LAM_MIN } from '../core/instrument.ts';
 import { colourMatch } from '../core/real.ts';
+import { t } from '../shell/i18n.ts';
 
 /** Plain names for parts of the wavelength range, shown beside the value (hidden below 1420px). */
 function plainName(lam: number): string {
-  if (lam < 1.1) return 'Just past red light';
-  if (lam < 1.6) return 'Near infrared';
-  if (lam < 2.4) return 'Deeper infrared';
-  if (lam < 3.8) return 'Longer infrared';
-  return 'Heat glow';
+  if (lam < 1.1) return t('bar.lamRed');
+  if (lam < 1.6) return t('bar.lamNear');
+  if (lam < 2.4) return t('bar.lamDeeper');
+  if (lam < 3.8) return t('bar.lamLonger');
+  return t('bar.lamHeat');
 }
 
 /** Fills the bar. Called once by main.ts. */
@@ -32,31 +33,32 @@ export function startBar(): void {
   if (!bar) return;
   // Regular glass (lane F's material class in app.css gives the blur; frame.css the tint).
   bar.classList.add('sima-bar', 'glass');
+  bar.dataset.i18n = '';
   bar.innerHTML = `
-    <div class="bar-play" role="group" aria-label="Playback">
-      <button class="icon-btn" data-step="-1" data-guide="prev" aria-label="Previous picture" data-tip="Previous (←)" data-tip-pos="above">${icon('prev')}</button>
-      <button class="play-btn" data-play data-guide="play" aria-label="Play" data-tip="Play (Space)" data-tip-pos="above"></button>
-      <button class="icon-btn" data-step="1" data-guide="next" aria-label="Next picture" data-tip="Next (→)" data-tip-pos="above">${icon('next')}</button>
+    <div class="bar-play" role="group" aria-label="${t('bar.playback')}">
+      <button class="icon-btn" data-step="-1" data-guide="prev" aria-label="${t('bar.prevLabel')}" data-tip="${t('bar.prev')}" data-tip-pos="above">${icon('prev')}</button>
+      <button class="play-btn" data-play data-guide="play" aria-label="${t('word.play')}" data-tip="${t('bar.playTip')}" data-tip-pos="above"></button>
+      <button class="icon-btn" data-step="1" data-guide="next" aria-label="${t('bar.nextLabel')}" data-tip="${t('bar.next')}" data-tip-pos="above">${icon('next')}</button>
     </div>
-    <div class="bar-dates" data-dates data-guide="dates" aria-label="Dates"></div>
-    <span class="bar-count term" data-count tabindex="0" data-tip="The picture on screen, of all the visits" data-tip-pos="above"></span>
+    <div class="bar-dates" data-dates data-guide="dates" aria-label="${t('bar.dates')}"></div>
+    <span class="bar-count term" data-count tabindex="0" data-tip="${t('bar.countTip')}" data-tip-pos="above"></span>
     <div class="bar-loop">
-      <button class="icon-btn" data-loop aria-label="Loop style" data-tip-pos="above"></button>
-      <button class="btn text bar-speed" data-speed data-tip="Speed" data-tip-pos="above"></button>
+      <button class="icon-btn" data-loop aria-label="${t('bar.loopStyle')}" data-tip-pos="above"></button>
+      <button class="btn text bar-speed" data-speed data-tip="${t('bar.speed')}" data-tip-pos="above"></button>
     </div>
     <span class="bar-rule" aria-hidden="true"></span>
     <div class="wl" data-guide="wavelength">
       <div class="wl-head">
-        <span class="term" tabindex="0" data-tip="The colour of infrared light the pictures were taken in. It sets the sky map too" data-tip-pos="above">Wavelength</span>
+        <span class="term" tabindex="0" data-tip="${t('bar.wavelengthTip')}" data-tip-pos="above">${t('bar.wavelength')}</span>
         <b class="wl-value" data-lam></b>
         <span class="wl-name" data-name></span>
         <span class="wl-gap"></span>
-        <button class="btn text wl-same" data-same role="switch" aria-checked="false" data-tip="Play only the exposures taken at the wavelength on the scale" data-tip-pos="above"><span class="switch sm" aria-hidden="true"></span>Same wavelength only</button>
+        <button class="btn text wl-same" data-same role="switch" aria-checked="false" data-tip="${t('bar.sameTip')}" data-tip-pos="above"><span class="switch sm" aria-hidden="true"></span>${t('bar.same')}</button>
       </div>
       <div class="wl-strip" data-strip>
         ${[1, 2, 3, 4, 5, 6].map((d) => `<span class="wl-band" style="--hue:var(--d${d});--i:${d - 1}"></span>`).join('')}
         ${BAND_EDGES.map((_, i) => `<span class="wl-tick" style="left:${(i * 100) / 6}%"></span>`).join('')}
-        <span class="wl-handle" data-guide="wavelength-handle" role="slider" tabindex="0" aria-label="Wavelength" aria-valuemin="${LAM_MIN}" aria-valuemax="${LAM_MAX}"></span>
+        <span class="wl-handle" data-guide="wavelength-handle" role="slider" tabindex="0" aria-label="${t('bar.wavelength')}" aria-valuemin="${LAM_MIN}" aria-valuemax="${LAM_MAX}"></span>
       </div>
       <div class="wl-ticks">${BAND_EDGES.map((lam, i) => {
         const text = i === BAND_EDGES.length - 1 ? `${lam.toFixed(1)} µm` : String(lam);
@@ -141,8 +143,8 @@ function paint(bar: HTMLElement): void {
   const playBtn = bar.querySelector<HTMLButtonElement>('[data-play]');
   if (playBtn) {
     playBtn.innerHTML = icon(S.playing ? 'pause' : 'play');
-    playBtn.setAttribute('aria-label', S.playing ? 'Pause' : 'Play');
-    playBtn.dataset.tip = many ? (S.playing ? 'Pause (Space)' : 'Play (Space)') : waitWhy();
+    playBtn.setAttribute('aria-label', S.playing ? t('word.pause') : t('word.play'));
+    playBtn.dataset.tip = many ? (S.playing ? t('bar.pauseTip') : t('bar.playTip')) : waitWhy();
     playBtn.disabled = !many;
   }
   // BAR-6: what needs pictures is dimmed and cannot be pressed while there are none.
@@ -152,13 +154,13 @@ function paint(bar: HTMLElement): void {
   const loop = bar.querySelector<HTMLElement>('[data-loop]');
   if (loop) {
     loop.innerHTML = icon(S.loop === 'forward' ? 'forward' : 'bounce');
-    loop.dataset.tip = S.loop === 'forward' ? 'Loop: forward' : 'Loop: forward, then back';
+    loop.dataset.tip = S.loop === 'forward' ? t('bar.loopForward') : t('bar.loopBounce');
     loop.setAttribute('aria-label', loop.dataset.tip);
   }
   const speed = bar.querySelector<HTMLElement>('[data-speed]');
   if (speed) {
     speed.textContent = `${S.speed}×`;
-    speed.setAttribute('aria-label', `Speed ${S.speed}×`);
+    speed.setAttribute('aria-label', `${t('bar.speed')} ${S.speed}×`);
   }
   const count = bar.querySelector<HTMLElement>('[data-count]');
   if (count) {
@@ -179,18 +181,18 @@ function paint(bar: HTMLElement): void {
     same.setAttribute('aria-checked', String(S.sameColour));
     same.querySelector('.switch')?.setAttribute('aria-checked', String(S.sameColour));
     same.dataset.tip = missingPasses.length
-      ? `No exposure at this wavelength in ${missingPasses.join(', ')}: left out`
-      : 'Play only the exposures taken at the wavelength on the scale';
+      ? t('bar.sameMissing', { passes: missingPasses.join(', ') })
+      : t('bar.sameTip');
   }
   const lam = bar.querySelector<HTMLElement>('[data-lam]');
-  if (lam) lam.textContent = S.color ? 'All six' : `${S.lam.toFixed(2)} µm`;
+  if (lam) lam.textContent = S.color ? t('bar.allSix') : `${S.lam.toFixed(2)} µm`;
   const name = bar.querySelector<HTMLElement>('[data-name]');
-  if (name) name.textContent = S.color ? 'Color' : plainName(S.lam);
+  if (name) name.textContent = S.color ? t('bar.color') : plainName(S.lam);
   const handle = bar.querySelector<HTMLElement>('.wl-handle');
   if (handle) {
     handle.style.left = `${where(S.lam) * 100}%`;
     handle.setAttribute('aria-valuenow', S.lam.toFixed(2));
-    handle.setAttribute('aria-valuetext', `${S.lam.toFixed(2)} µm, detector ${S.det}`);
+    handle.setAttribute('aria-valuetext', t('bar.handleText', { lam: `${S.lam.toFixed(2)} µm`, det: S.det }));
   }
   bar
     .querySelectorAll<HTMLElement>('.wl-band')
@@ -204,13 +206,13 @@ function paint(bar: HTMLElement): void {
 export function waitWhy(): string {
   if (S.source === 'loading') {
     return S.load?.step === 'shipped'
-      ? 'Waiting for the pictures to load…'
-      : 'Waiting for pictures from NASA’s archive…';
+      ? t('bar.waitLoad')
+      : t('bar.waitArchive');
   }
   if (!S.field || !S.groups.length) {
-    return S.source === 'none' ? 'No pictures here to play' : `No D${S.det} pictures to play`;
+    return S.source === 'none' ? t('bar.noPictures') : t('bar.noDetPictures', { det: `D${S.det}` });
   }
-  return S.groups.length < 2 ? 'Only one date here: nothing to play' : '';
+  return S.groups.length < 2 ? t('bar.oneDate') : '';
 }
 
 function setLam(lam: number): void {

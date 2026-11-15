@@ -18,6 +18,7 @@
  */
 import { en, type Key } from '../locales/en.ts';
 import { ar } from '../locales/ar.ts';
+import { setMonthNames } from '../core/astro.ts';
 
 export type Locale = 'en' | 'ar';
 export const LOCALES: readonly Locale[] = ['en', 'ar'];
@@ -61,6 +62,11 @@ let current: Locale = inPage ? pickLocale(location.search, storedChoice()) : 'en
 const opened: Locale | null = inPage ? linkLangOf(location.search) : null;
 
 if (inPage) applyDocument();
+// Every date the page writes (core/astro.ts formatDate) gets the language's month names.
+if (current === 'ar') {
+  const f = new Intl.DateTimeFormat(intlTag(), { month: 'short', timeZone: 'UTC' });
+  setMonthNames(Array.from({ length: 12 }, (_, m) => f.format(Date.UTC(2025, m, 15))));
+}
 
 /** Sets `<html lang dir>` and the page title for the current language (index.html did it first). */
 function applyDocument(): void {
@@ -137,9 +143,12 @@ export function t(key: Key, vars?: Vars): string {
 /** Fills `{name}` in a string; numbers are written with `fmtNum`. Unknown names stay as they are. */
 export function fill(text: string, vars?: Vars): string {
   if (!vars) return text;
+  // In Arabic each value sits in a first-strong isolate (FSI … PDI), so a number with its unit
+  // ("2.00 µm", "10.50″/yr") or a Latin name keeps its own order inside a right-to-left sentence.
+  const iso = current === 'ar' ? (v: string) => `\u2068${v}\u2069` : (v: string) => v;
   return text.replace(/\{(\w+)\}/g, (all, k: string) => {
     const v = vars[k];
-    return v === undefined ? all : typeof v === 'number' ? fmtNum(v) : v;
+    return v === undefined ? all : iso(typeof v === 'number' ? fmtNum(v) : v);
   });
 }
 
