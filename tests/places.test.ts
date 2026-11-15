@@ -91,7 +91,7 @@ test('O-P3: catalogue-only names are told apart from common names', () => {
 });
 
 test('names and text are tidied for reading', () => {
-  assert.equal(nameOf(byId.get('simbad-122671')!), 'del Cep');
+  assert.equal(nameOf(byId.get('simbad-122671')!), 'δ Cep'); // SIMBAD's "del Cep", in its Greek letter
   assert.ok(!otherNames(byId.get('simbad-719377')!).some((n) => n.startsWith('*')));
   assert.equal(tidy('the Follower (of the Pleiades )'), 'the Follower (of the Pleiades)');
   assert.equal(tidy("Earth 's North Pole ."), "Earth's North Pole.");
@@ -178,4 +178,15 @@ test('H9: the "In SPHEREx" note is made for the place only from named facts', ()
   const own = cat.places.find((p) => p.inSpherex);
   assert.ok(own);
   assert.equal(spherexNote(cat, own)?.fromCatalogue, true);
+});
+
+test('UX audit #12: SIMBAD Bayer short forms are shown in Greek letters; search keeps both', async () => {
+  const { shownName } = await import('../src/shell/objects.ts');
+  assert.equal(shownName('* alf Mon'), 'α Mon');
+  assert.equal(shownName('* eps Mon A'), 'ε Mon A');
+  assert.equal(shownName('* alf02 Lib'), 'α² Lib');
+  assert.equal(shownName('* mu. Cep'), 'μ Cep');
+  assert.equal(shownName('NAME Barnard\'s star'), "Barnard's star");
+  assert.equal(shownName('HD 48915'), 'HD 48915');
+  assert.equal(shownName('Deltoton'), 'Deltoton'); // a word that starts like "del" is left alone
 });

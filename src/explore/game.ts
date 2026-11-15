@@ -163,10 +163,11 @@ export function startGame(): void {
   onTap(tapped);
   startKeyPick({
     open: () => {
+      if (getView() === 'discover') return !!discoverPick;
       const t = task();
       return getView() === 'expert' && !!t && !found && t.kind !== 'faint';
     },
-    pick: tapped,
+    pick: (p) => (getView() === 'discover' ? (discoverPick?.(p) ?? false) : tapped(p)),
     aim: ringNow,
     focus: renderTask,
     name: () => S.field?.target?.name ?? task()?.title ?? '',
@@ -198,6 +199,13 @@ export function setLevel(level: Level): void {
   S.level = level;
   if (!VIEWS[level].includes(S.mode)) S.mode = 'flip';
   if (level === 'explore') S.tools = false;
+}
+
+type Pick = (p: { x: number; y: number; ra: number; dec: number }) => boolean;
+let discoverPick: Pick | null = null;
+/** Lane K: what a keyboard pick does in Discover (the runaway's tap step), or null for none. */
+export function setDiscoverPick(fn: Pick | null): void {
+  discoverPick = fn;
 }
 
 /** Opens a starter: loads its target and sets its task (through the bus's `start`). */

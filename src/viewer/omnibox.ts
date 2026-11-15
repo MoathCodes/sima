@@ -11,6 +11,7 @@
  */
 import { icon, type IconName } from '../shell/icons.ts';
 import { openPlace } from '../shell/shell.ts';
+import { getView, onView, type View } from '../shell/view.ts';
 import { formatCoords, parseCoords } from '../core/astro.ts';
 import { TARGETS } from '../core/targets.ts';
 
@@ -20,6 +21,8 @@ export interface SearchHit {
   name: string;
   /** One supporting line: kind and where ("Red dwarf · Ophiuchus"). */
   line: string;
+  /** v2.0: the Arabic name, shown after the name in its own `<bdi>` at 14 px (A11Y-4). */
+  arabic?: string;
   /** Icon on the row's dark tile. */
   icon?: IconName;
   /** 0 to 1: how well it matches. The best show first. */
@@ -58,14 +61,39 @@ export function addSearchSource(source: SearchSource): () => void {
   return () => sources.delete(source);
 }
 
+/** Arabic inside a Latin line: its own `<bdi>`, right to left, in the Arabic text face. */
+function arabicBdi(text: string, cls = 'search-ar'): HTMLElement {
+  const b = document.createElement('bdi');
+  b.className = cls;
+  b.lang = 'ar';
+  b.dir = 'rtl';
+  b.textContent = text;
+  return b;
+}
+
+/** What the visitor typed, isolated: it may be in any script. */
+function bdiText(text: string): HTMLElement {
+  const b = document.createElement('bdi');
+  b.textContent = text;
+  return b;
+}
+
+/** The Solar System's bodies by name: not on a map of the sky beyond it. */
+const SOLAR_SYSTEM = /^(the )?(sun|moon|mercury|venus|earth|mars|jupiter|saturn|uranus|neptune|pluto|planets?)$/i;
+
+const SEARCH_WORDS: Record<View, string> = {
+  expert: 'Search a star or galaxy, or paste coordinates',
+  discover: 'Find a star, galaxy or nebula',
+};
+
 /** Fills the search card. Called once by main.ts. */
 export function startSearch(): void {
   const box = document.getElementById('search');
   const list = document.getElementById('search-results');
   if (!box || !list) return;
   box.innerHTML = `${icon('search')}
-    <input type="search" class="search-input" aria-label="Search a star or galaxy, or paste coordinates"
-      placeholder="Search a star or galaxy, or paste coordinates"
+    <input type="search" class="search-input" aria-label="${SEARCH_WORDS.expert}"
+      placeholder="${SEARCH_WORDS.expert}"
       autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false"
       aria-controls="search-results" aria-autocomplete="list">
     <kbd class="kbd" aria-hidden="true">/</kbd>`;
@@ -73,6 +101,13 @@ export function startSearch(): void {
   list.setAttribute('aria-label', 'Suggestions');
   const input = box.querySelector('input');
   if (!input) return;
+  // Discover's words for the same field (DESIGN-v2 8.2).
+  const words = (v: View) => {
+    input.placeholder = SEARCH_WORDS[v];
+    input.setAttribute('aria-label', SEARCH_WORDS[v]);
+  };
+  words(getView());
+  onView(words);
   let timer = 0;
   input.addEventListener('input', () => {
     clearTimeout(timer);
@@ -147,12 +182,21 @@ const targets: SearchSource = {
   },
 };
 
+/**
+ * Astropy's `to_string('hmsdms')` and SIMBAD write declination with a `d` for degrees
+ * (`17h57m48s +04d41m36s`). `parseCoords` reads only `°`, so a `d` right after a number becomes
+ * one (UX audit #8).
+ */
+function degreeD(text: string): string {
+  return text.replace(/(\d)\s*d(?=\s*[\d.]|\s*$)/gi, '$1°');
+}
+
 /** Coordinates in any format `parseCoords` reads. */
 const coordinates: SearchSource = {
   name: 'coordinates',
   label: 'Coordinates',
   search(query) {
-    const at = parseCoords(query);
+    const at = parseCoords(degreeD(query));
     if (!at) return [];
     const name = formatCoords(at.ra, at.dec);
     return [
@@ -232,11 +276,26 @@ async function ask(
 
 function render(list: HTMLElement, input: HTMLInputElement, groups: Group[], query: string): void {
   list.replaceChildren();
-  if (!rows.length) {
+  const solar = SOLAR_SYSTEM.test(query.trim());
+  if (!rows.length && !solar) {
     const none = document.createElement('p');
     none.className = 'search-none';
-    none.textContent = `Nothing found for “${query}”. Try a name (Vega, سهيل), a catalogue number (M104, NGC 6572) or coordinates (17 57 48.5 +04 41 36).`;
+    if (getView() === 'discover') {
+      // BEGINNER-AND-MOBILE.md 5.9, word for word.
+      none.textContent = 'No star, galaxy or nebula by that name. Try a famous one: Vega, Betelgeuse, Orion Nebula.';
+    } else {
+      // The Arabic example sits in its own <bdi>, so the separators stay in place (section 9).
+      none.append(`Nothing found for “`, bdiText(query), `”. Try a name (Vega, `, arabicBdi('سهيل'), `), a catalogue number (M104, NGC 6572) or coordinates (17 57 48.5 +04 41 36).`);
+    }
     list.append(none);
+  }
+  if (solar) {
+    // Search finds other things named after them ("Jupiter's Ghost"); say why the body is not
+    // there first (UX audit #12).
+    const note = document.createElement('p');
+    note.className = 'search-none';
+    note.textContent = 'The Sun, Moon and planets are not on this map: it shows the sky beyond the Solar System.';
+    list.append(note);
   }
   let i = 0;
   for (const g of groups) {
@@ -252,7 +311,9 @@ function render(list: HTMLElement, input: HTMLInputElement, groups: Group[], que
       row.id = `search-row-${index}`;
       row.setAttribute('role', 'option');
       row.innerHTML = `<span class="window search-tile">${icon(hit.icon ?? 'star')}</span><span class="search-words"><span class="search-name"></span><span class="line"></span></span>`;
-      row.querySelector('.search-name')!.textContent = hit.name;
+      const name = row.querySelector('.search-name')!;
+      name.textContent = hit.name;
+      if (hit.arabic) name.append(' ', arabicBdi(hit.arabic, 'search-ar'));
       row.querySelector('.line')!.textContent = hit.line;
       row.addEventListener('pointerdown', (e) => e.preventDefault()); // keep focus in the field
       row.addEventListener('click', () => choose(hit, list, input));

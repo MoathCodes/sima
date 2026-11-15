@@ -12,6 +12,8 @@ import { draw, drawHooks, type PictureView } from '../render.ts';
 import { atDate } from '../../core/catalog.ts';
 import { mjdToYear, propagate } from '../../core/astro.ts';
 import { allRows, catalogue, onCatalogue } from './catalogue.ts';
+import { brightest, MARK_LIMIT } from './limit.ts';
+import type { Neighbour } from '../../core/types.ts';
 import { current, onSettings } from './settings.ts';
 import { onSearch, search, shown } from './search.ts';
 
@@ -68,21 +70,37 @@ function paint(ctx: CanvasRenderingContext2D, view: Readonly<PictureView>): void
     ctx.globalAlpha = 1;
   }
 
+  const was = cutKey();
+  cuts.gaia = null;
+  cuts.catwise = null;
   if (Number.isFinite(mjd) && (L.gaia || L.catwise)) {
     ctx.strokeStyle = ink;
     ctx.globalAlpha = 0.85;
+    // The marks on the picture, per catalogue; at wide fields only the brightest (limit.ts).
+    const inPic: Record<'gaia' | 'catwise', { row: Neighbour; x: number; y: number }[]> = { gaia: [], catwise: [] };
     for (const row of allRows()) {
       if ((row.cat === 'gaia' && !L.gaia) || (row.cat === 'catwise' && !L.catwise)) continue;
       const at = atDate(row, mjd);
       const p = view.skyToPic(at.ra, at.dec);
       if (!p || p.x < -r || p.y < -r || p.x > view.size + r || p.y > view.size + r) continue;
+      inPic[row.cat].push({ row, x: p.x, y: p.y });
+    }
+    for (const cat of ['gaia', 'catwise'] as const) {
+      const kept = brightest(inPic[cat].map((m) => ({ ...m, mag: m.row.mag, target: m.row.target })));
+      cuts[cat] = kept.faintest === null ? null : { total: kept.total, faintest: kept.faintest };
       ctx.beginPath();
-      if (row.cat === 'gaia') ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-      else ctx.rect(p.x - r, p.y - r, 2 * r, 2 * r);
+      for (const m of kept.rows) {
+        if (cat === 'gaia') {
+          ctx.moveTo(m.x + r, m.y);
+          ctx.arc(m.x, m.y, r, 0, Math.PI * 2);
+        } else ctx.rect(m.x - r, m.y - r, 2 * r, 2 * r);
+      }
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
   }
+  // The legend names the cut, so it changes with it.
+  if (was !== cutKey()) queueMicrotask(legend);
 
   const t = view.field.target;
   if (t && L.path && !view.field.simulated) {
@@ -167,6 +185,19 @@ function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number
   ctx.fillText(text, x, y);
 }
 
+/** What the last paint left out at this field size, per catalogue; null when it drew them all. */
+const cuts: Record<'gaia' | 'catwise', { total: number; faintest: number } | null> = { gaia: null, catwise: null };
+
+function cutKey(): string {
+  return JSON.stringify(cuts);
+}
+
+/** ": the 250 brightest of 3,912 here (G 16.1 and brighter)", or nothing when none were left out. */
+function cutWords(cut: { total: number; faintest: number } | null, band: string): string {
+  if (!cut) return '';
+  return `: only the ${MARK_LIMIT} brightest of ${cut.total.toLocaleString('en-GB')} at this field size (${band} ${cut.faintest.toFixed(1)} and brighter)`;
+}
+
 /** The legend under the picture: one item per kind of mark drawn now, in plain words. */
 function legend(): void {
   const box = document.getElementById('frame-legend');
@@ -176,9 +207,9 @@ function legend(): void {
     const L = current().layers;
     const cat = catalogue();
     if (L.gaia && cat.gaia.rows.length)
-      items.push('<span class="lg-sym lg-circle"></span>Gaia DR3 stars on this date');
+      items.push(`<span class="lg-sym lg-circle"></span>Gaia DR3 stars on this date${cutWords(cuts.gaia, 'G')}`);
     if (L.catwise && cat.catwise.rows.length)
-      items.push('<span class="lg-sym lg-square"></span>CatWISE2020 sources on this date');
+      items.push(`<span class="lg-sym lg-square"></span>CatWISE2020 sources on this date${cutWords(cuts.catwise, 'W1')}`);
     if (L.path && S.field.target)
       items.push('<span class="lg-sym lg-path"></span>Catalogue motion path');
     if (L.flags) items.push('<span class="lg-sym lg-flag"></span>Flagged or missing pixels');

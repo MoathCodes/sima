@@ -36,7 +36,7 @@ import {
   setWidening,
   widerPatch,
 } from './surround.ts';
-import { SEED_BASE, seedFor } from './seed.ts';
+import { SEED_BASE, resolveFolder, seedFor } from './seed.ts';
 import type {
   Det,
   Field,
@@ -50,6 +50,11 @@ import type {
 
 /** The live service's address (`/api/patch` in dev), or '' when there is none (FRM-11). */
 export const LIVE_API: string = (import.meta.env.VITE_LIVE_API ?? '').replace(/\/$/, '');
+
+/** `resolveFolder` for this page and its service. */
+export function liveFolder(folder: string): string {
+  return resolveFolder(folder, LIVE_API, location.href);
+}
 /** How often the live service is asked how far it got (docs/live-service.md). */
 export const POLL_MS = 1500;
 /** A spot this close to a shipped target's track opens the target's own pictures, degrees. */
@@ -209,7 +214,7 @@ async function loadPractice(key: string, fov?: number): Promise<void> {
  * @returns Resolves when the spot's first pictures are on screen, when it is known there are
  *   none, or when a newer aim replaces this one.
  */
-export async function aimAt(ra: number, dec: number, fov?: number): Promise<void> {
+export async function aimAt(ra: number, dec: number, fov?: number, name?: string): Promise<void> {
   const want = nearestFov(fov ?? S.fov);
   const near = TARGETS.find((t) => separation(t.ra, t.dec, ra, dec) < TARGET_RADIUS);
   // A small move (a drag inside the picture, or of the patch on the sky) keeps the target and the
@@ -236,7 +241,8 @@ export async function aimAt(ra: number, dec: number, fov?: number): Promise<void
   S.dec = Math.max(-90, Math.min(90, dec));
   S.fov = want;
   S.target = null;
-  S.label = formatCoords(S.ra, S.dec);
+  // A named place keeps its name (UX audit #5); the header adds the coordinates under it.
+  S.label = name?.trim() || formatCoords(S.ra, S.dec);
   // Real exposures fetched earlier for a wider field may already hold this spot.
   const held = [...onHand].reverse().find((set) => covers(set.data, S.ra, S.dec, want));
   if (held) {
@@ -413,7 +419,7 @@ async function showLive(
   if (!folder) return false;
   try {
     const set = await fetchSet(
-      folder.endsWith('/') ? folder : `${folder}/`,
+      liveFolder(folder),
       status.id,
       'live',
       signal,
@@ -646,7 +652,7 @@ async function pollWider(
     const folder = step === 'full' ? status.full : step === 'first' ? status.first : null;
     if (step && folder) {
       try {
-        const set = await fetchSet(folder.endsWith('/') ? folder : `${folder}/`, status.id, 'live', signal);
+        const set = await fetchSet(liveFolder(folder), status.id, 'live', signal);
         if (!live()) return;
         got = step;
         keep(set);
@@ -988,6 +994,8 @@ function wait(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 function errText(err: unknown): string {
+  // An empty or broken reply is a JSON parse error: say what happened, not the parser's words.
+  if (err instanceof SyntaxError) return 'it sent an empty or broken answer';
   return err instanceof Error ? err.message : String(err);
 }
 

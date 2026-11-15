@@ -7,6 +7,7 @@
  */
 import './styles/app.css';
 import './styles/shell.css';
+import './styles/settings.css';
 import './styles/sky.css';
 import './styles/frame.css';
 import './styles/tools.css';
@@ -15,6 +16,7 @@ import './styles/guide.css';
 import './styles/intro.css';
 import './styles/extras.css';
 import './styles/workspace.css';
+import './styles/discover.css';
 import './styles/sheet.css';
 
 import { startShell } from './shell/shell.ts';
@@ -26,6 +28,7 @@ import { startGlobe } from './sky/globe.ts';
 import { startSearch } from './viewer/omnibox.ts';
 import { startFrame } from './viewer/frame.ts';
 import { startBar } from './viewer/bar.ts';
+import { startChips } from './viewer/chips.ts';
 import { startMeasure } from './viewer/detail.ts';
 import { startTools } from './viewer/tools.ts';
 import { startMotion } from './viewer/motion.ts';
@@ -36,6 +39,7 @@ import { startIntro } from './intro/intro.ts';
 import { startWorkspace } from './workspace/index.ts';
 import { startView } from './shell/view.ts';
 import { startGlass } from './shell/glass.ts';
+import { startDiscover } from './discover/index.ts';
 import { startPhone } from './shell/phone.ts';
 import { S } from './viewer/state.ts';
 import * as bus from './shell/bus.ts';
@@ -73,6 +77,7 @@ start('shell', startShell);
 start('search', startSearch);
 start('frame', startFrame);
 start('bar', startBar);
+start('chips', startChips);
 start('measure', startMeasure);
 start('tools', startTools);
 start('motion', startMotion);
@@ -92,6 +97,8 @@ if (!link.embed) {
   start('sandbox', startSandbox);
 }
 start('url', () => startUrl(link));
+// v2.0: Discover's screens (lane K), once the sky, the frame and the link have started.
+if (!link.embed) start('discover', () => startDiscover(link));
 if (!link.embed) {
   const plain = !link.target && link.ra === null && !link.unknown.length && !link.view && !link.det && !link.date;
   start('workspace', () => startWorkspace(plain));

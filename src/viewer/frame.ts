@@ -7,7 +7,7 @@
  * It answers the bus: `aim` loads a spot, `band` shows a detector.
  */
 import { FOVS, S, VIEWS, watch, type Mode } from './state.ts';
-import { draw, exif, nextFov, setPointerActions } from './render.ts';
+import { dataLine, draw, exif, nextFov, setPointerActions } from './render.ts';
 import {
   aimAt,
   lamInBand,
@@ -25,9 +25,11 @@ import {
   announce,
 } from './load.ts';
 import { on } from '../shell/bus.ts';
+import { reducedMotion } from './playback.ts';
+import { formatCoords } from '../core/astro.ts';
 import { icon, type IconName } from '../shell/icons.ts';
 import { hideFrame } from '../shell/shell.ts';
-import { setLevel } from '../explore/game.ts';
+import { measureShown, setMeasureOpen } from './detail.ts';
 import { BAND_EDGES } from '../core/instrument.ts';
 import { TARGETS } from '../core/targets.ts';
 import { SCENARIOS } from '../core/field.ts';
@@ -85,11 +87,13 @@ const SOURCE: Record<string, { cls: string; text: string; tip: string }> = {
 
 /** Fills the frame and answers `aim` and `band`. Called once by main.ts. */
 export function startFrame(): void {
+  // Slate: opaque, for science (DESIGN-v2 D-3). frame.css draws it; lane F's class names it.
+  document.getElementById('frame')?.classList.add('slate');
   on('aim', (m) => {
     // A new spot loads: the frame shows, so its progress is always in view.
     hideFrame(false);
     if (m.target) void loadTarget(m.target, { fov: m.fov });
-    else void aimAt(m.ra, m.dec, m.fov);
+    else void aimAt(m.ra, m.dec, m.fov, m.name);
   });
   on('band', (m) => {
     S.color = false;
@@ -100,7 +104,7 @@ export function startFrame(): void {
     preview: (ra, dec) => previewPatch(ra, dec),
     wheel: (steps) => void setFov(nextFov(steps)),
   });
-  watch(['label', 'source', 'set', 'fov', 'level', 'tools', 'target'], header);
+  watch(['label', 'source', 'set', 'fov', 'level', 'measureOpen', 'tools', 'target', 'ra', 'dec'], header);
   watch(['level', 'mode', 'groups', 'source', 'field'], views);
   watch(['level', 'sameColour'], () => regroup());
   let combined = S.pic.combinePass;
@@ -161,6 +165,12 @@ function header(): void {
   const head = document.getElementById('frame-head');
   if (!head) return;
   const measure = S.level === 'measure';
+  const open = measureShown();
+  // A named spot that is not a shipped target: its coordinates follow the source (audit #5).
+  const named = !S.target && !!S.label && S.label !== formatCoords(S.ra, S.dec);
+  const view = document.documentElement.dataset.view;
+  const discover = view === 'discover';
+  const expert = view === 'expert';
   // A test target's wider field comes from the live service: say so (H2).
   const kind = S.source === 'real' && S.set?.origin === 'live' ? 'live' : S.source;
   const base = SOURCE[kind] ?? SOURCE.none;
@@ -179,20 +189,22 @@ function header(): void {
   const html = `
     <div class="frame-name">
       <h2 class="frame-title"></h2>
-      <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span></p>
+      <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span>${src?.cls === 'real' ? '<span class="frame-agency"> · NASA SPHEREx</span>' : ''}${named ? `<span class="frame-coords"> · ${formatCoords(S.ra, S.dec)}</span>` : ''}</p>
+      <p class="frame-prov" data-guide="data-line"></p>
     </div>
     <div class="frame-actions">
       <button class="icon-btn sm" data-fov="-1" aria-label="Smaller field" data-tip="Smaller field (${FOVS[Math.max(0, i - 1)]}′)" data-guide="fov-smaller" ${i <= 0 ? 'disabled' : ''}>${icon('minus')}</button>
       <span class="frame-fov term" tabindex="0" data-tip="Field size: the frame shows ${S.fov} arcminutes of sky. The wheel over the picture changes it too">${S.fov}′</span>
       <button class="icon-btn sm" data-fov="1" aria-label="Larger field" data-tip="Larger field (${FOVS[Math.min(FOVS.length - 1, i + 1)]}′)" data-guide="fov-larger" ${i >= FOVS.length - 1 ? 'disabled' : ''}>${icon('plus')}</button>
       ${measure ? `<button class="icon-btn sm" data-tools aria-pressed="${S.tools}" aria-label="Picture tools" data-tip="Picture tools" data-guide="tools-button">${icon('sliders')}</button>` : ''}
-      <button class="btn text frame-measure" data-measure aria-pressed="${measure}" data-guide="measure" data-tip="${measure ? 'Back to the simple view' : 'Measure: numbers, charts and all six views'}">${icon('chart')}<span>Measure</span></button>
+      ${discover ? '' : `<button class="btn text frame-measure" data-measure aria-pressed="${open}" data-guide="measure" data-tip="${open ? (expert ? 'Close Measure' : 'Back to the simple view') : 'Measure: numbers, charts and all six views'}">${icon('chart')}<span>Measure</span></button>`}
       ${embedded ? '' : `<button class="icon-btn sm" data-hide aria-label="Hide the frame" data-tip="Hide the frame" data-guide="frame-hide">${icon('close')}</button>`}
     </div>`;
   // Redrawn only when it changes: a redraw while the user presses − or + would lose the press.
   if (head.dataset.html === html + S.label) return;
   head.dataset.html = html + S.label;
   head.innerHTML = html;
+  lines();
   const title = head.querySelector<HTMLElement>('.frame-title');
   if (title) {
     title.textContent = S.label;
@@ -205,7 +217,7 @@ function header(): void {
   head.querySelector('[data-tools]')?.addEventListener('click', () => (S.tools = !S.tools));
   head
     .querySelector('[data-measure]')
-    ?.addEventListener('click', () => setLevel(measure ? 'explore' : 'measure'));
+    ?.addEventListener('click', () => setMeasureOpen(!open));
   head.querySelector('[data-hide]')?.addEventListener('click', () => hideFrame(true));
 }
 
@@ -234,6 +246,9 @@ function views(): void {
 // ----- Lines ------------------------------------------------------------------------------------
 
 function lines(): void {
+  // Discover and phones: the full data line under the name (H2; BEGINNER-AND-MOBILE 5.3, 11.4).
+  const prov = document.querySelector<HTMLElement>('#frame-head .frame-prov');
+  if (prov) prov.textContent = dataLine();
   const ex = document.getElementById('frame-exif');
   if (ex) {
     ex.className = 'frame-exif';
@@ -242,8 +257,12 @@ function lines(): void {
   const explain = document.getElementById('frame-explain');
   if (explain) {
     explain.className = 'frame-explain';
-    explain.hidden = S.level !== 'measure' || !S.field;
-    explain.textContent = EXPLAIN[S.mode];
+    // Less motion asked for: the frame opens on a still Two dates; say why (UX audit #10).
+    const still = reducedMotion() && S.mode === 'two' && !!S.field;
+    explain.hidden = !still && (S.level !== 'measure' || !S.field);
+    explain.textContent = still
+      ? 'Your device asks for less motion, so this is a still picture of two dates. Press Flip to play them.'
+      : EXPLAIN[S.mode];
   }
   const load = document.getElementById('frame-load');
   if (load) {

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Sima (سيما): watch the infrared sky change</title>
     <meta
       name="description"
@@ -96,8 +96,11 @@
            that do not fit and offers them in its own "More" menu. -->
       <nav id="chips" data-card="chips" data-guide="chips" aria-label="Kinds of places"></nav>
     </div>
-    <!-- Lane F: the top row, right: Guide, Places, Share, About. -->
+    <!-- Lane F: the top row, right: Guide, Places, Share, Settings, About (Settings and About in
+         Discover); the menu button on phones. The view switch sits right of it. -->
     <nav id="actions" class="card" data-card="actions" data-guide="actions" aria-label="Page"></nav>
+    <!-- Lane F: the phone menu (under 700 px): Find, Settings, Share, About. -->
+    <div id="phone-menu" class="popover" popover data-overlay="phone-menu" data-guide="phone-menu-list"></div>
     <!-- Lane F: the sky's loading card, top centre. Lane C reports through shell.ts skyReady(). -->
     <div
       id="sky-loading"
@@ -259,7 +262,7 @@
     <!-- v2.0 mount points (docs/design-v2/BEGINNER-AND-MOBILE.md section 13). Empty and hidden
          until their lane builds them. Each lane adds data-card, data-guide and keep-clear as it
          shows them. Escape order: coach 50; mission, success, settings, the sheet's Back 30. -->
-    <!-- Lane F: the view switch (Discover | Expert). Lane F places it in the top row. -->
+    <!-- Lane F: the view switch (Discover | Expert), top right in both views (shell/view.ts). -->
     <div id="view-switch" hidden></div>
     <!-- Lane K: Discover's mission list, "Try another object" and the skills record. -->
     <section id="discover-list" hidden></section>
@@ -281,10 +284,6 @@
     <div id="toasts" data-overlay="toasts" role="status" aria-live="polite"></div>
     <!-- Lane F: the one tooltip, shown for any element with data-tip. -->
     <div id="tooltip" class="tooltip" popover="manual" data-overlay="tooltip" role="tooltip"></div>
-    <!-- Lane F: phones are not designed yet (O-W3). -->
-    <p id="narrow-note" class="card" data-overlay="narrow-note">
-      Sima is made for a desktop screen. Open it on a computer to use it.
-    </p>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

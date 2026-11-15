@@ -34,6 +34,7 @@ import type { Det, Field } from '../core/types.ts';
 import { icon } from './icons.ts';
 import { closeAll as closePlaces } from './places/panels.ts';
 import { makeRoom, watchRoom } from './places/room.ts';
+import { layout } from './sheet.ts';
 
 /** Neptune where it is, from NASA's Neptune Fact Sheet (read 15 November 2026). */
 const NEPTUNE: PretendPlanet = { radius: 24_622 / 6_371.0, distance: 30.07, albedo: 0.442, ownHeat: 0 };
@@ -90,6 +91,8 @@ export interface SandboxReading {
   verdict: Verdict;
   /** The patch the verdict is for: a check rejects a reading for another patch. */
   patchKey: string;
+  /** The patch's measured noise per detector, for lane H's `planetEdges()` (Planet X's result). */
+  noises: DetectorNoise[];
 }
 
 const sandboxFns = new Set<(r: SandboxReading | null) => void>();
@@ -104,9 +107,11 @@ export function sandboxState(): SandboxReading | null {
   const m = widths.get(field);
   const pending = ([1, 2, 3, 4, 5, 6] as Det[]).some((d) => !m?.has(d) && field.frames.some((f) => f.det === d));
   if (pending) return null;
+  const measured = noises(field);
   return {
     planet: { ...planet },
-    verdict: verdict(answer(planet, noises(field))),
+    verdict: verdict(answer(planet, measured)),
+    noises: measured,
     patchKey: `${S.set?.key ?? 'field'}|${field.ra}|${field.dec}|${field.n}`,
   };
 }
@@ -134,12 +139,13 @@ function tellSandbox(): void {
 }
 
 /**
- * Opens the sandbox card (the search words, About's Planet X section).
- * @param opts `under`: v2.0, the element the card opens under (Discover's mission card on a
- *   desktop, the steps in the phone sheet). Step 0 stub: accepted, not used yet (lane F).
+ * Opens the sandbox card (the search words, About's Planet X section, Discover's Planet X).
+ * @param opts `under` (v2.0): the element the card opens under. On a desktop the card hangs
+ *   8 px under it, as wide as it, and follows it while it moves or changes size (Discover's
+ *   mission card). Inside the phone sheet or a phone layout, the card is put in the page flow
+ *   right after it. Without `under`, the card opens in the left column, as before.
  */
 export function openSandbox(opts: { under?: HTMLElement } = {}): void {
-  void opts.under;
   const c = card();
   if (!c) return;
   closePlaces();
@@ -149,7 +155,65 @@ export function openSandbox(opts: { under?: HTMLElement } = {}): void {
   measureWidths();
   fill();
   makeRoom(c);
+  if (opts.under) hangUnder(c, opts.under);
+  else unhang();
   draw();
+}
+
+/** Where the card goes back to when it stops hanging under something. */
+let home: Comment | null = null;
+let stopHanging: (() => void) | null = null;
+
+/** Keeps the card under `under`: fixed under it on a desktop, in the flow after it on a phone. */
+function hangUnder(c: HTMLElement, under: HTMLElement): void {
+  unhang();
+  const inFlow = !!under.closest('#sheet') || layout().kind !== 'desktop';
+  if (inFlow) {
+    home = document.createComment('sandbox');
+    c.before(home);
+    under.after(c);
+    Object.assign(c.style, { position: 'static', width: 'auto', maxHeight: 'none', top: '', left: '' });
+    c.dataset.under = 'flow';
+    stopHanging = () => undefined;
+    return;
+  }
+  const place = () => {
+    if (c.hidden || !under.isConnected) return;
+    const r = under.getBoundingClientRect();
+    const top = Math.round(r.bottom + 8);
+    Object.assign(c.style, {
+      top: `${top}px`,
+      left: `${Math.round(r.left)}px`,
+      width: `${Math.round(r.width)}px`,
+      maxHeight: `calc(100vh - ${top}px - var(--bar-bottom) - var(--bar-room) - 14px)`,
+    });
+  };
+  c.dataset.under = 'fixed';
+  place();
+  const ro = new ResizeObserver(place);
+  ro.observe(under);
+  addEventListener('resize', place);
+  const mo = new MutationObserver(place);
+  mo.observe(under, { attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
+  stopHanging = () => {
+    ro.disconnect();
+    mo.disconnect();
+    removeEventListener('resize', place);
+  };
+}
+
+/** Puts the card back in its own place. */
+function unhang(): void {
+  const c = card();
+  stopHanging?.();
+  stopHanging = null;
+  if (!c || !c.dataset.under) return;
+  if (home) {
+    home.replaceWith(c);
+    home = null;
+  }
+  for (const k of ['position', 'width', 'maxHeight', 'top', 'left'] as const) c.style[k] = '';
+  delete c.dataset.under;
 }
 
 /** Closes the card; the pretend planet leaves the picture with it. */
@@ -158,6 +222,7 @@ export function closeSandbox(): void {
   if (!c || c.hidden) return;
   c.hidden = true;
   placing = false;
+  unhang();
   draw();
   tellSandbox();
 }

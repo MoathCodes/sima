@@ -68,9 +68,32 @@ let lastField: unknown = null;
 let openOn: number | null = null;
 let shownBefore = false;
 
+/** True when the Measure panel shows: the Measure level, unless Expert closed it (S.measureOpen). */
+export function measureShown(): boolean {
+  return S.level === 'measure' && S.measureOpen !== false;
+}
+
+/**
+ * Opens or closes the Measure panel (v2.0 contract 2). In Expert the level stays Measure: only
+ * the panel opens and closes (`S.measureOpen`). Elsewhere (Discover, or v1's Explore level) it
+ * switches the level as before.
+ */
+export function setMeasureOpen(open: boolean): void {
+  const expert = document.documentElement.dataset.view === 'expert';
+  if (open) {
+    if (S.level !== 'measure') setLevel('measure');
+    S.measureOpen = true;
+  } else if (expert && S.level === 'measure') S.measureOpen = false;
+  else setLevel('explore');
+}
+
 /** Fills Measure and shows it with the Measure level. Called once by main.ts. */
 export function startMeasure(): void {
   restoreAllNumbers();
+  // Arriving at the Measure level (the view switch, a link, the guide) opens the panel.
+  watch(['level'], () => {
+    if (S.level === 'measure') S.measureOpen = true;
+  });
   onTap((p) => {
     if (S.level === 'measure' && S.field && !S.field.simulated) detail(tapped(p.ra, p.dec));
   });
@@ -82,7 +105,7 @@ export function startMeasure(): void {
     openOn = S.det;
     S.selected = S.field?.target && !S.field.simulated ? { kind: 'target' } : null;
   });
-  watch(['level', 'selected', 'measureTab', 'allNumbers', 'field', 'set', 'label', 'det', 'color', 'source'], render);
+  watch(['level', 'measureOpen', 'selected', 'measureTab', 'allNumbers', 'field', 'set', 'label', 'det', 'color', 'source'], render);
   watch(['epoch', 'groups', 'pic'], () => {
     if (!panel()?.hidden) chart();
   });
@@ -171,17 +194,44 @@ function saveAllNumbers(): void {
   }
 }
 
+/**
+ * "Send this to my computer" (Expert on a phone, 11.5): the system share sheet with this view's
+ * link, or the link copied when there is no share sheet.
+ */
+async function sendToComputer(p: HTMLElement): Promise<void> {
+  const done = p.querySelector<HTMLElement>('.ms-computer-done');
+  const url = location.href;
+  const say = (t: string) => {
+    if (done) done.textContent = t;
+  };
+  try {
+    if (typeof navigator.share === 'function') {
+      await navigator.share({ title: `Sima: ${S.label}`, url });
+      say('');
+      return;
+    }
+  } catch (err) {
+    if ((err as DOMException)?.name === 'AbortError') return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    say('Link copied. Open it on your computer.');
+  } catch {
+    say(`Copy this link: ${url}`);
+  }
+}
+
 // ----- Building the panel -------------------------------------------------------------------
 
 function skeleton(p: HTMLElement): void {
   if (p.querySelector('[data-wrap]')) return;
-  p.classList.add('ms-panel', 'appear');
+  p.classList.add('ms-panel', 'appear', 'slate');
   p.innerHTML = `
     <div class="ms-wrap" data-wrap>
       <div class="ms-main">
         <header class="ms-headrow">
           <div class="ms-title"><h2 data-title></h2><p class="ms-kind" data-kind></p></div>
-          <button type="button" class="icon-btn sm" data-close aria-label="Close Measure" data-tip="Back to Explore (Esc)">${icon('close')}</button>
+          <button type="button" class="icon-btn sm" data-close aria-label="Close Measure" data-tip="Close Measure (Esc)">${icon('close')}</button>
         </header>
         <div class="ms-headline" data-headline></div>
         <div class="tabs ms-tabs" role="tablist" aria-label="Charts" data-tabs>${TABS.map(
@@ -208,8 +258,23 @@ function skeleton(p: HTMLElement): void {
         <button type="button" class="btn" data-all data-guide="all-numbers" aria-pressed="false"></button>
         <p class="ms-foot-line" data-all-line></p>
       </div>
+      <div class="ms-computer" data-computer>
+        <p>Picture tools, several frames and workspaces need a computer.</p>
+        <button type="button" class="btn" data-send data-guide="send-to-computer">Send this to my computer</button>
+        <p class="ms-computer-done" role="status"></p>
+      </div>
     </div>`;
-  p.querySelector('[data-close]')?.addEventListener('click', () => setLevel('explore'));
+  p.querySelector('[data-close]')?.addEventListener('click', () => setMeasureOpen(false));
+  p.querySelector('[data-send]')?.addEventListener('click', () => void sendToComputer(p));
+  // The chart is drawn at its box's size: draw it again when the box changes size ("Show all
+  // the numbers", a window resize), on the next frame so the drawing cannot feed back.
+  let sized = 0;
+  new ResizeObserver(() => {
+    cancelAnimationFrame(sized);
+    sized = requestAnimationFrame(() => {
+      if (!p.hidden) chart();
+    });
+  }).observe(p.querySelector('[data-chartbox]')!);
   p.querySelector('[data-all]')?.addEventListener('click', () => {
     S.allNumbers = !S.allNumbers;
     if (!S.allNumbers) S.measureTab = null;
@@ -273,7 +338,7 @@ function ensure(): void {
 function render(): void {
   const p = panel();
   if (!p) return;
-  p.hidden = S.level !== 'measure';
+  p.hidden = !measureShown();
   if (p.hidden) {
     shownBefore = false;
     return;
@@ -495,7 +560,7 @@ function selKind(sel: Selection): string {
   const cat = catalogue();
   const partial = cat.gaia.partial || cat.catwise.partial;
   const known = partial
-    ? 'frames.json lists catalogue sources only near the target’s path; look up the whole field in Layers'
+    ? 'The shipped pictures list catalogue sources only near the target’s path; look up the whole field in Layers'
     : cat.gaia.state === 'ready' || cat.catwise.state === 'ready'
       ? 'No Gaia DR3 or CatWISE2020 source here'
       : 'The catalogues are not available here, so it is not known whether a source is here';

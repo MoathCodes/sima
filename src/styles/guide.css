@@ -58,7 +58,7 @@
   padding: 1px 7px;
   border-radius: var(--r-pill);
   background: var(--action-soft);
-  color: var(--action);
+  color: var(--ink);
   font: var(--text-label);
 }
 .welcome-own {
@@ -365,7 +365,7 @@
   padding: 8px 10px;
   border-radius: var(--r-control);
   background: var(--action-soft);
-  color: var(--action);
+  color: var(--on-action-soft);
   font: var(--text-control);
 }
 .tour-action.done {
@@ -410,8 +410,6 @@
   width: 270px;
   padding: 12px 14px;
   border-radius: var(--r-panel);
-  background: var(--ink);
-  color: var(--card);
   box-shadow: var(--lift);
 }
 #tip.tip-card[hidden] {
@@ -529,7 +527,7 @@
   display: inline;
   height: auto;
   padding: 0;
-  color: var(--action);
+  color: var(--ink);
   font: inherit;
   font-weight: 600;
   vertical-align: baseline;

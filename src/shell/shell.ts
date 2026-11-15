@@ -10,10 +10,13 @@
 import { emit } from './bus.ts';
 import { icon } from './icons.ts';
 import { closeTop, nativeOpen, startEscape } from './escape.ts';
+import { phonePage } from './pages.ts';
+import { onView } from './view.ts';
 import { startLayout } from './layout.ts';
 import { camera, flyTo, grid, retry, setLayer, type SkyLayer } from '../sky/sky.ts';
 import { openShare, startShare } from '../viewer/share.ts';
 import { openAbout, startAbout } from '../page/about.ts';
+import { startSettings } from './settings.ts';
 
 export { onFrameMove } from './layout.ts';
 export { toast } from './toast.ts';
@@ -59,10 +62,12 @@ export function startShell(): void {
   fill(
     'actions',
     `
-    <button class="btn quiet" popovertarget="guide-menu" data-guide="guide-button">${icon('compass')}<span class="action-word">Guide</span></button>
-    <button class="btn quiet" popovertarget="places-menu" data-guide="places-button">${icon('pin')}<span class="action-word">Places</span></button>
-    <button class="icon-btn" data-open="share" aria-label="Share" data-tip="Share this view" data-guide="share-button">${icon('share')}</button>
-    <button class="icon-btn" data-open="about" aria-label="About Sima" data-tip="About Sima" data-guide="about-button">${icon('info')}</button>`,
+    <button class="btn quiet" popovertarget="guide-menu" data-guide="guide-button" data-expert-only>${icon('compass')}<span class="action-word">Guide</span></button>
+    <button class="btn quiet" popovertarget="places-menu" data-guide="places-button" data-expert-only>${icon('pin')}<span class="action-word">Places</span></button>
+    <button class="icon-btn" data-open="share" aria-label="Share" data-tip="Share this view" data-guide="share-button" data-expert-only>${icon('share')}</button>
+    <button class="icon-btn" data-open="settings" aria-label="Settings" aria-expanded="false" aria-controls="settings" data-tip="Settings" data-guide="settings-button">${icon('settings')}</button>
+    <button class="icon-btn" data-open="about" aria-label="About Sima" data-tip="About Sima" data-guide="about-button">${icon('info')}</button>
+    <button class="icon-btn phone-menu-btn" popovertarget="phone-menu" aria-label="Menu" data-guide="phone-menu">${icon('menu')}</button>`,
   );
 
   fill(
@@ -89,12 +94,23 @@ export function startShell(): void {
   );
 
   fill(
+    'phone-menu',
+    `
+    <button class="menu-item" data-find data-guide="phone-find">${icon('search')}Find</button>
+    <button class="menu-item" data-open="settings" data-guide="phone-settings">${icon('settings')}Settings</button>
+    <button class="menu-item" data-open="share" data-guide="phone-share">${icon('share')}Share</button>
+    <button class="menu-item" data-open="about" data-guide="phone-about">${icon('info')}About</button>`,
+  );
+  startFind();
+
+  fill(
     'frame-show',
     `<button class="btn quiet" data-show-frame data-guide="frame-show">${icon('flip')}Show the frame</button>`,
   );
 
   startShare();
   startAbout();
+  startSettings();
   startEscape();
   startLayout();
   startPopovers();
@@ -104,6 +120,12 @@ export function startShell(): void {
   // over a card it would zoom the whole page, so there it does nothing (the page never moves).
   document.addEventListener('wheel', (e) => e.ctrlKey && e.preventDefault(), { passive: false });
   startTooltips();
+  const loading = document.getElementById('sky-loading');
+  if (loading) {
+    placeLoading(loading);
+    addEventListener('resize', () => placeLoading(loading));
+    onView(() => placeLoading(loading)); // Discover's top-right card is shorter
+  }
 }
 
 /**
@@ -125,7 +147,7 @@ export function frameRect(): DOMRect | null {
  */
 export function openPlace(place: PlaceRef, opts: { fly?: boolean } = {}): void {
   hideFrame(false);
-  emit('aim', { ra: place.ra, dec: place.dec, fov: place.fov, target: place.target ?? null });
+  emit('aim', { ra: place.ra, dec: place.dec, fov: place.fov, target: place.target ?? null, name: place.name });
   if (opts.fly !== false) flyTo({ ra: place.ra, dec: place.dec });
 }
 
@@ -189,6 +211,7 @@ export function skyReady(load: SkyLoad): void {
     load.total > 0 ? Math.floor((100 * Math.min(load.loaded, load.total)) / load.total) : 0;
   sky.pct = Math.max(sky.pct, pct);
   setCard(card, load, sky.pct);
+  placeLoading(card);
   if (!card.hidden || sky.timer) return;
   if (load.first && !sky.firstDone) card.hidden = false;
   else {
@@ -196,6 +219,32 @@ export function skyReady(load: SkyLoad): void {
       sky.timer = 0;
       card.hidden = false;
     }, 300);
+  }
+}
+
+/**
+ * The loading card sits in the top row's free gap, between the search field and the actions,
+ * as wide as that gap allows (UX audit #9: at 1280 px a fixed width cut its words, at 1024 it
+ * sat on the search field). With under 200 px free it hangs under the search field instead; the
+ * chips row gives way to it (layout.ts).
+ */
+function placeLoading(card: HTMLElement): void {
+  const search = document.getElementById('search')?.getBoundingClientRect();
+  const actions = document.getElementById('actions')?.getBoundingClientRect();
+  if (!search || !actions || !search.width || !actions.width) return;
+  const left = search.right + 10;
+  const right = actions.left - 10;
+  const room = right - left;
+  if (room >= 200) {
+    const w = Math.min(320, room);
+    card.style.left = `${Math.round(left + (room - w) / 2)}px`;
+    card.style.top = '';
+    card.style.width = `${Math.round(w)}px`;
+  } else {
+    const w = Math.min(320, search.width);
+    card.style.left = `${Math.round(search.right - w)}px`;
+    card.style.top = `${Math.round(search.bottom + 8)}px`;
+    card.style.width = `${Math.round(w)}px`;
   }
 }
 
@@ -222,6 +271,25 @@ function setCard(card: HTMLElement, load: SkyLoad, pct: number): void {
   card.querySelector('.sky-loading-head')!.textContent = head;
   card.querySelector('.sky-loading-line')!.textContent = meanwhile;
   card.querySelector('[data-retry]')?.addEventListener('click', retry);
+}
+
+// ----- Find on phones (BEGINNER-AND-MOBILE.md 11.2, 11.3) ---------------------------------------
+
+/**
+ * In a phone layout the search field lives behind the menu's Find: lane M's full-height page with
+ * Back, the field at its top and the suggestions under it. Back puts the field back home.
+ */
+function startFind(): void {
+  document.addEventListener('click', (e) => {
+    if (!(e.target instanceof Element) || !e.target.closest('[data-find]')) return;
+    const search = document.getElementById('search');
+    if (!search) return;
+    document.getElementById('phone-menu')?.hidePopover();
+    phonePage(search, 'Find a star, galaxy or nebula', () => {
+      document.getElementById('search-results')?.hidePopover();
+    });
+    search.querySelector<HTMLInputElement>('input')?.focus();
+  });
 }
 
 // ----- Clicks, keys, popovers and tooltips ------------------------------------------------------
@@ -252,6 +320,7 @@ function onClick(e: MouseEvent): void {
     document.getElementById('sky-layers')?.hidePopover();
   }
   const open = el.closest<HTMLElement>('[data-open]');
+  if (open?.closest('#phone-menu')) document.getElementById('phone-menu')?.hidePopover();
   if (open?.dataset.open === 'share') openShare();
   if (open?.dataset.open === 'about') openAbout();
   if (el.closest('[data-show-frame]')) hideFrame(false);
@@ -308,6 +377,7 @@ function startPopovers(): void {
   const actions = () => document.getElementById('actions')?.getBoundingClientRect();
   under('places-menu', actions, 'right');
   under('guide-menu', actions, 'right');
+  under('phone-menu', () => document.querySelector('[data-guide="phone-menu"]')?.getBoundingClientRect(), 'right');
   const layers = document.getElementById('sky-layers');
   layers?.addEventListener('beforetoggle', (e) => {
     if ((e as ToggleEvent).newState !== 'open') return;

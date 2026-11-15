@@ -1,0 +1,89 @@
+/* Lane F: Settings (shell/settings.ts; BEGINNER-AND-MOBILE.md 5.7). Raised card under its button
+   on a desktop; a full-height Slate page with Back under 700 px (section 11.2).
+   Its material comes from app.css ("Materials": #settings is Raised; Slate on phones below). */
+
+#settings {
+  position: fixed;
+  top: calc(var(--top) + var(--h-top) + 6px);
+  right: var(--gutter);
+  z-index: var(--z-popover);
+  display: grid;
+  gap: 14px;
+  width: min(340px, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100vh - var(--top) - var(--h-top) - 6px - var(--gutter));
+  overflow: auto;
+  padding: 14px 16px 16px;
+  border-radius: var(--r-panel);
+  --settle-y: -6px;
+}
+
+.st-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -2px -6px -4px 0;
+}
+.st-title {
+  flex: 1;
+  font: var(--text-title);
+}
+.st-group {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.st-group + .st-group {
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+.st-seg {
+  width: 100%;
+}
+.st-seg > [aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.st-note {
+  color: var(--ink-2);
+  font: var(--text-body);
+  font-size: 14px;
+}
+.st-done:empty {
+  display: none;
+}
+.st-confirm {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--r-control);
+  background: var(--card-2);
+}
+.st-q {
+  font: var(--text-body);
+}
+.st-confirm-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Phones: M's full-height Slate page (sheet.ts openPage) holds it; M's head has the title and
+   Back, so the card lies flat in the page. Every hit area 48 px (sections 10, 11.2). */
+.sheet-body #settings {
+  position: static;
+  width: auto;
+  max-height: none;
+  overflow: visible;
+  padding: 4px 0 24px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  --mat-filter: none; /* no glass on M's Slate page */
+  gap: 18px;
+}
+.sheet-body #settings .st-head {
+  display: none;
+}
+.sheet-body #settings :is(.btn, .seg > button) {
+  min-height: var(--v2-hit-phone);
+}

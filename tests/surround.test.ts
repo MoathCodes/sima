@@ -138,3 +138,16 @@ test('maskOutline: the border of a bare corner, runs joined', () => {
   assert.equal(len, 12);
   assert.ok(segs.length <= 6, `joined into runs, got ${segs.length}`);
 });
+
+// UX audit #3b: the live service's folders are fetched from the service's own address.
+import { resolveFolder } from '../src/viewer/seed.ts';
+
+test('a status folder resolves against a service on another address', () => {
+  const page = 'https://sima.example/';
+  assert.equal(
+    resolveFolder('/api/patch/7/full/', 'http://127.0.0.1:8766/api/patch', page),
+    'http://127.0.0.1:8766/api/patch/7/full/',
+  );
+  assert.equal(resolveFolder('/api/patch/7/first', '/api/patch', page), '/api/patch/7/first/');
+  assert.equal(resolveFolder('/api/patch/7/full/', '', page), '/api/patch/7/full/');
+});

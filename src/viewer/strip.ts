@@ -20,7 +20,11 @@ export function startStrip(): void {
     const el = document.getElementById('detectors');
     if (el !== host) {
       host = el;
-      if (host) build(host);
+      if (host) {
+        build(host);
+        // Shown again ("Show all the numbers", Measure opening): paint what waited meanwhile.
+        new ResizeObserver(() => soon()).observe(host);
+      }
     }
   };
   new MutationObserver(find).observe(document.body, { childList: true, subtree: true });
@@ -51,7 +55,7 @@ function build(el: HTMLElement): void {
         (d) => `<button class="det-thumb" data-det="${d}" style="--hue:var(--d${d})"
           aria-label="Detector ${d}, ${BAND_EDGES[d - 1]} to ${BAND_EDGES[d]} µm" data-tip="D${d}: ${BAND_EDGES[d - 1]} to ${BAND_EDGES[d]} µm">
           <canvas class="window" width="1" height="1"></canvas>
-          <span class="det-name">D${d}</span><span class="det-band">${BAND_EDGES[d - 1]}–${BAND_EDGES[d]}</span>
+          <span class="det-name">D${d}</span><span class="det-band">${BAND_EDGES[d - 1]}–${BAND_EDGES[d]}</span><span class="det-none">none</span>
         </button>`,
       )
       .join('') +
@@ -90,8 +94,7 @@ function next(): void {
   frame = 0;
   const el = host;
   if (!el?.isConnected || !el.checkVisibility()) {
-    // Hidden: painted again when Measure opens (the `level` change).
-    waiting.clear();
+    // Hidden: the thumbnails keep waiting; the strip's ResizeObserver paints them when it shows.
     return;
   }
   // The detector on screen first.
@@ -122,6 +125,8 @@ function thumb(b: HTMLButtonElement, d: number): void {
   const mine = groups.find((x) => x.window === g.window && x.visit === g.visit);
   b.disabled = !mine?.frames.length;
   b.title = mine?.frames.length ? '' : `No D${d} exposure on this date`;
+  // No exposure on this date: a dotted empty square with "none" under it (H6).
+  b.classList.toggle('none', !mine?.frames.length);
   if (!mine?.frames.length) {
     canvas.width = field.n;
     canvas.height = field.n;

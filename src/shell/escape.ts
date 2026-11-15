@@ -120,7 +120,8 @@ export function closeTop(): boolean {
  * is left to the browser.
  */
 export function nativeOpen(): boolean {
-  return !!document.querySelector('dialog[open], [popover]:not([popover="manual"]):popover-open');
+  // Only a modal dialog closes itself on Escape; About shown as a phone page is not modal.
+  return !!document.querySelector('dialog:modal, [popover]:not([popover="manual"]):popover-open');
 }
 
 /**
