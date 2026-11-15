@@ -23,6 +23,21 @@ export const en = {
   // The language switch (Settings). The choices name each language in its own words (lang.*).
   'lang.group': 'Language',
 
+  // The top row and the rail.
+  'top.view': 'View',
+  'top.guide': 'Guide',
+  'top.places': 'Places',
+  'top.shareTip': 'Share this view',
+  'top.menu': 'Menu',
+  'rail.zoomIn': 'Zoom in (+)',
+  'rail.zoomInLabel': 'Zoom the sky in',
+  'rail.zoomOut': 'Zoom out (−)',
+  'rail.zoomOutLabel': 'Zoom the sky out',
+  'rail.skyMap': 'Sky map',
+  'rail.grid': 'Coordinate grid',
+  'rail.frames': 'Add a frame · workspaces',
+  'rail.framesLabel': 'Add a frame, workspaces',
+
   // Toasts any part may show.
   'toast.close': 'Close the message',
   'link.notUnderstood': 'Not understood in the link, so left out: {notes}.',
