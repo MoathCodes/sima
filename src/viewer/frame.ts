@@ -37,52 +37,52 @@ import { startStrip } from './strip.ts';
 import { onSurround, widening } from './surround.ts';
 import { liveTip, liveWords } from './seed.ts';
 import { hangPopover } from './tools/dom.ts';
+import { t as tr } from '../shell/i18n.ts';
 
 const VIEW_NAMES: Record<Mode, [string, IconName, string]> = {
-  flip: ['Flip', 'flip', 'Show the dates one after another'],
-  swipe: ['Swipe', 'swipe', 'Drag the line to compare the reference date with this one'],
-  two: ['Two dates', 'two', 'Two dates in one picture: red is earlier, cyan is later'],
-  diff: ['Difference', 'diff', 'Only what is brighter or fainter than usual'],
-  stack: ['Stack', 'stack', 'Every date added up, to see what is too faint for one'],
-  trail: ['Trail', 'trail', 'Earlier dates stay as a fading trail'],
+  flip: [tr('view.flip'), 'flip', tr('view.flip.tip')],
+  swipe: [tr('view.swipe'), 'swipe', tr('view.swipe.tip')],
+  two: [tr('view.two'), 'two', tr('view.two.tip')],
+  diff: [tr('view.diff'), 'diff', tr('view.diff.tip')],
+  stack: [tr('view.stack'), 'stack', tr('view.stack.tip')],
+  trail: [tr('view.trail'), 'trail', tr('view.trail.tip')],
 };
 
 /** What each view shows, in Measure's explanation line. */
 const EXPLAIN: Record<Mode, string> = {
-  flip: 'Each picture is one visit, scaled to the reference brightness. Stars stay put; what shifts is moving.',
-  swipe:
-    'Left of the line is the reference date, right of it this one. Drag the line over anything that differs.',
-  two: 'Red is the reference date, cyan this one. Unchanged is white; a red and cyan pair moved.',
-  diff: 'This date minus the median of all dates: white is here now, dark is where it usually sits.',
-  stack: 'Every exposure in this detector added up, so faint things build up and the noise drops.',
-  trail: 'This date in colour, earlier dates as a fading trail: a mover draws its own path.',
+  flip: tr('explain.flip'),
+  swipe: tr('explain.swipe'),
+  two: tr('explain.two'),
+  diff: tr('explain.diff'),
+  stack: tr('explain.stack'),
+  trail: tr('explain.trail'),
 };
 
 const SOURCE: Record<string, { cls: string; text: string; tip: string }> = {
   real: {
     cls: 'real',
-    text: 'Real data',
-    tip: 'Real exposures from NASA’s SPHEREx telescope, from NASA’s archive (IRSA)',
+    text: tr('src.real'),
+    tip: tr('src.realTip'),
   },
   live: {
     cls: 'real',
-    text: 'Real data, fetched live',
-    tip: 'Real exposures fetched from NASA’s archive (IRSA) for this spot just now',
+    text: tr('src.live'),
+    tip: tr('src.liveTip'),
   },
   simulated: {
     cls: 'sim',
-    text: 'Simulated',
-    tip: 'Made-up pictures for practice. They are never mixed with real results',
+    text: tr('honest.simulated'),
+    tip: tr('src.simTip'),
   },
   none: {
     cls: 'none',
-    text: 'No pictures here',
-    tip: 'There are no real pictures of this spot in the frame',
+    text: tr('src.none'),
+    tip: tr('src.noneTip'),
   },
   loading: {
     cls: 'loading',
-    text: 'Loading…',
-    tip: 'Real exposures of this spot are on their way',
+    text: tr('src.loading'),
+    tip: tr('src.loadingTip'),
   },
 };
 
@@ -176,14 +176,14 @@ function startPopovers(): void {
   fovs.className = 'popover appear frame-pop fovs-menu';
   fovs.popover = 'auto';
   fovs.setAttribute('role', 'menu');
-  fovs.setAttribute('aria-label', 'Field size');
+  fovs.setAttribute('aria-label', tr('frame.fov'));
   fovs.dataset.overlay = 'frame-fovs';
   const more = document.createElement('div');
   more.id = 'frame-more';
   more.className = 'popover appear frame-pop frame-more';
   more.popover = 'auto';
   more.setAttribute('role', 'dialog');
-  more.setAttribute('aria-label', 'About this picture');
+  more.setAttribute('aria-label', tr('frame.about'));
   more.dataset.overlay = 'frame-more';
   frame.append(fovs, more);
   hangPopover(() => document.querySelector<HTMLElement>('#frame-head .frame-fov'), fovs, 'end');
@@ -243,7 +243,7 @@ function header(): void {
   const live = S.set?.data.live;
   const src =
     kind === 'live' && base
-      ? { ...base, text: `Real data, ${liveWords(live)}`, tip: liveTip(live) }
+      ? { ...base, text: tr('src.realHow', { how: liveWords(live) }), tip: liveTip(live) }
       : base;
   // An embedded page shows only the frame, the bar and Measure: hiding the frame would empty it.
   // (main.ts marks <html> before the frame starts; S.embed is set later, by url.ts.)
@@ -253,13 +253,13 @@ function header(): void {
   const html = `
     <div class="frame-name">
       <h2 class="frame-title"></h2>
-      <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span><span class="frame-prov term" tabindex="0" data-guide="data-line"></span><span class="frame-rel"></span>${named ? `<span class="frame-coords"> · ${formatCoords(S.ra, S.dec)}</span>` : ''}${measure && !discover ? `<button type="button" class="icon-btn xs frame-info" popovertarget="frame-more" aria-label="About this picture" data-tip="About this picture" data-guide="frame-info">${icon('info')}</button>` : ''}</p>
+      <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span><span class="frame-prov term" tabindex="0" data-guide="data-line"></span><span class="frame-rel"></span>${named ? `<span class="frame-coords"> · ${formatCoords(S.ra, S.dec)}</span>` : ''}${measure && !discover ? `<button type="button" class="icon-btn xs frame-info" popovertarget="frame-more" aria-label="${tr('frame.about')}" data-tip="${tr('frame.about')}" data-guide="frame-info">${icon('info')}</button>` : ''}</p>
     </div>
     <div class="frame-actions">
-      <button type="button" class="btn text frame-fov" popovertarget="frame-fovs" aria-label="Field size: ${S.fov} arcminutes" data-tip="Field size (the wheel over the picture changes it too)" data-guide="fov">${S.fov}′${icon('chevron-down')}</button>
-      ${measure ? `<button class="icon-btn sm" data-tools aria-pressed="${S.tools}" aria-label="Picture tools" data-tip="Picture tools" data-guide="tools-button">${icon('sliders')}</button>` : ''}
-      ${discover ? '' : `<button class="btn text frame-measure" data-measure aria-pressed="${open}" data-guide="measure" data-tip="${open ? (expert ? 'Close Measure' : 'Back to the simple view') : 'Measure: numbers, charts and all six views'}">${icon('chart')}<span>Measure</span></button>`}
-      ${embedded ? '' : `<button class="icon-btn sm" data-hide aria-label="Hide the frame" data-tip="Hide the frame" data-guide="frame-hide">${icon('close')}</button>`}
+      <button type="button" class="btn text frame-fov" popovertarget="frame-fovs" aria-label="${tr('frame.fovLabel', { n: S.fov })}" data-tip="${tr('frame.fovTip')}" data-guide="fov">${S.fov}′${icon('chevron-down')}</button>
+      ${measure ? `<button class="icon-btn sm" data-tools aria-pressed="${S.tools}" aria-label="${tr('frame.tools')}" data-tip="${tr('frame.tools')}" data-guide="tools-button">${icon('sliders')}</button>` : ''}
+      ${discover ? '' : `<button class="btn text frame-measure" data-measure aria-pressed="${open}" data-guide="measure" data-tip="${open ? (expert ? tr('frame.closeMeasure') : tr('frame.simple')) : tr('frame.measureTip')}">${icon('chart')}<span>${tr('word.measure')}</span></button>`}
+      ${embedded ? '' : `<button class="icon-btn sm" data-hide aria-label="${tr('frame.hide')}" data-tip="${tr('frame.hide')}" data-guide="frame-hide">${icon('close')}</button>`}
     </div>`;
   // Redrawn only when it changes: a redraw while the user presses − or + would lose the press.
   if (head.dataset.html === html + S.label) return;
@@ -288,7 +288,7 @@ function views(): void {
   const list = VIEWS[S.level];
   box.className = `seg frame-views${S.level === 'measure' ? ' six' : ''}`;
   box.setAttribute('role', 'group');
-  box.setAttribute('aria-label', 'View');
+  box.setAttribute('aria-label', tr('top.view'));
   // One pill slides under the chosen view (redesign item 4): equal columns, so its place is the
   // view's index. Words when the frame is wide enough, icons alone (named in the tooltip) when not.
   box.style.setProperty('--n', String(list.length));
@@ -332,7 +332,7 @@ function lines(): void {
   if (rel) {
     const r = S.field && !S.field.simulated ? releaseWords(S.field.releases) : '';
     rel.textContent = r ? ` · ${r}` : '';
-    rel.dataset.tip = r ? `Data release: ${r}` : '';
+    rel.dataset.tip = r ? tr('frame.release', { r }) : '';
   }
   if (document.getElementById('frame-more')?.matches(':popover-open')) fillMore();
   const ex = document.getElementById('frame-exif');
@@ -347,7 +347,7 @@ function lines(): void {
     const still = reducedMotion() && S.mode === 'two' && !!S.field;
     explain.hidden = !still && (S.level !== 'measure' || !S.field);
     explain.textContent = still
-      ? 'Your device asks for less motion, so this is a still picture of two dates. Press Flip to play them.'
+      ? tr('frame.still')
       : EXPLAIN[S.mode];
   }
   const load = document.getElementById('frame-load');
@@ -372,11 +372,11 @@ function lines(): void {
       load.dataset.key = key;
       load.innerHTML = `${
         w?.state === 'busy'
-          ? `<span class="load-bar${known ? ' known' : ''}" style="--done:${pct}%" role="progressbar" aria-label="Real exposures of the wider field" ${known ? `aria-valuenow="${pct}"` : ''}><span></span></span>`
+          ? `<span class="load-bar${known ? ' known' : ''}" style="--done:${pct}%" role="progressbar" aria-label="${tr('frame.wider')}" ${known ? `aria-valuenow="${pct}"` : ''}><span></span></span>`
           : ''
       }${
         w?.state === 'failed'
-          ? '<button type="button" class="link load-retry" data-widen-retry>Ask again</button>'
+          ? `<button type="button" class="link load-retry" data-widen-retry>${tr('frame.askAgain')}</button>`
           : ''
       }<span class="load-text"></span>`;
       const t = load.querySelector('.load-text');
@@ -416,10 +416,10 @@ function cover(): void {
     let box = el.querySelector<HTMLElement>('.cover-busy');
     if (!box) {
       el.innerHTML = `<canvas class="cover-preview" hidden></canvas>
-        <span class="cover-tag window-badge" hidden>Preview: sky map, all dates averaged</span>
+        <span class="cover-tag window-badge" hidden>${tr('frame.preview')}</span>
         <div class="cover-busy" role="status" aria-live="polite">
           <p class="cover-what"></p>
-          <p class="cover-more">Can take a few minutes. The sky still works.</p>
+          <p class="cover-more">${tr('frame.coverMore')}</p>
           <div class="cover-bar"><span></span></div>
         </div>`;
       box = el.querySelector<HTMLElement>('.cover-busy');
@@ -454,19 +454,19 @@ function cover(): void {
   const why =
     noPictures ??
     (S.source === 'simulated'
-      ? { why: 'The practice simulation has no pictures in this build.', more: null }
-      : { why: 'There are no pictures of this spot in the frame.', more: null });
+      ? { why: tr('frame.noPractice'), more: null }
+      : { why: tr('frame.noSpot'), more: null });
   el.hidden = false;
   el.innerHTML = `<div class="cover-none">
-      <p class="cover-head">${why.retry ? 'No real pictures yet' : 'No real pictures here'}</p>
+      <p class="cover-head">${why.retry ? tr('frame.noneYet') : tr('frame.noneHere')}</p>
       <p class="cover-why"></p>
       <p class="cover-why more" ${why.more ? '' : 'hidden'}></p>
-      <button class="btn primary cover-retry" data-retry ${why.retry ? '' : 'hidden'}>Ask again</button>
-      <p class="cover-label">Real SPHEREx pictures you can open now</p>
+      <button class="btn primary cover-retry" data-retry ${why.retry ? '' : 'hidden'}>${tr('frame.askAgain')}</button>
+      <p class="cover-label">${tr('frame.openNow')}</p>
       <ul class="cover-targets">${TARGETS.map(
         (t) => `<li><button class="link" data-target="${t.key}">${t.name}</button></li>`,
       ).join('')}</ul>
-      <button class="btn cover-practice" data-practice ${SCENARIOS['warm-up'] ? '' : 'hidden'}><span class="pill warn">Simulated</span>Practice on made-up pictures</button>
+      <button class="btn cover-practice" data-practice ${SCENARIOS['warm-up'] ? '' : 'hidden'}><span class="pill warn">${tr('honest.simulated')}</span>${tr('frame.practice')}</button>
     </div>`;
   const [w, m] = el.querySelectorAll<HTMLElement>('.cover-why');
   if (w) w.textContent = why.why;
