@@ -38,7 +38,7 @@ import { closeSandbox, onSandbox, openSandbox, sandboxState, type SandboxReading
 import { targetByKey } from '../core/targets.ts';
 import { KEYS, LEAVE_ASK, MEASURING, MISSION_COPY, plainKind } from './copy.ts';
 import { esc, icon, liveRegion, rerender, say } from './ui.ts';
-import { t as tr } from '../shell/i18n.ts';
+import { targetName, t as tr } from '../shell/i18n.ts';
 
 /** A mission as it runs on this page. */
 interface Run {
@@ -456,7 +456,7 @@ function objectLine(r: Run): string {
   if (!t) return '';
   const type = /\(([^)]*)\)\s*$/.exec(t.kind)?.[1];
   const ly = t.plx ? 3261.56 / t.plx : null;
-  return `${esc(t.name)} · ${esc(plainKind(t.kind).toLowerCase())}${type ? ` (SIMBAD: ${esc(type)})` : ''}${
+  return `${esc(targetName(t))} · ${esc(plainKind(t.kind).toLowerCase())}${type ? ` (SIMBAD: ${esc(type)})` : ''}${
     ly && r.id === 'runaway' ? tr('dm.ly', { n: String(Math.round(ly)) }) : ''
   }`;
 }

@@ -878,4 +878,18 @@ export const ar: ArMessages = {
   'tt.twoPx': '«تاريخان» يعرض صورتين: اختر عرضًا واحدًا لقراءة قيمة',
   'tt.noData': 'لا بيانات هنا',
   'tt.pickBox': 'اختر عرضًا بصورة واحدة لقياس مربع',
+
+  // The five targets (core/targets.ts keys), Places chips, the Original button.
+  'tg.barnard': 'نجم برنارد',
+  'tg.eps-indi-b': 'Epsilon Indi B',
+  'tg.wise-0855': 'WISE 0855−0714',
+  'tg.rw-aur': 'RW ممسك الأعنة',
+  'tg.r-dra': 'R التنين',
+  'pl.tours': 'جولات',
+  'pl.surprise': 'فاجئني',
+  'tt.originalBtn': 'الأصل',
+  'tt.holdOriginal': 'اضغط مطوّلًا لترى البكسلات كما سُجّلت (أو اضغط \\ مطوّلًا)',
+  'ld.loadingOf': 'جارٍ تحميل لقطات SPHEREx الحقيقية لـ {name}…',
+  'ld.opening': 'جارٍ فتح لقطات SPHEREx الحقيقية لهذه البقعة…',
+  'ld.asking': 'جارٍ طلب لقطات SPHEREx الحقيقية لهذه البقعة…',
 };

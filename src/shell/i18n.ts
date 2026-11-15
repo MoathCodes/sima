@@ -228,3 +228,12 @@ export function localName(name: string, arabic?: string | null): string {
 export function ltrText(text: string): string {
   return `⁦${text}⁩`;
 }
+
+/**
+ * One of the five targets' names in the current language (`tg.<key>`): "نجم برنارد", "R التنين";
+ * catalogue designations stay in Latin. Any other place keeps the name it was given.
+ */
+export function targetName(target: { key: string; name: string }): string {
+  const k = `tg.${target.key}`;
+  return k in en ? t(k as Key) : target.name;
+}

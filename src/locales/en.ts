@@ -849,6 +849,20 @@ export const en = {
   'tt.twoPx': 'Two dates shows two pictures: pick one view to read a value',
   'tt.noData': 'No data here',
   'tt.pickBox': 'Pick a view with one picture to measure a box',
+
+  // The five targets (core/targets.ts keys), Places chips, the Original button.
+  'tg.barnard': "Barnard's Star",
+  'tg.eps-indi-b': 'Epsilon Indi B',
+  'tg.wise-0855': 'WISE 0855−0714',
+  'tg.rw-aur': 'RW Aurigae',
+  'tg.r-dra': 'R Draconis',
+  'pl.tours': 'Tours',
+  'pl.surprise': 'Surprise me',
+  'tt.originalBtn': 'Original',
+  'tt.holdOriginal': 'Hold to see the pixels as recorded (or hold \\)',
+  'ld.loadingOf': 'Loading the real SPHEREx exposures of {name}…',
+  'ld.opening': 'Opening real SPHEREx exposures of this spot…',
+  'ld.asking': 'Asking for the real SPHEREx exposures of this spot…',
 } as const satisfies Record<string, string | EnPlural>;
 
 /** A message key. */

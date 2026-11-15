@@ -22,6 +22,7 @@ import { onProgress, progress, type Progress } from '../explore/progress.ts';
 import { keepClear, setTaken } from './markers.ts';
 import { separation } from './project.ts';
 import { camera, flyTo, globeCircle, globeFov, mapBox, onZoom, toScreen } from './sky.ts';
+import { targetName } from '../shell/i18n.ts';
 
 /** A mark on the globe: a mission's target or an object to try. */
 export interface Beacon {
@@ -148,11 +149,11 @@ export function beacons(): Beacon[] {
   const out: Beacon[] = [];
   for (const m of MISSION_MARKS) {
     const t = targetByKey(m.target);
-    if (t) out.push({ id: m.id, kind: 'mission', target: m.target, name: t.name, ra: t.ra, dec: t.dec, state: stateOf(p, m.id) });
+    if (t) out.push({ id: m.id, kind: 'mission', target: m.target, name: targetName(t), ra: t.ra, dec: t.dec, state: stateOf(p, m.id) });
   }
   for (const key of OBJECTS) {
     const t = targetByKey(key);
-    if (t) out.push({ id: key, kind: 'object', target: key, name: t.name, ra: t.ra, dec: t.dec, state: 'object' });
+    if (t) out.push({ id: key, kind: 'object', target: key, name: targetName(t), ra: t.ra, dec: t.dec, state: 'object' });
   }
   return out;
 }

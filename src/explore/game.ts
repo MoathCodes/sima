@@ -21,7 +21,7 @@ import { detail } from '../viewer/detail.ts';
 import { on, emit } from '../shell/bus.ts';
 import { openPlace } from '../shell/shell.ts';
 import { icon } from '../shell/icons.ts';
-import { t as tr } from '../shell/i18n.ts';
+import { targetName, t as tr } from '../shell/i18n.ts';
 import { fitMotion } from '../core/fit.ts';
 import { formatDate } from '../core/astro.ts';
 import { targetByKey } from '../core/targets.ts';
@@ -171,7 +171,7 @@ export function startGame(): void {
     pick: (p) => (getView() === 'discover' ? (discoverPick?.(p) ?? false) : tapped(p)),
     aim: ringNow,
     focus: renderTask,
-    name: () => S.field?.target?.name ?? task()?.title ?? '',
+    name: () => (S.field?.target ? targetName(S.field.target) : (task()?.title ?? '')),
     missed: MISSED,
   });
   watch(['target', 'field', 'source', 'groups', 'level'], renderTask);

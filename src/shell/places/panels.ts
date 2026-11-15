@@ -234,7 +234,7 @@ function rowsTop(): number {
 }
 
 function backToList(v: View): { label: string; go: () => void } {
-  const label = v.type === 'kind' ? v.chip.name : v.type === 'tour' ? v.tour.title : 'Tours';
+  const label = v.type === 'kind' ? v.chip.name : v.type === 'tour' ? v.tour.title : tr('pl.tours');
   return {
     label,
     go: () => {
@@ -288,7 +288,7 @@ export function openTours(): void {
 function drawTours(): void {
   const l = showList();
   if (!l) return;
-  const body = frame(l, 'Tours', null);
+  const body = frame(l, tr('pl.tours'), null);
   body.append(
     el(
       'p.pl-note',
@@ -331,7 +331,7 @@ function drawTour(): void {
   const data = catalogue();
   if (!l || !data) return;
   const body = frame(l, v.tour.title, {
-    label: 'Tours',
+    label: tr('pl.tours'),
     go: () => {
       pauseTour();
       view = { type: 'tours' };

@@ -161,7 +161,7 @@ function picTools(): void {
       <p class="window-badge tl-processed" data-processed hidden></p>
       <p class="window-badge tl-readout" data-readout hidden></p>
       <button type="button" class="window-badge tl-original" data-original data-guide="original" aria-pressed="false"
-        data-tip="Hold to see the pixels as recorded (or hold \\)" data-tip-pos="above">Original</button>`;
+        data-tip="${esc(tr('tt.holdOriginal'))}" data-tip-pos="above">${esc(tr('tt.originalBtn'))}</button>`;
     const btn = box.querySelector<HTMLElement>('[data-original]');
     const hold = (on: boolean) => (e: Event) => {
       if (on && e instanceof PointerEvent) btn?.setPointerCapture(e.pointerId);

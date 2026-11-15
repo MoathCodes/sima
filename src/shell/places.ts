@@ -14,6 +14,7 @@
  */
 import { addSearchSource, type SearchHit } from '../viewer/omnibox.ts';
 import { localName } from './i18n.ts';
+import { t as tr } from './i18n.ts';
 import { onDotClick, onPinClick, setDots, setPins, type Dot } from '../sky/markers.ts';
 import { camera, flyTo } from '../sky/sky.ts';
 import { openPlace } from './shell.ts';
@@ -36,8 +37,8 @@ interface Chip {
 
 const CHIPS: readonly Chip[] = [
   ...KIND_CHIPS.map((c) => ({ id: c.id, name: c.name, icon: c.icon, run: () => openKind(c) })),
-  { id: 'tours', name: 'Tours', icon: 'trail', run: openTours },
-  { id: 'surprise-me', name: 'Surprise me', icon: 'bulb', run: surprise },
+  { id: 'tours', name: tr('pl.tours'), icon: 'trail', run: openTours },
+  { id: 'surprise-me', name: tr('pl.surprise'), icon: 'bulb', run: surprise },
 ];
 
 /** Fills the chips and the Places menu, then loads the catalogue. Called once by main.ts. */
