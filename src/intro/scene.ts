@@ -21,8 +21,8 @@ export const T = {
   sign: 1.85,
   ink: [2.1, 3.1],
   glint: [3.1, 3.9],
-  la: [2.2, 2.8], // Sima
-  line: [2.4, 3.0], // the line
+  la: [1.7, 2.3], // Sima, as the pen finishes
+  line: [1.9, 2.5], // the line
   /** The reveal starts here when the sky map is in; else up to `hold` later. */
   reveal: 4.1,
   hold: 2.0,
