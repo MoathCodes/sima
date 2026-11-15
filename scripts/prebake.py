@@ -173,7 +173,11 @@ _log_lock = threading.Lock()
 def log(*parts):
     with _log_lock:
         stamp = time.strftime("%H:%M:%S")
-        print(f"[{stamp}]", *parts, file=sys.stderr, flush=True)
+        try:
+            print(f"[{stamp}]", *parts, file=sys.stderr, flush=True)
+        except OSError:
+            # The log's reader went away (its dev server was killed): keep serving without a log.
+            pass
 
 
 def mjd_to_year(mjd: float) -> float:
