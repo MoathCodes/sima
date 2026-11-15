@@ -139,3 +139,9 @@
 [dir='rtl'] .pic-badge > * {
   unicode-bidi: plaintext;
 }
+
+/* Dates on the time strips (which stay left to right): "17 أغسطس 2025" reads right to left, so
+   its day stays before its month. */
+[dir='rtl'] :is(.fp-now > span, .ds-month, .ds-passname) {
+  unicode-bidi: plaintext;
+}

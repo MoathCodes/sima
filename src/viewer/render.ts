@@ -38,7 +38,7 @@ import {
   type StackView,
 } from './paint.ts';
 import { trialView } from './motion.ts';
-import { fmtList, t as tr } from '../shell/i18n.ts';
+import { fmtList, iso, t as tr } from '../shell/i18n.ts';
 import { liveWords } from './seed.ts';
 import {
   aroundMap,
@@ -402,7 +402,7 @@ export function dataLine(): string {
   else parts.push(tr('pic.noExpShort', { det: `D${S.det}` }));
   const lams = lamRange(frames.map((x) => x.lam));
   parts.push(S.color ? 'D1–D6' : lams || `D${S.det}`);
-  return parts.join(' · ');
+  return parts.map(iso).join(' · ');
 }
 
 /** "15–16 Sep 2026", "30 Sep – 2 Oct 2026", or one day. */
