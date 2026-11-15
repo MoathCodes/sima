@@ -70,9 +70,18 @@ export interface Landing {
   fromScale: number;
 }
 
+/** A disc on screen: centre and radius, CSS px. */
+export interface Disc {
+  x: number;
+  y: number;
+  r: number;
+}
+
 /** What intro.ts has decided; the painter draws from it. Times are seconds from the start. */
 export interface Plan {
   reduced: boolean;
+  /** Where the globe sits while it is in shadow; the window's middle (`globeRadius`) if unset. */
+  home?: Disc;
   /** The sky map's channel: the globe shows it. */
   skyChannel: number;
   revealAt: number | null;
@@ -97,6 +106,30 @@ export function handFov(w: number, h: number, fov: number): number {
 /** The globe's radius while it is in shadow, CSS pixels. */
 export function globeRadius(w: number, h: number): number {
   return Math.min(w * 0.4, h * 0.3, 330);
+}
+
+/**
+ * On a phone, the disc sits from the start where Discover's globe rests: centred in the map's
+ * box, as wide as the box less a margin (globe.ts `globeHome`, phones), so the landing is the
+ * turn alone, with no slide or grow.
+ */
+export function phoneDisc(box: { x: number; y: number; w: number; h: number }): Disc {
+  return {
+    x: box.x + box.w / 2,
+    y: box.y + box.h / 2,
+    r: Math.max(120, Math.min(box.w - 48, box.h - 60)) / 2,
+  };
+}
+
+/**
+ * The phone's map box in Discover before the sky has set it up (the sky starts after the intro's
+ * first frame): sky.ts `freeBox`, under the top row and its one-line sky note (64 + 19 + 8 px),
+ * above the sheet's resting third. The turn takes up any small difference.
+ */
+export function phoneBox(w: number, h: number): { x: number; y: number; w: number; h: number } {
+  const y = Math.round(Math.max(64, Math.min(91, h / 3)));
+  const bottom = Math.max(y + 200, h - Math.round(h / 3));
+  return { x: 0, y, w, h: bottom - y };
 }
 
 /** Where the flare sits on the globe's edge: up and to the right (x right, y up). */
@@ -164,7 +197,9 @@ export function sceneAt(
 
   // The globe's size: still, then growing to the landing's start (cubic ease-in, so its speed
   // there matches the sky map's glide, which starts fast and eases out).
-  const r0 = globeRadius(w, h);
+  const r0 = plan.home?.r ?? globeRadius(w, h);
+  const hx = plan.home?.x ?? w / 2;
+  const hy = plan.home?.y ?? h / 2;
   let radius = r0;
   if (plan.handAt !== null) {
     // The sky map's glide (sky.ts `introZoom`): eased out, in the globe's size on screen.
@@ -187,8 +222,8 @@ export function sceneAt(
       ? 0
       : ease(T.turn[0], T.turn[1], r)
     : smooth(Math.hypot(w, h) / 2, land.fromScale * 0.98, radius);
-  const cx = w / 2 + (land.x - w / 2) * fill;
-  const cy = h / 2 + (land.y - h / 2) * fill;
+  const cx = hx + (land.x - hx) * fill;
+  const cy = hy + (land.y - hy) * fill;
 
   // The turn: one rotation, about the axis that brings the flare's point to the centre.
   const flare = flareDir(w);

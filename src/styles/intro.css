@@ -20,11 +20,12 @@
   height: 100%;
 }
 
-/* The name, inside the dark disc. --r0 is the disc's radius (set by intro.ts). */
+/* The name, inside the dark disc. --r0 is the disc's radius, --cx and --cy its centre on a phone
+   (set by intro.ts; else the window's middle). */
 .intro-name {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: var(--cy, 50%);
+  left: var(--cx, 50%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -175,7 +176,7 @@
 /* What the light is (H2): source, release, date and wavelength. */
 .intro-source {
   position: absolute;
-  bottom: 22px;
+  bottom: max(22px, calc(env(safe-area-inset-bottom) + 10px));
   left: 50%;
   width: max-content;
   max-width: calc(100vw - 2 * var(--gutter));
@@ -189,8 +190,8 @@
 
 .intro-skip {
   position: absolute;
-  top: var(--top);
-  right: var(--gutter);
+  top: max(var(--top), env(safe-area-inset-top));
+  right: max(var(--gutter), env(safe-area-inset-right));
   height: var(--h-text-btn);
   padding: 0 10px;
   border: 0;
@@ -218,6 +219,17 @@
 @media (max-width: 600px) {
   .intro-line {
     font: var(--text-body);
+  }
+}
+/* On a phone the disc is narrow: the word and Sima fill it, and the line sits under the disc,
+   gutter to gutter, so it never crowds the ring. */
+@media (max-width: 699px) {
+  .intro-line {
+    position: absolute;
+    top: calc(50% + var(--r0, 160px) + 22px);
+    left: calc(50% - 50vw + var(--gutter));
+    right: calc(50% - 50vw + var(--gutter));
+    margin: 0;
   }
 }
 
