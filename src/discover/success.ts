@@ -20,6 +20,7 @@ import { MEASURING, MISSION_COPY } from './copy.ts';
 import { ghostLines, planetLines } from '../explore/plain.ts';
 import { planetEdges } from '../explore/plan-x.ts';
 import { esc, icon, liveRegion, rerender, say } from './ui.ts';
+import { t as tr } from '../shell/i18n.ts';
 
 /** What the mission left for its result. */
 export interface Outcome {
@@ -95,8 +96,8 @@ function render(): void {
   body.dataset.simulated = String(m.simulated);
   rerender(body, `
     <div class="dsc-hd">
-      <p class="dsc-pill ${m.simulated ? 'sim' : 'done'}">${m.simulated ? 'Simulated · ' : icon('check')}Mission ${n} complete</p>
-      <button class="dsc-icon-btn" type="button" data-k="close" data-close aria-label="Back to the missions" data-tip="Back to the missions">${icon('close')}</button>
+      <p class="dsc-pill ${m.simulated ? 'sim' : 'done'}">${m.simulated ? `${tr('honest.simulated')} · ` : icon('check')}${tr('ds.complete', { n })}</p>
+      <button class="dsc-icon-btn" type="button" data-k="close" data-close aria-label="${tr('ds.back')}" data-tip="${tr('ds.back')}">${icon('close')}</button>
     </div>
     <h2 class="dsc-title" tabindex="-1" data-k="title">${esc(m.heading ?? '')}</h2>
     <div class="dsc-scroll" data-scroll>
@@ -104,16 +105,16 @@ function render(): void {
       ${
         m.simulated
           ? ''
-          : `<button class="dsc-link" type="button" data-k="expert" data-guide="success-expert">${icon('chart')}How it was measured (Expert)</button>`
+          : `<button class="dsc-link" type="button" data-k="expert" data-guide="success-expert">${icon('chart')}${tr('ds.how')}</button>`
       }
-      <p class="dsc-skill">${icon('check')}<span><b>Skill learned: ${esc(m.skill)}.</b> ${esc(m.lesson ?? '')}</span></p>
-      ${o.id === 'runaway' ? `<button class="dsc-btn" type="button" data-k="object" data-object="rw-aur" data-guide="object-rw-aur">${icon('arrow-right')}Try Blink on RW Aurigae</button>` : ''}
+      <p class="dsc-skill">${icon('check')}<span><b>${tr('ds.skill', { skill: esc(m.skill) })}</b> ${esc(m.lesson ?? '')}</span></p>
+      ${o.id === 'runaway' ? `<button class="dsc-btn" type="button" data-k="object" data-object="rw-aur" data-guide="object-rw-aur">${icon('arrow-right')}${tr('ds.tryRw')}</button>` : ''}
     </div>
     <div class="dsc-actions">
       ${
         next
-          ? `<button class="dsc-btn primary lg" type="button" data-k="next" data-next="${next}" data-guide="success-next">Next: ${esc(MISSION_COPY[next].name)}${icon('arrow-right')}</button>`
-          : `<button class="dsc-btn primary lg" type="button" data-k="close" data-guide="success-next">Back to the missions</button>`
+          ? `<button class="dsc-btn primary lg" type="button" data-k="next" data-next="${next}" data-guide="success-next">${tr('ds.next', { name: esc(MISSION_COPY[next].name) })}${icon('arrow-right')}</button>`
+          : `<button class="dsc-btn primary lg" type="button" data-k="close" data-guide="success-next">${tr('ds.back')}</button>`
       }
     </div>`, '.dsc-title');
   body.append(live);
@@ -131,26 +132,26 @@ function runaway(): string {
     ? fit.catalogue.total
     : t ? Math.hypot(t.pmra, t.pmdec) / 1000 : Number.NaN;
   const cat = Number.isFinite(catTotal)
-    ? `<p class="dsc-cat"><b>${catTotal.toFixed(2)}″ a year</b> · Gaia's star catalogue (ESA Gaia DR3)</p>`
+    ? `<p class="dsc-cat"><b>${tr('ds.perYear', { v: `${catTotal.toFixed(2)}″` })}</b> · ${tr('ds.gaia')}</p>`
     : '';
-  const tail = `<p class="dsc-fine">″ is an arcsecond: 1/3600 of a degree. No known star crosses the sky faster (Wikipedia: Barnard's Star).</p>`;
+  const tail = `<p class="dsc-fine">${tr('ds.arcsec')}</p>`;
   if (fit === undefined)
-    return `<p class="dsc-label">Measured by Sima</p><p class="dsc-big checking"><span class="dsc-busy" aria-hidden="true"></span>${esc(MEASURING)}</p>${cat}${tail}`;
+    return `<p class="dsc-label">${tr('ds.measuredBy')}</p><p class="dsc-big checking"><span class="dsc-busy" aria-hidden="true"></span>${esc(MEASURING)}</p>${cat}${tail}`;
   if (!fit.ok)
-    return `<p class="dsc-label">Measured by Sima</p><p class="dsc-big not">Not measured: ${esc(fit.reason ?? 'the motion could not be measured')}.</p>${
-      Number.isFinite(catTotal) ? `<p class="dsc-cat"><b>Catalogue value: ${catTotal.toFixed(2)}″ a year</b> · Gaia's star catalogue (ESA Gaia DR3)</p>` : ''
-    }${tail}<p class="dsc-src">Catalogue: ESA Gaia DR3</p>`;
+    return `<p class="dsc-label">${tr('ds.measuredBy')}</p><p class="dsc-big not">${tr('honest.notMeasuredWhy', { reason: esc(fit.reason ?? tr('ds.noMotion')) })}.</p>${
+      Number.isFinite(catTotal) ? `<p class="dsc-cat"><b>${tr('ds.catValue', { v: `${catTotal.toFixed(2)}″` })}</b> · ${tr('ds.gaia')}</p>` : ''
+    }${tail}<p class="dsc-src">${tr('ds.catSrc')}</p>`;
   const f = fit as MotionFit;
   const pill =
     f.matches === true
-      ? '<span class="dsc-pill good">Matches within the error</span>'
+      ? `<span class="dsc-pill good">${tr('ds.matches')}</span>`
       : f.matches === false
-        ? '<span class="dsc-pill warn">Differs from the catalogue</span>'
+        ? `<span class="dsc-pill warn">${tr('ds.differs')}</span>`
         : '';
-  return `<p class="dsc-label">Measured by Sima, from ${f.used} of ${f.of} pictures</p>
-    <p class="dsc-big" data-guide="success-value">${f.total.toFixed(2)} ± ${f.totalErr.toFixed(2)}″ a year</p>
+  return `<p class="dsc-label">${tr('ds.measuredFrom', { used: f.used, of: f.of })}</p>
+    <p class="dsc-big" data-guide="success-value">${tr('ds.perYear', { v: `${f.total.toFixed(2)} ± ${f.totalErr.toFixed(2)}″` })}</p>
     ${cat}${pill ? `<p>${pill}</p>` : ''}${tail}
-    <p class="dsc-src">Measured from SPHEREx pixels · Catalogue: ESA Gaia DR3</p>`;
+    <p class="dsc-src">${tr('ds.fromPixels')} · ${tr('ds.catSrc')}</p>`;
 }
 
 function ghost(r: TrialResult | null): string {
@@ -164,10 +165,10 @@ function ghost(r: TrialResult | null): string {
   if (!r || !Number.isFinite(a))
     return `<p class="dsc-big not">${esc(l.measured)}</p><p class="dsc-fine">${esc(l.type)}</p>`;
   const how = r.atCatalogue
-    ? 'along the catalogue motion'
-    : `along your arrow (${(Math.hypot(r.motion.pmra, r.motion.pmdec) / 1000).toFixed(1)}″ a year)`;
-  return `<p class="dsc-label">Measured by Sima, ${esc(how)}</p>
-    <p class="dsc-big" data-guide="success-value">${a.toFixed(1)}× the noise</p>
+    ? tr('hl.alongCat')
+    : tr('ds.alongArrow', { v: `${(Math.hypot(r.motion.pmra, r.motion.pmdec) / 1000).toFixed(1)}″` });
+  return `<p class="dsc-label">${tr('ds.measuredHow', { how: esc(how) })}</p>
+    <p class="dsc-big" data-guide="success-value">${tr('ds.timesNoise', { v: `${a.toFixed(1)}×` })}</p>
     <p class="dsc-cat">${esc(l.measured)}</p>
     <p class="dsc-cat">${esc(l.controls)}</p>
     ${l.notDetected ? `<p class="dsc-cat">${esc(l.notDetected)}</p>` : ''}
@@ -176,21 +177,21 @@ function ghost(r: TrialResult | null): string {
 }
 
 function planetX(r: MissionInputs['sandbox']): string {
-  const none = `<p class="dsc-big not">Not worked out: this patch has no measured noise to compare with.</p>`;
-  const observed = `<p class="dsc-cat"><b>Nothing here was observed.</b></p>`;
+  const none = `<p class="dsc-big not">${tr('ds.notWorked')}</p>`;
+  const observed = `<p class="dsc-cat"><b>${tr('ds.nothingObserved')}</b></p>`;
   if (!r || r.verdict.kind === 'unknown') return `${none}${observed}`;
   const p = r.planet;
   const say =
     r.verdict.kind === 'one'
-      ? `one SPHEREx picture would show it`
+      ? tr('ds.one')
       : r.verdict.kind === 'stack'
-        ? 'it would show only when pictures are added up'
-        : 'it would not show with this method';
-  return `<p class="dsc-label">Model · Simulated</p>
-    <p class="dsc-cat">By a simple model and this patch's measured noise: with your pretend planet at <b>${Math.round(p.distance)} AU</b> and <b>${p.radius.toFixed(1)} times Earth's width</b>, ${say}.</p>
+        ? tr('ds.stackOnly')
+        : tr('ds.wouldNot');
+  return `<p class="dsc-label">${tr('ds.modelSim')}</p>
+    <p class="dsc-cat">${tr('ds.byModel', { d: `<b>${Math.round(p.distance)} AU</b>`, r: `<b>${tr('ds.timesEarth', { v: p.radius.toFixed(1) })}</b>`, say })}.</p>
     ${edgeLines(r.noises)}
     ${observed}
-    <p class="dsc-src">Model: Sima's sandbox · Noise: measured from SPHEREx pixels</p>`;
+    <p class="dsc-src">${tr('ds.pxSrc')}</p>`;
 }
 
 /** Lane H's edges: how far a Neptune-sized planet would show, and how big one at 500 AU must be. */
@@ -208,7 +209,7 @@ function resultWords(): string {
   const o = outcome;
   if (!o || o.id !== 'runaway') return '';
   if (fit === undefined) return MEASURING;
-  if (!fit.ok) return `Not measured: ${fit.reason ?? ''}.`;
+  if (!fit.ok) return `${tr('honest.notMeasuredWhy', { reason: fit.reason ?? '' })}.`;
   const f = fit as MotionFit;
-  return `Sima measured it moving ${f.total.toFixed(2)} ± ${f.totalErr.toFixed(2)} arcseconds a year, from ${f.used} of ${f.of} pictures.`;
+  return tr('ds.words', { v: `${f.total.toFixed(2)} ± ${f.totalErr.toFixed(2)}`, used: f.used, of: f.of });
 }

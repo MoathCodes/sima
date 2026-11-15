@@ -122,7 +122,7 @@
 }
 
 /* Icons that point a way turn round; play, next and previous do not (time runs left to right). */
-[dir='rtl'] .icon:is([data-icon='arrow-right'], [data-icon='back']) {
+[dir='rtl'] :is(.icon[data-icon='arrow-right'], [data-icon='back']) {
   transform: scaleX(-1);
 }
 

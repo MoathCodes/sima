@@ -9,6 +9,7 @@
 import { FOVS, S, watch } from '../viewer/state.ts';
 import { setFov } from '../viewer/load.ts';
 import { esc } from './ui.ts';
+import { t as tr } from '../shell/i18n.ts';
 
 /** Adds the button and its menu to the frame. Called once by Discover's start. */
 export function startField(): void {
@@ -25,16 +26,16 @@ export function startField(): void {
   menu.className = 'dsc-field-menu';
   menu.setAttribute('popover', '');
   menu.setAttribute('role', 'group');
-  menu.setAttribute('aria-label', 'Field size');
+  menu.setAttribute('aria-label', tr('frame.fov'));
   frame.append(btn);
   document.body.append(menu);
 
   const draw = () => {
     btn.innerHTML = `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>${S.fov}′</span>`;
-    btn.setAttribute('aria-label', `Field size: ${S.fov} arcminutes`);
-    menu.innerHTML = `<p class="dsc-field-label">Field size</p><div class="dsc-field-row">${FOVS.map(
+    btn.setAttribute('aria-label', tr('frame.fovLabel', { n: S.fov }));
+    menu.innerHTML = `<p class="dsc-field-label">${tr('frame.fov')}</p><div class="dsc-field-row">${FOVS.map(
       (v) =>
-        `<button type="button" data-fov-pick="${v}" aria-pressed="${v === S.fov}" aria-label="${esc(`${v} arcminutes`)}">${v}′</button>`,
+        `<button type="button" data-fov-pick="${v}" aria-pressed="${v === S.fov}" aria-label="${esc(tr('df.arcmin', { n: v }))}">${v}′</button>`,
     ).join('')}</div>`;
   };
   draw();
