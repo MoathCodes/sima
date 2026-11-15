@@ -12,20 +12,22 @@ import { icon } from '../shell/icons.ts';
 import { openSandbox } from '../shell/sandbox.ts';
 import { playIntro } from '../intro/intro.ts';
 import type { Target } from '../core/types.ts';
+import { locale, t } from '../shell/i18n.ts';
+import { aboutBodyAr } from '../locales/about-ar.ts';
 
 /** Light-years in a parsec (IAU). */
 const LY_PER_PC = 3.26156;
 
 /** About's sections, for the contents row: heading id and short name. */
 const SECTIONS: readonly [string, string][] = [
-  ['about-use', 'How to use'],
-  ['about-method', 'Method'],
-  ['about-targets', 'Targets'],
-  ['about-planet-x', 'Planet X'],
-  ['about-challenge', 'Challenge'],
-  ['about-limits', 'Limits'],
-  ['about-ai', 'AI help'],
-  ['about-sources', 'Sources'],
+  ['about-use', t('about.sec.use')],
+  ['about-method', t('about.sec.method')],
+  ['about-targets', t('about.sec.targets')],
+  ['about-planet-x', t('about.sec.planetX')],
+  ['about-challenge', t('about.sec.challenge')],
+  ['about-limits', t('about.sec.limits')],
+  ['about-ai', t('about.sec.ai')],
+  ['about-sources', t('about.sec.sources')],
 ];
 
 /** Fills the About dialog. Called once by shell.ts. */
@@ -35,13 +37,13 @@ export function startAbout(): void {
   dialog.setAttribute('aria-labelledby', 'about-title');
   dialog.innerHTML = `
     <header class="dialog-head">
-      <h2 id="about-title"><span lang="ar" dir="rtl" class="about-ar">سيما</span> About Sima</h2>
-      <button class="icon-btn sm" data-dialog-close aria-label="Close About" data-tip="Close">${icon('close')}</button>
+      <h2 id="about-title"><span lang="ar" dir="rtl" class="about-ar">سيما</span> ${t('about.title')}</h2>
+      <button class="icon-btn sm" data-dialog-close aria-label="${t('about.close')}" data-tip="${t('word.close')}">${icon('close')}</button>
     </header>
-    <nav class="about-toc" aria-label="Sections of About">
+    <nav class="about-toc" aria-label="${t('about.toc')}">
       ${SECTIONS.map(([id, name]) => `<a class="link" href="#${id}" data-section="${id}">${name}</a>`).join('')}
     </nav>
-    <div class="about-body" data-scroll tabindex="0">${body()}</div>`;
+    <div class="about-body" data-scroll tabindex="0"${locale() === 'ar' ? ' data-i18n' : ''}>${locale() === 'ar' ? aboutBodyAr(link, TARGETS) : body()}</div>`;
   dialog.querySelector('[data-dialog-close]')?.addEventListener('click', () => dialog.close());
   // Closed from inside (its close button, "Play the intro", "Open the sandbox") while it is a
   // phone page: leave the page too.
@@ -77,7 +79,7 @@ export function openAbout(): void {
   if (!(dialog instanceof HTMLDialogElement)) return;
   if (onPhone()) {
     dialog.show();
-    phonePage(dialog, 'About Sima', () => {
+    phonePage(dialog, t('about.title'), () => {
       if (dialog.open) dialog.close();
     });
   } else dialog.showModal();

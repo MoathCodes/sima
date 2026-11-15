@@ -9,6 +9,7 @@ import { LOCALES, LOCALE_NAMES, locale, setLocale, t } from './i18n.ts';
 export function languageGroup(): HTMLElement {
   const sec = document.createElement('section');
   sec.className = 'st-group';
+  sec.dataset.i18n = '';
   sec.setAttribute('aria-labelledby', 'st-lang');
   sec.innerHTML = `
     <h3 class="group-label" id="st-lang">${t('lang.group')}</h3>

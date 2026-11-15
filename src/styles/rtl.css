@@ -76,8 +76,13 @@
   direction: rtl;
 }
 /* Until phase 2 translates every surface, a line still in English keeps English order (its
-   full stop stays at its end); an Arabic line reads right to left. */
-[dir='rtl'] :is(p, h1, h2, h3, h4, li, dt, dd, label, td, th, figcaption, summary, legend) {
+   full stop stays at its end): each line takes the direction of its first letter. A part that is
+   fully translated says so with `data-i18n` and reads right to left throughout (an Arabic line
+   that starts with a Latin name, such as "VizieR و SIMBAD", stays right to left). */
+[dir='rtl']
+  :is(p, h1, h2, h3, h4, li, dt, dd, label, td, th, figcaption, summary, legend):not(
+    [data-i18n] *
+  ) {
   unicode-bidi: plaintext;
   text-align: start;
 }
@@ -111,4 +116,9 @@
 /* Icons that point a way turn round; play, next and previous do not (time runs left to right). */
 [dir='rtl'] .icon:is([data-icon='arrow-right'], [data-icon='back']) {
   transform: scaleX(-1);
+}
+
+/* About's heading is «عن سيما» in Arabic: the wordmark's سيما beside it would say the name twice. */
+:root:lang(ar) .about-ar {
+  display: none;
 }
