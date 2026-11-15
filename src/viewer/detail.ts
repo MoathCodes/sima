@@ -37,14 +37,15 @@ import { paintCutout, triplet, tripletReady } from './measure/cutouts.ts';
 import { ABSORPTION, candidateLines, moverLine, neighbours, pathLine, showDet, spotHeadline, targetHeadline, targetStats, type Headline } from './measure/model.ts';
 import { plainP, trendWords } from './measure/words.ts';
 import { renderFound, startInbox } from './inbox.ts';
+import { t as tr } from '../shell/i18n.ts';
 
 const TABS: readonly [MeasureTab, string][] = [
-  ['spectrum', 'Spectrum'],
-  ['brightness', 'Brightness'],
-  ['folded', 'Folded'],
-  ['path', 'Path'],
-  ['cutouts', 'Cutouts'],
-  ['exposure', 'Exposure'],
+  ['spectrum', tr('ms.spectrum')],
+  ['brightness', tr('ms.brightness')],
+  ['folded', tr('ms.folded')],
+  ['path', tr('ms.path')],
+  ['cutouts', tr('ms.cutouts')],
+  ['exposure', tr('ms.exposure')],
 ];
 
 /** What has been computed for the selection on screen. */
@@ -215,9 +216,9 @@ async function sendToComputer(p: HTMLElement): Promise<void> {
   }
   try {
     await navigator.clipboard.writeText(url);
-    say('Link copied. Open it on your computer.');
+    say(tr('ms.linkCopied'));
   } catch {
-    say(`Copy this link: ${url}`);
+    say(tr('ms.copyLink', { url }));
   }
 }
 
@@ -226,23 +227,24 @@ async function sendToComputer(p: HTMLElement): Promise<void> {
 function skeleton(p: HTMLElement): void {
   if (p.querySelector('[data-wrap]')) return;
   p.classList.add('ms-panel', 'appear', 'slate');
+  p.dataset.i18n = '';
   p.innerHTML = `
     <div class="ms-wrap" data-wrap>
       <div class="ms-main">
         <header class="ms-headrow">
           <div class="ms-title"><h2 data-title></h2><p class="ms-kind" data-kind></p></div>
-          <button type="button" class="icon-btn sm" data-do="csv" data-csv aria-label="Download these numbers (CSV)" data-tip="Download these numbers (CSV)" hidden>${icon('download')}</button>
-          <button type="button" class="icon-btn sm" data-close aria-label="Close Measure" data-tip="Close Measure (Esc)">${icon('close')}</button>
+          <button type="button" class="icon-btn sm" data-do="csv" data-csv aria-label="${tr('ms.csv')}" data-tip="${tr('ms.csv')}" hidden>${icon('download')}</button>
+          <button type="button" class="icon-btn sm" data-close aria-label="${tr('frame.closeMeasure')}" data-tip="${tr('ms.closeEsc')}">${icon('close')}</button>
         </header>
         <div class="ms-headline" data-headline></div>
-        <div class="tabs ms-tabs" role="tablist" aria-label="Charts" data-tabs>${TABS.map(
+        <div class="tabs ms-tabs" role="tablist" aria-label="${tr('ms.charts')}" data-tabs>${TABS.map(
           ([key, label]) =>
             `<button type="button" role="tab" data-tab="${key}" aria-selected="false">${label}</button>`,
         ).join('')}</div>
-        <div class="ms-chart-row"><p class="ms-chart-head" data-chart-head></p><button type="button" class="icon-btn xs ms-info" popovertarget="ms-about" aria-label="How to read this" data-tip="How to read this" data-guide="measure-info">${icon('info')}</button></div>
-        <div id="ms-about" class="popover appear frame-pop ms-about" popover role="dialog" aria-label="How to read this" data-overlay="ms-about"></div>
+        <div class="ms-chart-row"><p class="ms-chart-head" data-chart-head></p><button type="button" class="icon-btn xs ms-info" popovertarget="ms-about" aria-label="${tr('ms.howToRead')}" data-tip="${tr('ms.howToRead')}" data-guide="measure-info">${icon('info')}</button></div>
+        <div id="ms-about" class="popover appear frame-pop ms-about" popover role="dialog" aria-label="${tr('ms.howToRead')}" data-overlay="ms-about"></div>
         <div class="window ms-chart" data-guide="chart" data-chartbox>
-          <canvas data-chart aria-label="Chart"></canvas>
+          <canvas data-chart aria-label="${tr('ms.chart')}"></canvas>
           <div class="ms-cuts" data-cuts hidden></div>
           <div class="ms-table" data-table hidden></div>
         </div>
@@ -252,7 +254,7 @@ function skeleton(p: HTMLElement): void {
         <dl class="ms-stats" data-stats></dl>
         <div id="detectors" data-guide="detectors"></div>
         <section class="ms-found">
-          <p class="ms-found-head"><span class="group-label">${term('Found in this patch', 'The target and what the change search lists in this detector at its threshold (Find changes in the picture tools). Candidates to check, not discoveries.')}</span><span class="ms-count" data-found-count></span></p>
+          <p class="ms-found-head"><span class="group-label">${term(tr('ms.found'), tr('ms.foundTip'))}</span><span class="ms-count" data-found-count></span></p>
           <div class="ms-found-list" data-found data-scroll></div>
         </section>
       </aside>
@@ -260,8 +262,8 @@ function skeleton(p: HTMLElement): void {
         <button type="button" class="btn" data-all data-guide="all-numbers" aria-pressed="false"></button>
       </div>
       <div class="ms-computer" data-computer>
-        <p>Picture tools, several frames and workspaces need a computer.</p>
-        <button type="button" class="btn" data-send data-guide="send-to-computer">Send this to my computer</button>
+        <p>${tr('ms.computer')}</p>
+        <button type="button" class="btn" data-send data-guide="send-to-computer">${tr('ms.send')}</button>
         <p class="ms-computer-done" role="status"></p>
       </div>
     </div>`;
@@ -357,9 +359,9 @@ function render(): void {
   const state = !field ? 'none' : field.simulated ? 'sim' : !sel ? 'picture' : 'measure';
   wrap.dataset.state = state;
   wrap.classList.toggle('ms-all', all && state !== 'none');
-  q('[data-all]').textContent = all ? 'Show fewer numbers' : 'Show all the numbers';
+  q('[data-all]').textContent = all ? tr('ms.fewer') : tr('ms.all');
   q('[data-all]').setAttribute('aria-pressed', String(all));
-  q('[data-all]').dataset.tip = all ? 'Back to one chart' : 'More charts, catalogue values, the six detectors and finds in this patch';
+  q('[data-all]').dataset.tip = all ? tr('ms.fewerTip') : tr('ms.allTip');
   q('[data-csv]').hidden = state !== 'measure' || !hasNumbers();
   if (all && state !== 'none') {
     q('[data-stats]').innerHTML = state === 'measure' ? statsHtml() : '';
@@ -374,25 +376,25 @@ function render(): void {
   if (state === 'none') {
     // MSR-6: nothing from the last place.
     const loading = S.source === 'loading';
-    title.textContent = loading ? 'Waiting for pictures' : 'Nothing to measure here';
+    title.textContent = loading ? tr('ms.waiting') : tr('ms.nothing');
     kind.textContent = '';
     head.innerHTML = loading
       ? ''
-      : `<p class="ms-sub">No SPHEREx pictures of this spot. Open a test target, or move the frame.</p>`;
+      : `<p class="ms-sub">${tr('ms.noPictures')}</p>`;
     under.innerHTML = '';
     return;
   }
   if (state === 'sim') {
     title.textContent = S.label;
-    kind.innerHTML = pill('Simulated', 'warn');
-    head.innerHTML = `<p class="ms-sub">Simulated pictures, made up for practice. Measure works only on real exposures, so nothing here is measured, listed or saved as a result.</p>`;
+    kind.innerHTML = pill(tr('honest.simulated'), 'warn');
+    head.innerHTML = `<p class="ms-sub">${tr('ms.simulated')}</p>`;
     under.innerHTML = under.dataset.pic = pictureDetails();
     return;
   }
   if (state === 'picture') {
-    title.textContent = 'The picture on screen';
+    title.textContent = tr('ms.picture');
     kind.textContent = S.label;
-    head.innerHTML = `<p class="ms-sub">Tap a star in the picture to measure it${field?.target ? `, or <button type="button" class="link" data-do-target>measure ${esc(field.target.name)}</button>` : ''}.</p>`;
+    head.innerHTML = `<p class="ms-sub">${tr('ms.tapStar')}${field?.target ? `${tr('ms.orMeasure')}<button type="button" class="link" data-do-target>${tr('ms.measureName', { name: esc(field.target.name) })}</button>` : ''}.</p>`;
     head.querySelector('[data-do-target]')?.addEventListener('click', () => detail({ kind: 'target' }));
     under.innerHTML = under.dataset.pic = pictureDetails();
     return;
@@ -453,29 +455,29 @@ function detWords(det: number): string {
 function chartHead(tab: MeasureTab): string {
   const g = S.groups[S.epoch];
   const sel = S.selected!;
-  const det = S.color ? 'Color view: pick one detector' : detWords(S.det);
-  const day = g ? formatDate(g.mjd, 'day') : 'no picture on screen';
+  const det = S.color ? tr('ms.colorPick') : detWords(S.det);
+  const day = g ? formatDate(g.mjd, 'day') : tr('ms.noPicLower');
   switch (tab) {
     case 'path': {
       const c = moverOf(sel);
-      if (c) return `<b>Path</b> · D${searchDet()} · ${c.path?.length ?? 0} positions`;
+      if (c) return `<b>${tr('ms.path')}</b> · D${searchDet()} · ${tr('ms.positions', { n: c.path?.length ?? 0 })}`;
       const f = res.target?.fit;
-      if (sel.kind !== 'target' || !f?.ok) return '<b>Path</b> · all six detectors';
+      if (sel.kind !== 'target' || !f?.ok) return `<b>${tr('ms.path')}</b> · ${tr('ms.allSix')}`;
       const ms = (res.target?.ms ?? []).filter((m) => m.seen && Number.isFinite(m.ra) && !m.skipped);
       const t0 = Math.min(...ms.map((m) => m.mjd));
       const t1 = Math.max(...ms.map((m) => m.mjd));
-      return `<b>Path</b> · all six detectors · ${esc(formatDate(t0, 'month'))} to ${esc(formatDate(t1, 'month'))}`;
+      return `<b>${tr('ms.path')}</b> · ${tr('ms.allSix')} · ${tr('ms.range', { from: esc(formatDate(t0, 'month')), to: esc(formatDate(t1, 'month')) })}`;
     }
     case 'spectrum':
-      return `<b>Spectrum</b> · all six detectors · ${spectrumAll ? 'every date' : `dates up to ${esc(g ? formatDate(g.mjd1 ?? g.mjd, 'day') : '—')}`}`;
+      return `<b>${tr('ms.spectrum')}</b> · ${tr('ms.allSix')} · ${spectrumAll ? tr('ms.everyDate') : tr('ms.upTo', { day: esc(g ? formatDate(g.mjd1 ?? g.mjd, 'day') : '—') })}`;
     case 'brightness':
-      return `<b>Brightness</b> · ${esc(det)} · every date`;
+      return `<b>${tr('ms.brightness')}</b> · ${esc(det)} · ${tr('ms.everyDate')}`;
     case 'folded':
-      return `<b>Folded</b> · ${esc(det)}`;
+      return `<b>${tr('ms.folded')}</b> · ${esc(det)}`;
     case 'cutouts':
-      return `<b>Cutouts</b> · ${esc(det)}`;
+      return `<b>${tr('ms.cutouts')}</b> · ${esc(det)}`;
     case 'exposure':
-      return `<b>Exposures</b> · ${esc(det)} · ${esc(day)}, the picture on screen`;
+      return `<b>${tr('ms.exposures')}</b> · ${esc(det)} · ${tr('ms.onScreen', { day: esc(day) })}`;
   }
 }
 
@@ -704,15 +706,15 @@ function pictureDetails(): string {
   const noise = view ? noiseOf(view) : null;
   const bad = frames.length ? frames.reduce((s, f) => s + f.bad.reduce((a, b) => a + b, 0), 0) / (frames.length * field.n * field.n) : Number.NaN;
   const rows: [string, string, string][] = [
-    ['Date', formatDate(g.mjd, 'time'), 'The middle of the exposures blended into this picture, UTC.'],
-    ['Detector', `D${g.det}, ${num(g.lam, 2)} µm`, 'Which of the six detectors, and the wavelength at the centre of the patch.'],
-    ['Exposures', `${frames.length} blended`, 'How many single exposures make this picture.'],
-    ['Data', field.simulated ? 'Simulated' : `Real SPHEREx, ${field.releases.map((r) => r.replace('spherex_', '').toUpperCase()).join(', ')}`, 'Where the pixels came from: NASA’s SPHEREx archive at IRSA, and which data release.'],
-    ['Field', `${field.fov}′ across, ${field.n} × ${field.n} pixels`, 'The size of the patch on the sky (arcminutes) and its grid of 6.15″ pixels.'],
-    ['Centre', formatCoords(field.ra, field.dec), 'Right ascension and declination of the patch centre.'],
-    ['Sky level', noise ? `${sig(noise.sky, 3)} µJy a pixel` : 'not measured', 'The typical brightness of empty sky here.'],
-    ['Noise', noise ? `${sig(noise.sigma, 3)} µJy a pixel` : 'not measured', 'How much empty-sky pixels scatter: the unit the tools count in.'],
-    ['Flagged', Number.isFinite(bad) ? `${num(bad * 100, 1)}% of pixels` : 'not measured', 'Pixels the pipeline flags as untrustworthy (saturated, cosmic ray, hot) or not covered.'],
+    [tr('ms.row.date'), formatDate(g.mjd, 'time'), tr('ms.row.dateTip')],
+    [tr('ms.row.det'), `D${g.det}, ${num(g.lam, 2)} µm`, tr('ms.row.detTip')],
+    [tr('ms.exposures'), tr('ms.row.blended', { n: frames.length }), tr('ms.row.expTip')],
+    [tr('ms.row.data'), field.simulated ? tr('honest.simulated') : tr('ms.row.real', { rel: field.releases.map((r) => r.replace('spherex_', '').toUpperCase()).join(', ') }), tr('ms.row.dataTip')],
+    [tr('ms.row.field'), tr('ms.row.fieldV', { fov: `${field.fov}′`, n: `${field.n} × ${field.n}` }), tr('ms.row.fieldTip')],
+    [tr('ms.row.centre'), formatCoords(field.ra, field.dec), tr('ms.row.centreTip')],
+    [tr('ms.row.sky'), noise ? tr('ms.row.perPixel', { v: `${sig(noise.sky, 3)} µJy` }) : tr('ms.nm'), tr('ms.row.skyTip')],
+    [tr('ms.row.noise'), noise ? tr('ms.row.perPixel', { v: `${sig(noise.sigma, 3)} µJy` }) : tr('ms.nm'), tr('ms.row.noiseTip')],
+    [tr('ms.row.flagged'), Number.isFinite(bad) ? tr('ms.row.pct', { v: `${num(bad * 100, 1)}%` }) : tr('ms.nm'), tr('ms.row.flaggedTip')],
   ];
   return `<dl class="ms-stats ms-pic">${rows
     .map(([n, v, tip]) => `<dt>${term(n, tip)}</dt><dd>${esc(v)}</dd>`)
@@ -754,9 +756,9 @@ function statsHtml(): string {
   // named catalogue, or "Model".
   const source = rows.find((r) => r.name === 'Catalogue values from' || r.name === 'Catalogue');
   const groups: [string, string, string][] = [
-    ['measured', 'Measured from the pixels', 'Worked out by Sima from the SPHEREx exposures of this patch.'],
-    ['catalogue', source ? `Catalogue: ${source.value}` : 'Catalogue', source?.tip ?? 'From a named catalogue, not measured here.'],
-    ['model', 'Model', 'Worked out from a model, not measured.'],
+    ['measured', tr('ms.g.measured'), tr('ms.g.measuredTip')],
+    ['catalogue', source ? tr('ms.g.catalogueOf', { name: source.value }) : tr('ms.g.catalogue'), source?.tip ?? tr('ms.g.catalogueTip')],
+    ['model', tr('ms.g.model'), tr('ms.g.modelTip')],
   ];
   return groups
     .map(([from, head, tip]) => {
@@ -950,19 +952,19 @@ function drawCuts(host: HTMLElement): void {
   const making = !stackOnly && !!g && !!pos && !tripletReady(field, S.det, chart);
   const tri = !stackOnly && !making && g && pos ? triplet(field, S.det, g.window, { ...pos, half: 7 }) : null;
   const fig = (k: string, cap: string) => `<figure><canvas data-cut="${k}"></canvas><figcaption>${cap}</figcaption></figure>`;
-  const snr = (v: number) => (Number.isFinite(v) ? `${num(v, 1)}σ` : 'not measured');
+  const snr = (v: number) => (Number.isFinite(v) ? `${num(v, 1)}σ` : tr('ms.nm'));
   const stackRow = stack
-    ? `<p class="ms-cuthead">${term(`Stacks of ${stack.frames} D${stack.det} exposures`, 'Every exposure of this detector added up three ways. Only the first follows the target’s catalogue motion; the two controls should not show it.')}</p>
-      <div class="ms-cutrow">${fig('along', `Along the motion · ${snr(stack.along.snr)}`)}${fig('c0', `Not shifted · ${snr(stack.controls[0].snr)}`)}${fig('c1', `Opposite motion · ${snr(stack.controls[1].snr)}`)}</div>`
+    ? `<p class="ms-cuthead">${term(tr('ms.stacksOf', { n: stack.frames, det: `D${stack.det}` }), tr('ms.stacksTip'))}</p>
+      <div class="ms-cutrow">${fig('along', `${tr('ms.along')} · ${snr(stack.along.snr)}`)}${fig('c0', `${tr('ms.notShifted')} · ${snr(stack.controls[0].snr)}`)}${fig('c1', `${tr('ms.opposite')} · ${snr(stack.controls[1].snr)}`)}</div>`
     : '';
   const dateRow = stackOnly
     ? ''
     : making
-      ? '<p class="ms-cutnote">Making the cutouts…</p>'
+      ? `<p class="ms-cutnote">${tr('ms.making')}</p>`
       : tri
-        ? `<p class="ms-cuthead">${term(`One date: ${g ? formatDate(g.mjd, 'day') : ''}, D${S.det}`, `The picture on screen, against ${tri.refText}, and the difference.`)}</p>
-          <div class="ms-cutrow">${fig('ref', 'Reference')}${fig('now', 'This date')}${fig('diff', 'Difference')}</div>`
-        : `<p class="ms-cutnote">${esc(g ? 'No other date in this detector to compare with.' : 'No picture on screen.')}</p>`;
+        ? `<p class="ms-cuthead">${term(tr('ms.oneDate', { day: g ? formatDate(g.mjd, 'day') : '', det: `D${S.det}` }), tr('ms.oneDateTip', { ref: tri.refText }))}</p>
+          <div class="ms-cutrow">${fig('ref', tr('ms.reference'))}${fig('now', tr('ms.thisDate'))}${fig('diff', tr('view.diff'))}</div>`
+        : `<p class="ms-cutnote">${esc(g ? tr('ms.noOther') : tr('ms.noPic'))}</p>`;
   host.innerHTML = stackRow + dateRow;
   if (pos && tri) {
     const sigma = field.noise[S.det - 1];
@@ -986,7 +988,7 @@ function exposureTable(): string {
   const field = S.field;
   const set = S.set;
   const g = S.groups[S.epoch];
-  if (!field || !set || !g) return '<p class="ms-cutnote">No picture on screen.</p>';
+  if (!field || !set || !g) return `<p class="ms-cutnote">${tr('ms.noPic')}</p>`;
   const ms = new Map((res.target?.ms ?? []).map((m) => [m.frame, m]));
   const rows = g.frames
     .map((i) => field.frames[i])
