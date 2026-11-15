@@ -2,12 +2,15 @@
  * The frame's own play row (v2.0, lane DE). Shown where the bar is not:
  *
  * - **Discover** (BEGINNER-AND-MOBILE 5.3, 7; mockups 03 and 04): previous (48 px), Play (56 px),
- *   next (48 px), then one **date chip** per date group: the letter in its pass tint, the month
- *   and year, the current one ringed in Marker Magenta. A date with no exposure in this detector
- *   is a dotted "Missing" chip (H6). Every target is at least 48 px tall.
- * - **Expert on a phone** (11.5): the compact bar: previous, Play, next, a date scale for display
- *   only (the buttons step, so there are no tiny targets), the counter "12 of 72", and the
- *   wavelength as a slider row.
+ *   next (48 px), then the **date strip**.
+ * - **Expert on a phone** (11.5): the compact bar: previous, Play, next, the date strip, the
+ *   counter "12 of 72", and the wavelength as a slider row.
+ *
+ * The date strip (redesign, "Date chips"): a thin line with one dot per picture, placed by date,
+ * the one on screen ringed in Marker Magenta and its date written above it; the others say theirs
+ * on hover. A tap or a drag picks the nearest date, the arrow keys step (it is a slider). A date
+ * with no exposure in this detector is a hollow dot and says "no D3 picture" (H6). The strip is
+ * thin to look at and 48 px tall to touch.
  *
  * On a desktop in Expert the bar (bar.ts) does all this, and the row is hidden.
  */
@@ -46,10 +49,9 @@ export function startChips(): void {
       <button type="button" class="icon-btn fp-step" data-fp-step="-1" data-guide="frame-prev" aria-label="Previous picture">${icon('prev')}</button>
       <button type="button" class="play-btn fp-play" data-fp-play data-guide="frame-play" aria-label="Play"></button>
       <button type="button" class="icon-btn fp-step" data-fp-step="1" data-guide="frame-next" aria-label="Next picture">${icon('next')}</button>
-      <div class="fp-scale" aria-hidden="true"></div>
+      <div class="fp-seq" role="slider" tabindex="0" aria-label="Date" aria-valuemin="1" data-guide="date-strip"></div>
       <span class="fp-count" aria-live="off"></span>
     </div>
-    <div class="fp-chips" role="group" aria-label="Dates" data-guide="date-chips"></div>
     <label class="fp-wl" data-guide="frame-wavelength">
       <span class="fp-wl-name">Wavelength</span>
       <b class="fp-wl-value"></b>
@@ -60,12 +62,8 @@ export function startChips(): void {
     b.addEventListener('click', () => step(Number(b.dataset.fpStep))),
   );
   row.querySelector('[data-fp-play]')?.addEventListener('click', () => (S.playing ? pause() : play()));
-  row.querySelector('.fp-chips')?.addEventListener('click', (e) => {
-    const b = (e.target as Element | null)?.closest<HTMLElement>('[data-epoch]');
-    if (!b) return;
-    pause();
-    setEpoch(Number(b.dataset.epoch));
-  });
+  const seq = row.querySelector<HTMLElement>('.fp-seq');
+  if (seq) startSeq(seq);
   const range = row.querySelector<HTMLInputElement>('.fp-wl input');
   range?.addEventListener('input', () => {
     const lam = Math.max(LAM_MIN, Math.min(LAM_MAX, lamAt(Number(range.value) / 1000)));
@@ -104,16 +102,8 @@ function paint(): void {
     count.textContent = S.groups.length ? `${S.epoch + 1} of ${S.groups.length}` : '';
     count.style.minWidth = `calc(${String(S.groups.length || 1).length * 2}ch + 1.6em)`;
   }
-  const chips = row.querySelector<HTMLElement>('.fp-chips');
-  if (chips) {
-    chips.hidden = form !== 'discover';
-    if (form === 'discover') paintChips(chips);
-  }
-  const scale = row.querySelector<HTMLElement>('.fp-scale');
-  if (scale) {
-    scale.hidden = form !== 'phone';
-    if (form === 'phone') paintScale(scale);
-  }
+  const seq = row.querySelector<HTMLElement>('.fp-seq');
+  if (seq) paintSeq(seq);
   const wl = row.querySelector<HTMLElement>('.fp-wl');
   if (wl) {
     wl.hidden = form !== 'phone';
@@ -125,50 +115,104 @@ function paint(): void {
   }
 }
 
-/** One chip per date group (Discover). Redrawn only when what it shows changes. */
-function paintChips(box: HTMLElement): void {
-  const groups = S.groups;
-  const key = `${groups.map((g) => `${g.key}:${g.frames.length}`).join(',')}|${S.epoch}|${S.det}`;
-  if (box.dataset.key === key) return;
-  box.dataset.key = key;
-  if (!groups.length) {
-    box.innerHTML = `<p class="fp-why">${waitWhy() || 'No pictures yet'}</p>`;
-    return;
-  }
-  box.innerHTML = groups
-    .map((g, i) => {
-      const t = groupDate(S.field, g);
-      const month = Number.isFinite(t) ? formatDate(t, 'month') : 'No date';
-      const missing = !g.frames.length;
-      const on = i === S.epoch;
-      const label = `Date ${g.letter}, ${month}${missing ? `: missing, no D${g.det} exposure` : ''}, picture ${i + 1} of ${groups.length}`;
-      return `<button type="button" class="fp-chip${missing ? ' missing' : ''}" data-epoch="${i}" aria-pressed="${on}" aria-label="${label}"><span class="fp-letter" style="--tint:var(--p${(g.window % 4) + 1})">${g.letter}</span><span class="fp-month">${missing ? 'Missing' : month}</span></button>`;
-    })
-    .join('');
-  box.querySelector<HTMLElement>('[aria-pressed="true"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
-}
-
-/** The phone's date scale: a dot per picture at its date, the one on screen in magenta. Display only. */
-function paintScale(box: HTMLElement): void {
-  const groups = S.groups;
-  const ts = groups.map((g) => groupDate(S.field, g));
+/** The dates of the groups, MJD (NaN when a group has none), and where each sits on the strip, 0 to 1. */
+function places(): { ts: number[]; at: number[] } {
+  const ts = S.groups.map((g) => groupDate(S.field, g));
   const ok = ts.filter(Number.isFinite);
-  const key = `${groups.map((g) => g.key).join(',')}|${S.epoch}`;
-  if (box.dataset.key === key) return;
-  box.dataset.key = key;
-  if (!ok.length) {
-    box.innerHTML = '';
-    return;
-  }
   const lo = Math.min(...ok);
   const hi = Math.max(...ok);
-  const x = (t: number) => `${hi > lo ? ((t - lo) / (hi - lo)) * 100 : 50}%`;
-  box.innerHTML =
-    '<span class="fp-line"></span>' +
-    ts
-      .map((t, i) =>
-        Number.isFinite(t) ? `<span class="fp-dot${i === S.epoch ? ' on' : ''}" style="left:${x(t)}"></span>` : '',
-      )
-      .join('') +
-    `<span class="fp-end first">${formatDate(lo, 'month')}</span><span class="fp-end last">${formatDate(hi, 'month')}</span>`;
+  // Undated groups keep their order between their neighbours (evenly spaced as a fallback).
+  const at = ts.map((t, i) =>
+    Number.isFinite(t) && hi > lo ? (t - lo) / (hi - lo) : ts.length > 1 ? i / (ts.length - 1) : 0.5,
+  );
+  return { ts, at };
+}
+
+/** Picks the date nearest a point on the strip, and the keys of a slider. */
+function startSeq(box: HTMLElement): void {
+  let dragging = false;
+  const pick = (x: number) => {
+    const r = box.getBoundingClientRect();
+    const inner = r.width - 24; // 12 px inset each side, as the dots
+    if (!S.groups.length || inner <= 0) return;
+    const f = (x - r.left - 12) / inner;
+    const { at } = places();
+    let best = 0;
+    at.forEach((a, i) => {
+      if (Math.abs(a - f) < Math.abs((at[best] ?? 0) - f)) best = i;
+    });
+    if (best !== S.epoch) setEpoch(best);
+  };
+  box.addEventListener('pointerdown', (e) => {
+    if (S.groups.length < 2) return;
+    dragging = true;
+    box.setPointerCapture(e.pointerId);
+    pause();
+    pick(e.clientX);
+  });
+  box.addEventListener('pointermove', (e) => {
+    if (dragging) pick(e.clientX);
+  });
+  const end = () => (dragging = false);
+  box.addEventListener('pointerup', end);
+  box.addEventListener('pointercancel', end);
+  box.addEventListener('keydown', (e) => {
+    const n = S.groups.length;
+    if (n < 2) return;
+    const to =
+      e.key === 'ArrowRight' || e.key === 'ArrowUp'
+        ? S.epoch + 1
+        : e.key === 'ArrowLeft' || e.key === 'ArrowDown'
+          ? S.epoch - 1
+          : e.key === 'Home'
+            ? 0
+            : e.key === 'End'
+              ? n - 1
+              : null;
+    if (to === null) return;
+    e.preventDefault();
+    pause();
+    setEpoch(Math.max(0, Math.min(n - 1, to)));
+  });
+}
+
+/** Paints the strip. The dots are redrawn only when the dates change; the ring and the date slide. */
+function paintSeq(box: HTMLElement): void {
+  const groups = S.groups;
+  if (!groups.length) {
+    if (box.dataset.key !== 'none') {
+      box.dataset.key = 'none';
+      box.innerHTML = `<p class="fp-why">${waitWhy() || 'No pictures yet'}</p>`;
+    }
+    box.removeAttribute('aria-valuenow');
+    return;
+  }
+  const { ts, at } = places();
+  const day = (i: number) => (Number.isFinite(ts[i]) ? formatDate(ts[i]!, 'day') : 'No date');
+  const key = `${groups.map((g) => `${g.key}:${g.frames.length}`).join(',')}|${S.det}`;
+  if (box.dataset.key !== key) {
+    box.dataset.key = key;
+    box.innerHTML =
+      '<span class="fp-line"></span>' +
+      groups
+        .map((g, i) => {
+          const missing = !g.frames.length;
+          return `<span class="fp-dot${missing ? ' missing' : ''}" style="--x:${at[i]}" data-tip="${day(i)}${missing ? `: no D${g.det} picture` : ''}"></span>`;
+        })
+        .join('') +
+      '<span class="fp-head" aria-hidden="true"><span class="fp-ring"></span></span><span class="fp-now" aria-hidden="true"><span></span></span>';
+  }
+  const i = Math.min(S.epoch, groups.length - 1);
+  const g = groups[i];
+  const missing = !!g && !g.frames.length;
+  const x = String(at[i] ?? 0);
+  box.style.setProperty('--now', x);
+  box.querySelectorAll<HTMLElement>('.fp-dot').forEach((d, k) => d.classList.toggle('on', k === i));
+  const now = box.querySelector<HTMLElement>('.fp-now > span');
+  const words = `${day(i)}${missing && g ? ` · no D${g.det} picture` : ''}`;
+  if (now && now.textContent !== words) now.textContent = words;
+  box.classList.toggle('missing', missing);
+  box.setAttribute('aria-valuemax', String(groups.length));
+  box.setAttribute('aria-valuenow', String(i + 1));
+  box.setAttribute('aria-valuetext', `${words}, picture ${i + 1} of ${groups.length}`);
 }

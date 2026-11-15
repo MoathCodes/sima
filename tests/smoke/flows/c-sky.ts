@@ -54,7 +54,7 @@ const skyReady: Step = {
       () => {
         const note = document.querySelector('#sky-note')?.textContent ?? '';
         return (
-          note.includes('Average of all dates: moving objects are blurred or shifted here') &&
+          note.includes('Sky map, all dates averaged') &&
           note.includes('µm') &&
           !!document.querySelector('#sky')?.getAttribute('data-view')
         );

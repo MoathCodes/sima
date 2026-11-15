@@ -7,6 +7,19 @@
 import type { Page } from 'playwright-core';
 import { guide, pressStep, type Flow, type Step } from '../smoke.ts';
 
+/** Picks a field size from the frame's field-size menu (the "6′ ▾" button). */
+function fovStep(fov: number, label = `Field ${fov}′`): Step {
+  return {
+    name: label,
+    async run(page) {
+      await page.locator('[data-guide="fov"]').first().click();
+      await page.locator(`[data-guide="fov-${fov}"]`).click();
+      await page.waitForFunction((f) => document.querySelector('.frame-fov')?.textContent === `${f}′`, fov);
+    },
+  };
+}
+
+
 type Sima = {
   sima: {
     S: { fov: number; source: string; field: { n: number } | null; groups: unknown[]; ra: number };
@@ -57,8 +70,8 @@ export const flows: Flow[] = [
     path: '/?target=barnard',
     steps: [
       stillReal('at the start'),
-      pressStep('fov-larger', 'Field 12′'),
-      pressStep('fov-larger', 'Field 24′'),
+      fovStep(12),
+      fovStep(24),
       expectStep('The field is 24′', `document.querySelector('.frame-fov')?.textContent === '24′'`),
       stillReal('at 24′ (not a blank frame)'),
       expectStep(
@@ -83,7 +96,7 @@ export const flows: Flow[] = [
           }
         },
       },
-      pressStep('fov-larger', 'Field 48′'),
+      fovStep(48),
       stillReal('at 48′'),
       {
         name: 'Drag inside the picture past the exposures pans and keeps them (FRM-12)',
@@ -102,9 +115,9 @@ export const flows: Flow[] = [
         },
       },
       stillReal('after the pan'),
-      pressStep('fov-smaller', 'Field 24′ again'),
-      pressStep('fov-smaller', 'Field 12′ again'),
-      pressStep('fov-smaller', 'Field 6′ again'),
+      fovStep(24, 'Field 24′ again'),
+      fovStep(12, 'Field 12′ again'),
+      fovStep(6, 'Field 6′ again'),
       stillReal('back at 6′'),
     ],
   },
@@ -116,8 +129,8 @@ export const flows: Flow[] = [
       // Expert opens with Measure, which covers the patch in the middle of the sky.
       pressStep('measure', 'Close Measure'),
       stillReal('at the start'),
-      pressStep('fov-larger', 'Field 12′'),
-      pressStep('fov-larger', 'Field 24′'),
+      fovStep(12),
+      fovStep(24),
       stillReal('at 24′'),
       {
         name: 'A press on the patch without moving it reloads nothing',

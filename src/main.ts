@@ -18,6 +18,9 @@ import './styles/extras.css';
 import './styles/workspace.css';
 import './styles/discover.css';
 import './styles/sheet.css';
+import './styles/rtl.css';
+// The interface language first: it sets <html lang dir> before any part writes words.
+import './shell/i18n.ts';
 
 import { startShell } from './shell/shell.ts';
 import { startPlaces } from './shell/places.ts';

@@ -17,6 +17,7 @@ import { camera, flyTo, grid, retry, setLayer, type SkyLayer } from '../sky/sky.
 import { openShare, startShare } from '../viewer/share.ts';
 import { openAbout, startAbout } from '../page/about.ts';
 import { startSettings } from './settings.ts';
+import { startMotion } from './motion.ts';
 
 export { onFrameMove } from './layout.ts';
 export { toast } from './toast.ts';
@@ -55,6 +56,7 @@ export interface SkyLoad {
  * Fills the shell's cards and starts the keys. Called once by main.ts.
  */
 export function startShell(): void {
+  startMotion();
   fill(
     'wordmark',
     `<span lang="ar" dir="rtl" class="wordmark-ar">سيما</span><span class="wordmark-latin">Sima</span>`,
@@ -416,7 +418,8 @@ function startTooltips(): void {
   const show = (el: HTMLElement) => {
     hide();
     timer = window.setTimeout(() => {
-      if (!el.isConnected || !el.dataset.tip) return;
+      // A control whose menu or card is open says nothing: its tip would cover what it opened.
+      if (!el.isConnected || !el.dataset.tip || el.getAttribute('aria-expanded') === 'true') return;
       tip.textContent = el.dataset.tip;
       tip.showPopover();
       const r = el.getBoundingClientRect();

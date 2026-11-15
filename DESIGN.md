@@ -243,48 +243,33 @@ The mood is calm, exact and honest. It is busy only where data is: the picture, 
 
 ## Colors
 
-A pale card and one deep-blue ink carry the chrome. Two working colours and a small set of data colours do the rest.
+**v2.1 Graphite: let the data be the colour** (chosen by the product owner, Nov 2026; replaces the pale chart card and the Night Glass ultramarine). The chrome is neutral grey with no hue at all. Any colour on screen is data or a status label. The tokens live in `src/styles/app.css` (`--v2-*` source values; the v1 names point at them). The front matter above still lists the v1 values.
 
-### Primary
-- **Press Ultramarine** (`action`): the fill of the Play button and of any primary button, and the colour of links. It is also the focus outline, the text caret, the underline of the chosen tab and the "on" side of a switch.
-- **Ultramarine, pressed down** (`action-hi`): the hover fill of a primary button.
-- **Ultramarine Wash** (`action-soft`): the background of a control that is on or open (a pressed toggle, an open menu button, the chosen row in a list). Its text and icon turn `action`.
-- **On Ultramarine** (`on-action`): text and icons on an ultramarine fill.
+### Chrome
+- **Page** (`sky`, `#0b0b0c`): behind the map, and the screen lift of the map's black (the map stays grey).
+- **Panel** (`--v2-tint`, `#161618`): every card. Glass is allowed but neutral: blur with no saturation boost, tint 84–86% (Thin, Regular), 95% (Raised: what opens over other cards), 98% (Slate). A crisp 1px white-7% hairline edge, no grain.
+- **Fills** (`card-2/3/4`): white 5%, 10%, 16%: quiet fills, hover, the chosen segment.
+- **Rule** (`rule`): white 8%, 1px.
+- **Inks** (`ink`, `ink-2`, `ink-3`): `#f4f4f5`, `#a1a1aa`, `#93939c`. All pass WCAG AA on the panel and on glass over the brightest sky (the GLS-2 smoke check).
+- **Press White** (`action`, `#f4f4f5`, hover `#ffffff`, text `on-action` `#0e0e10`): Play, the one primary button per card, a switch that is on, the focus ring (a white ring with a dark gap) and the caret.
+- **On** (`action-soft`, white 16%, white text): a pressed toggle, an open menu button, the chosen row. Chips on glass use the opaque `--v2-chosen` (`#3a3a40`).
 
-### Secondary
-- **Marker Magenta** (`mark`): where the user is looking, drawn over dark things. It is the patch outline and its label on the sky, the dotted line from the patch to the frame, and the selection ring and playhead inside dark windows. The canvas code reads it as `--st-accent`.
-- **Marker Magenta, on card** (`mark-ink`): the same idea printed on the pale card, where the bright magenta would be too faint. It is the date playhead, the ring on the current date stop and the wavelength handle.
-
-### Tertiary
-These are data colours. They never colour chrome.
-- **Detector hues** (`d1` violet, `d2` blue, `d3` teal, `d4` lime, `d5` amber, `d6` coral): the six SPHEREx detector bands, shortest wavelength first. They colour the band strip on the wavelength scale, chart points and the "Band" picture colour map.
-- **Pass tints** (`p1` to `p4`): four tints of the ink, oldest survey pass first. They colour the date stops, the edge of the picture while it flips, and chart points grouped by date.
-- **Path Amber** (`st-accent-2`): things that are worked out and not observed. Inside dark windows it draws the path and the predicted positions. On the sky it is the dashed outline and label of a simulated patch.
-- **Real Green** (`good` on `good-soft`): real data, a match with the catalogue, done.
-- **Caution Brown** (`warn` on `warn-soft`): simulated data, partly done, a result to treat with care.
-- **Flag Red** (`bad` on `bad-soft`): saturated or flagged data, no data at this wavelength, not possible.
-
-### Neutral
-- **Chart Card** (`card`): the background of every panel.
-- **Card Shade** (`card-2`): quiet button fills, hover rows, the trough of a segmented control, the Share field.
-- **Card Deep** (`card-3`): the hover of a quiet fill, the "off" side of a switch, minor ticks, unplayed parts of the date scale.
-- **Ruled Line** (`rule`): 1px lines between sections of a panel and between rows of a table.
-- **Chart Ink** (`ink`): main text and icons. It is also the fill of tooltips and the toast, with card-coloured text.
-- **Soft Ink** (`ink-2`): supporting text, unselected choices, played parts of the date scale.
-- **Faint Ink** (`ink-3`): group labels, hints, placeholders, scale lettering and major ticks.
-- **Blue-black Sky** (`sky`): the page behind the map.
-- **Window Night** (`st-bg`): the background of a dark data window. `st-raise` and `st-line` are its raised fills and its grid lines. `st-ink`, `st-ink-2` and `st-ink-3` are its three text strengths. Catalogue marks in the picture use `st-ink` and are told apart by shape: a circle for Gaia, a square for AllWISE.
+### Data (the only hues)
+- **Detector hues** (`d1`–`d6`), **Marker Magenta** (`mark`) and **Path Amber** (`path`, `st-accent-2`): unchanged, as before.
+- **Pass tints** (`p1`–`p4`): four greys of the ink, oldest pass first.
+- **Data windows** (`st-*`): `st-bg` `#0c0c0e`, `st-line` `#2c2c31`, inks `#f4f4f5`, `#a8a8b0`, `#7d7d86`. Pictures sit on pure black.
+- **Status** (`good`, `warn`, `bad` on their 13% soft fills): muted green, sand and rose, used sparingly and always with words.
 
 ### Named Rules
-**The Two Inks Rule.** Chrome is card and ink. A hue on a card means one of two things: it can be pressed (ultramarine) or it is data.
+**The No Hue Rule.** Chrome has no hue. Blue in the chrome is a bug. A hue means data (detectors, magenta, amber) or a status label with words.
 
-**The One Mark Rule.** Magenta marks where the user is looking and nothing else: the patch, the selection, the playheads. It never fills a button and never decorates. Use `mark` on the sky and in dark windows. Use `mark-ink` on the card, because `mark` on card is only 2.8:1.
+**The One Mark Rule.** Magenta marks where the user is looking and nothing else.
 
-**The Rainbow Rule.** The six bright hues belong to the six detectors. Dates use the four pass tints. Nothing else may borrow either set.
+**The Rainbow Rule.** The six bright hues belong to the six detectors. Nothing else may borrow them.
 
-**The Honesty Rule.** Green, brown and red are only for status labels: what the data is, and whether a step is done. Each one always comes with words. Simulated data also gets a dashed line, so the difference does not rest on colour alone.
+**The Honesty Rule.** Status colours always come with words. Simulated data also gets a dashed line.
 
-**The Grey Map Rule.** The sky map stays grey. A screen-blend layer lifts its black to blue-black on screen and leaves its whites white. Marks ride over the map and never recolour it. Shown larger than its own pixels, the map is softened by about 0.4 of a map pixel (display only), and its small gaps (bright star centres) are filled from their rim; the sky note says so.
+**The Grey Map Rule.** The sky map stays grey; a screen-blend layer lifts its black to `sky` only. Marks ride over the map and never recolour it.
 
 ## Typography
 
@@ -459,9 +444,13 @@ The welcome card is a 372px card with the 25px heading, one sentence, and a shor
 
 ## Motion
 
-Motion says where a thing came from and where it went. It is short and it never decorates.
+Motion says where a thing came from and where it went. It is short and it never decorates. Tokens in `src/styles/app.css`: `--ease-out` `cubic-bezier(.2,.8,.2,1)`, `--ease-in-out` `cubic-bezier(.65,0,.35,1)`, `--ease-in` (leaving), `--dur-1` 120 ms (hover, press), `--dur-2` 200 ms (menus, popovers, the segment pill), `--dur-3` 320 ms (cards, panels), `--dur-out` 140 ms (closing). Only `transform`, `opacity` and `clip-path` animate.
 
-- **Panels and popovers** (the frame, Measure, overlays, Places, the sky map menu, search suggestions, the welcome card, dialogs) fade in 0.18s and settle 6 to 14px into place in 0.32s with the ease-out curve `cubic-bezier(.16,1,.3,1)`. They leave the same way. CSS does it with `@starting-style` and `display … allow-discrete`, so the hidden attribute still decides what is shown.
+- **Buttons** fade their fill on hover (`--dur-1`) and drop 1px on press; icon buttons and Play give a little (scale 0.92 and 0.94). Text buttons never scale, because lanes measure their widths.
+- **Segmented controls, the Discover | Expert switch and tabs:** the chosen pill (or the tab underline) slides to the new choice in `--dur-2`. One helper, `src/shell/motion.ts`, does it for every one, by animating a clip on the container's `::before`. Under reduced motion the pill jumps and buttons do not scale.
+- **Menus and popovers** (every `.popover[popover]`, the tooltip) fade in and drop 6px from their anchor in `--dur-2`; the sky map chooser slides in from the rail.
+- **Cards and panels** (lists, the place card, finds, tools, Settings, toasts, dialogs, the welcome card) fade in and rise 8px in `--dur-3`; dialogs also grow from 98%. CSS does it with `@starting-style` and `display … allow-discrete`, so the hidden attribute still decides what is shown.
+- **Leaving is faster** (`--dur-out`, ease-in), and a leaving card takes no clicks, so it never holds up the next press, Escape or focus.
 - **The frame glides** (0.42s) when Measure opens beside it or the window changes size. The glide is a transform, so it still runs while the page builds the measurements. The controls that come with Measure (or with Explore) fade in just after. While the user drags or sizes the frame, it follows the pointer with no delay.
 - **The picture slides, never jumps,** when the lines above it change height (a name on two lines, a longer task, the loading line): 0.26s with the same curve. The frame is placed once, at its final height, before it glides.
 - **The sky changes wavelength by cross-fade** (0.26s): the new map comes up over the old one once its tiles are in. It never cuts to grey.
@@ -471,21 +460,21 @@ Motion says where a thing came from and where it went. It is short and it never 
 
 ## Intro
 
-The first visit opens with about six seconds of motion (6.25 s, then the cards' 0.45 s fade). It is the one deliberate exception to the rules above: motion here is there to set the scene, once, and it ends in the calm page. Everything in it is real data or plainly a mark, and it never holds the page up.
+The first visit opens with about seven and a half seconds of motion (7.45 s, then the cards' 0.45 s fade). It is the one deliberate exception to the rules above: motion here is there to set the scene, once, and it ends in the calm page. Everything in it is real data or plainly a mark, and it never holds the page up.
 
-1. **Darkness, then the ring** (0 to 2.9 s). On Blue-black Sky, a black disc (the sky globe in shadow) with a thin ring of light round its edge, like an eclipse's corona. The ring's light is the real SPHEREx sky along the globe's edge, from the shipped all-sky images: brighter sky reaches further out, so the Milky Way makes the streamers. It steps through one channel from each detector, 0.91 to 4.92 µm, each in its detector hue (`d1` to `d6`: here they colour detector data, as the Rainbow Rule allows). A line at the bottom says what the light is, in Label size and `st-ink-3`: "SPHEREx all-sky map, NASA IRSA (DR1) · average of all dates · 0.91 µm, detector D1".
-2. **The name** inside the disc, in `st-ink`: سيما (Aref Ruqaa 700, 30% of the disc's radius, 40 to 84px), Sima under it (Aref Ruqaa, 19 to 30px), and one line in Reading size and `st-ink-2`: "The infrared sky, as NASA's SPHEREx sees it." Each fades and rises 8px into place.
-3. **The diamond ring** (about 2.35 s). A small white flare on the edge, up and to the right, where Barnard's Star sits: the spot the page will land on. Its name is beside it in Label size and `st-ink-2`, only when the frame's patch is a named target at the landing's centre.
-4. **The shadow slides off** (from 2.9 s, 1.45 s long), away from the flare, as at the end of an eclipse. The globe under it is the real map in the channel the sky map shows, grey and lifted as the Grey Map Rule says. The ring fades as the globe lights. The name leaves first.
-5. **The turn and the dive** (3.2 to 4.95 s). The globe turns until Barnard's Star faces us, then grows until the sky fills the window. It is the same globe the sky map shows zoomed right out (orthographic), so nothing changes shape on the way.
-6. **The landing** (4.95 to 6.25 s). The sky map takes over at about 55° wide (exactly matched: same projection, scale and centre) and glides in to its own view in 1.3 s; the intro fades over it in the first 0.4 s. The page's cards then fade in (0.45 s) on the normal first visit: the frame playing, the welcome card open.
+1. **Darkness, then the ring** (0 to 4.1 s). On Blue-black Sky, a black disc (the sky globe in shadow) with a thin ring of light round its edge, like an eclipse's corona. The ring's light is the real SPHEREx sky along the globe's edge, from the shipped all-sky images: brighter sky reaches further out, so the Milky Way makes the streamers. It steps through one channel from each detector, 0.91 to 4.92 µm, each in its detector hue (`d1` to `d6`: here they colour detector data, as the Rainbow Rule allows). The ring fades in from when its first picture is ready, so a slow load never pops it in half bright. A line at the bottom says what the light is, in Label size and `st-ink-3`: "SPHEREx all-sky map, NASA IRSA (DR1) · average of all dates · 0.91 µm, detector D1".
+2. **The name, written as a constellation,** inside the disc (0.4 to 3.1 s), in `st-ink` (`src/intro/mark.ts`). A small shooting star draws a star chart's figure through the letters of سيما, right to left as it is written (0.4 to 1.7 s). Each star lights as it arrives. The two dots of ي light last, as two four-point stars, the brightest of the figure (1.85 s); they keep a slow twinkle. Then the letters condense out of the figure (2.1 to 3.1 s) and the figure fades: its lines and stars are plainly marks, never shown as real stars. One soft glint crosses the word (3.1 to 3.9 s). The word is Amiri Bold outlines, 70% of the disc's radius wide (120 to 240px). Sima under it, also Amiri Bold, its i dotted with a star (2.2 s), and one line in Reading size and `st-ink-2`: "The infrared sky, as NASA's SPHEREx sees it." (2.4 s). Each fades and rises 8px into place. Reduced motion: the finished word and its two stars, faded in.
+3. **The diamond ring** (about 3.55 s). A small white flare on the edge, up and to the right, where Barnard's Star sits: the spot the page will land on. Its name is beside it in Label size and `st-ink-2`, only when the frame's patch is a named target at the landing's centre.
+4. **The shadow slides off** (from 4.1 s, 1.45 s long), away from the flare, as at the end of an eclipse. The globe under it is the real map in the channel the sky map shows, grey and lifted as the Grey Map Rule says. The ring fades as the globe lights. The name leaves first.
+5. **The turn and the dive** (4.4 to 6.15 s). The globe turns until Barnard's Star faces us, then grows until the sky fills the window. It is the same globe the sky map shows zoomed right out (orthographic), so nothing changes shape on the way.
+6. **The landing** (6.15 to 7.45 s). The sky map takes over at about 55° wide (exactly matched: same projection, scale and centre) and glides in to its own view in 1.3 s; the intro fades over it in the first 0.4 s. The page's cards then fade in (0.45 s) on the normal first visit: the frame playing, the welcome card open.
 
 **Rules.**
 - **Once per browser** (`sima-intro` in storage). About's "Play the intro" and `?intro=1` play it again; `?intro=0`, `embed=1` and `#w=` workspace links never show it.
 - **Skippable at any moment** by any key, click or tap, and a small "Skip" text button at the top right (Label size, `st-ink-2`, `st-raise` on hover). A skip fades the intro out in 0.26s onto the page as it would have landed. Every key goes to the intro while it plays, so Space skips it and does not also pause the frame. Escape skips it like any key.
 - **Never holds the page up.** Every part starts under it. If the sky map is not ready when the shadow should leave, the ring and name hold, breathing gently, for at most 2 s more; then the shipped sky is shown anyway. A slow machine or network can stretch the landing too: the map lands sharp only once NASA's tiles are in, which the intro asks for while it plays. The globe is never empty or black: it is drawn from pictures shipped with the app.
 - **Reduced motion:** a still ring (the sky map's channel and detector hue), a still flare and the name, for 2.4 s, then a 0.6 s fade into the page.
-- **Smooth:** drawn live with WebGL 2 in a worker (an OffscreenCanvas), so the picture keeps moving while the page starts; the words fade on the compositor. No video.
+- **Smooth:** drawn live with WebGL 2 in a worker (an OffscreenCanvas), so the picture keeps moving while the page starts; the words and the constellation move only by transform, opacity and filter, on the compositor. No video.
 - **Stacking:** while it plays it covers every card. While the sky map glides in, the cards wait (`html[data-intro='land']`), then fade in. On phones (under 700px) it plays too, then gives way to the sky and its note.
 
 ## Interaction

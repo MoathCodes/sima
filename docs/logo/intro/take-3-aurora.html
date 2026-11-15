@@ -1,0 +1,155 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sima intro take 3</title><style>html,body{margin:0;height:100%;background:#05070d}body{display:grid;place-items:center}
+svg.stage{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#05070d;cursor:pointer}svg.stage{max-height:100vh;width:auto;max-width:100vw}
+.hint{position:fixed;top:14px;right:16px;text-align:right;font:12px system-ui,sans-serif;color:#7c86ab}</style></head>
+<body><svg class="stage" id="s" viewBox="0 0 1600 900"></svg><div class="hint">Take 3 · {name} · click to replay</div>
+<script>const G={"amiri":{"letters":["M867 371Q878 371 869 389Q878 397 893 397Q916 397 932 354Q934 348 939 349Q944 351 943 357L940 369Q943 372 948 374Q952 376 957 378Q962 380 967 380Q971 381 974 381Q972 370 969 365Q966 361 970 354L980 337Q986 331 989 345Q994 370 989 392Q983 414 971 422Q970 423 966 423Q942 424 924 409Q911 435 890 440Q868 446 846 423Q825 448 812 448Q805 448 802 437Q801 430 800 425Q799 408 812 406Q846 403 861 376Q864 371 867 371Z","M727 428Q727 445 719 449Q716 450 714 450Q704 450 705 431Q705 414 712 401Q734 363 760 365Q770 367 775 375Q793 408 818 406Q826 405 830 413Q831 414 831 415Q832 417 832 418Q832 433 823 443Q818 448 812 448Q791 447 776 435Q766 427 752 409Q749 406 738 414Q727 423 727 428Z","M719 402Q725 401 724 415Q724 429 731 440Q739 453 747 457Q749 458 753 459Q756 460 762 462Q774 466 782 469Q790 474 790 483Q789 509 785 516Q782 523 774 519Q758 510 749 506Q739 501 734 501Q725 501 706 510Q697 514 690 516Q682 519 676 519Q668 519 665 508Q662 497 664 488Q666 478 676 477Q701 475 713 468Q701 441 710 415Q715 402 719 402Z","M624 261Q631 248 633 263Q640 328 641 382Q642 436 643 447Q644 475 676 477Q687 477 688 487Q689 489 689 492Q688 496 688 500Q686 508 684 514Q682 519 676 519Q627 519 624 471Q623 460 623 442Q622 423 621 398Q620 374 617 349Q614 324 609 297Q608 288 611 283L624 261Z"],"dotsPath":"M828 529Q830 527 834 528Q841 530 847 534Q854 538 860 543Q862 545 861 549L844 575Q841 579 838 576Q836 575 832 572Q827 569 819 564L808 583Q805 587 801 584Q800 582 793 579Q787 575 776 568Q772 566 775 562L792 537Q794 534 798 535Q808 539 817 545L828 529Z","dots":[[800.3,560.4,25.1],[840.4,551.0,21.6]],"bbox":[608.7,255.0,991.3,585.0]},"nast":{"letters":["M824 394Q817 394 814 386Q811 378 811 369Q811 351 818 342Q825 334 835 334Q851 334 866 325Q880 316 891 299Q894 294 896 291Q899 287 900 285Q902 282 903 280Q906 277 908 276Q910 276 914 276Q918 276 924 279Q928 280 931 281Q934 281 938 281Q948 281 955 276Q963 270 968 260L973 259Q976 262 981 263Q986 264 991 264Q1002 264 1009 255Q1016 246 1020 230L1032 231Q1026 263 1019 283Q1011 302 1002 310Q992 319 980 319Q977 319 972 318Q968 317 962 315Q954 331 943 337Q933 342 926 342Q915 342 907 336Q899 330 895 330Q891 330 882 347Q876 357 870 365Q864 373 858 380Q851 386 842 390Q834 394 824 394Z","M758 448Q747 448 736 445Q725 443 718 438Q711 433 711 425Q711 418 714 409Q716 401 725 384Q735 366 747 353Q758 339 771 331Q785 323 799 323Q806 323 812 326Q817 328 823 331Q828 334 834 334Q838 334 843 339Q847 345 847 359Q847 373 841 384Q835 394 824 394Q814 394 807 391Q801 388 796 385Q791 381 786 378Q781 375 773 375Q763 375 755 379Q746 383 741 389Q737 395 737 402Q737 410 757 418Q767 423 772 428Q777 433 777 440Q777 444 771 446Q765 448 758 448Z","M618 544Q612 544 608 537Q604 529 604 512Q604 498 607 489Q611 481 618 476Q625 472 633 472Q654 472 668 464Q682 456 695 440Q705 427 714 421Q723 416 731 416Q740 416 750 419Q761 422 769 427Q777 433 777 440Q777 446 774 454Q771 462 765 469Q760 477 753 481Q746 486 740 486Q736 486 731 484Q726 482 720 479Q714 475 709 474Q704 472 699 472Q692 472 687 478Q682 483 673 497Q672 500 671 502Q669 505 667 507Q656 527 645 535Q634 544 618 544Z","M618 544Q592 544 580 526Q568 509 568 469Q568 461 569 453Q569 446 569 436Q570 426 570 413Q571 399 572 380Q573 354 575 332Q578 311 582 292Q587 273 595 254L604 256Q602 263 600 279Q598 294 596 315Q594 335 593 358Q592 382 592 404Q592 422 594 435Q597 448 602 456Q607 464 615 468Q623 472 633 472Q641 472 644 480Q647 488 647 502Q647 515 644 524Q641 534 634 539Q628 544 618 544Z"],"dotsPath":"M779 590Q771 582 766 577Q762 573 758 570Q755 567 750 564V561Q752 558 757 553Q761 547 766 542Q771 537 775 533Q779 529 781 528H784Q792 533 797 537Q802 541 805 545Q812 537 818 530Q825 524 828 522H831Q844 530 851 537Q858 543 858 551Q858 559 849 568Q840 577 829 584H826Q820 578 815 574Q811 570 807 567Q800 578 782 590H779Z","bbox":[568.5,230.0,1031.5,590.0]},"latin":{"path":"M714 655Q718 655 722 656Q726 657 731 658Q731 662 732 666Q732 670 732 675Q732 676 731 676Q731 676 731 676Q730 676 729 676Q728 675 728 675Q728 673 727 670Q725 667 724 665Q722 662 720 661Q717 659 714 659Q712 659 710 660Q708 661 707 663Q705 665 705 668Q705 671 708 674Q710 677 714 680Q717 683 720 685Q724 687 727 690Q731 692 733 696Q735 700 735 706Q735 712 732 716Q729 720 724 723Q719 725 713 725Q708 725 703 724Q698 723 693 722Q693 720 692 716Q692 713 691 709Q691 706 691 705Q691 704 692 704Q694 703 694 703Q695 703 695 704Q696 706 697 709Q698 712 701 715Q703 717 706 719Q708 721 712 721Q716 721 719 718Q722 716 722 711Q722 708 720 705Q719 703 716 701Q714 699 711 697Q709 695 707 694Q703 691 700 689Q696 686 694 683Q692 679 692 674Q692 668 695 664Q698 660 703 657Q708 655 714 655ZM762 692V709Q762 712 763 714Q763 717 763 719Q764 719 765 720Q766 720 767 720Q768 720 769 721Q770 721 769 722Q769 724 769 724Q766 724 763 724Q759 724 756 724Q752 724 749 724Q745 724 742 724Q741 724 741 722Q741 721 742 721Q742 720 744 720Q745 720 747 720Q748 719 748 719Q749 717 749 715Q749 712 749 709V697Q749 697 749 695Q749 693 749 691Q749 689 748 689Q748 688 746 687Q745 687 743 687Q742 687 742 687Q742 687 741 686Q741 685 741 684Q742 683 742 683Q746 683 750 682Q753 681 757 680Q760 679 762 678Q762 678 763 679Q764 680 764 680Q763 680 763 682Q763 685 763 686Q762 687 762 689Q762 692 762 692ZM810 678Q815 678 818 680Q821 682 823 687Q825 685 828 683Q831 681 834 679Q837 678 840 678Q846 678 849 681Q852 683 853 689Q854 694 854 702V709Q854 709 854 710Q854 710 854 710Q854 713 854 715Q854 717 855 719Q855 719 856 720Q857 720 859 720Q861 720 861 721Q862 721 862 722Q861 724 861 724Q858 724 854 724Q850 724 847 724Q844 724 840 724Q837 724 834 724Q834 724 834 722Q834 721 834 721Q835 720 837 720Q839 720 840 719Q840 717 840 715Q840 712 840 709V701Q840 697 840 694Q839 691 838 688Q836 686 833 686Q831 686 829 687Q827 688 825 690Q824 691 824 692V693Q824 695 824 697Q824 700 824 702V709Q824 712 824 715Q824 717 825 719Q825 719 827 720Q828 720 829 720Q831 720 831 721Q832 721 832 722Q832 724 831 724Q828 724 825 724Q821 724 818 724Q814 724 811 724Q807 724 804 724Q804 724 804 722Q804 721 804 721Q805 720 808 720Q810 720 810 719Q811 717 811 715Q811 713 811 710Q811 710 811 710Q811 709 811 709V701Q811 697 810 694Q810 691 808 688Q807 686 804 686Q802 686 800 687Q798 688 796 690Q795 691 795 692V709Q795 712 795 714Q795 717 796 719Q796 719 797 720Q798 720 800 720Q801 720 801 721Q802 721 802 722Q802 724 801 724Q799 724 795 724Q791 724 788 724Q785 724 781 724Q777 724 774 724Q774 724 774 722Q774 721 774 721Q775 720 776 720Q778 720 779 720Q780 719 781 719Q781 717 781 715Q781 712 781 709V697Q781 697 781 695Q781 693 781 691Q781 689 780 689Q780 688 779 687Q777 687 776 687Q774 687 774 687Q774 687 774 686Q774 685 774 684Q774 683 774 683Q778 683 782 682Q786 681 789 680Q792 679 794 678Q795 678 795 679Q796 680 796 680Q796 680 796 682Q795 683 795 684Q795 686 795 686Q795 686 795 686Q795 686 796 686Q797 684 800 682Q802 681 805 679Q808 678 810 678ZM887 678Q892 678 895 680Q899 682 901 685Q903 689 903 693V713Q903 715 904 716Q904 717 905 717Q906 717 907 717Q908 716 908 716Q909 716 909 718Q909 718 909 719Q908 720 906 721Q904 722 902 724Q900 725 898 725Q896 725 893 723Q891 721 890 719Q890 720 888 721Q885 722 883 724Q880 725 879 725Q875 725 872 723Q869 721 867 718Q865 715 865 712Q865 709 867 707Q868 705 870 704Q872 703 876 702Q879 701 883 699Q887 698 890 697V692Q890 688 888 685Q886 682 883 682Q880 682 879 684Q878 687 877 690Q877 692 876 693Q874 695 872 695Q870 695 868 693Q866 692 866 690Q866 689 867 688Q867 687 868 686Q868 685 870 684Q872 683 875 681Q877 680 881 679Q884 678 887 678ZM885 718Q887 718 888 717Q890 716 890 715V701Q888 702 886 702Q884 703 883 704Q881 706 880 708Q879 710 879 711Q879 714 881 716Q883 718 885 718Z","star":[754.8,660.5,19.5]}};// Shared helpers for the intro takes. Stage is an <svg viewBox="0 0 1600 900">.
+const NS='http://www.w3.org/2000/svg';
+const C={cream:'#f6f3ec',sky:'#05070d',navy:'#0f1a3c',green:'#5cf2a6',teal:'#2fd3c4',violet:'#8f7cff',pink:'#ff4a9c',
+  d:['#8f7cff','#4fa8ff','#3fd0c0','#a8d34f','#f4b740','#ff7650']};
+function el(tag,attrs={},parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+function star4(cx,cy,r,k=0.2){let p='';for(let i=0;i<8;i+=2){const a0=(-90+i*45)*Math.PI/180,a1=(-90+(i+1)*45)*Math.PI/180,a2=(-90+(i+2)*45)*Math.PI/180;
+  const x0=cx+r*Math.cos(a0),y0=cy+r*Math.sin(a0),qx=cx+r*k*0.55*Math.cos(a1)*1.0,qy=cy+r*k*0.55*Math.sin(a1),x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
+  if(i===0)p+=`M${x0.toFixed(1)} ${y0.toFixed(1)}`;p+=`Q${qx.toFixed(1)} ${qy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;}return p+'Z';}
+function rng(seed){let s=seed>>>0;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
+function A(node,frames,o){return node.animate(frames,Object.assign({fill:'both',easing:'cubic-bezier(.2,.7,.2,1)'},o));}
+const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Background: sky gradient + twinkling field stars
+function skyfield(svg,id,seed,n=140,avoid){
+  const defs=el('defs',{},svg);
+  const g=el('radialGradient',{id:id+'bg',cx:'50%',cy:'45%',r:'75%'},defs);
+  el('stop',{offset:'0','stop-color':'#0d1533'},g);el('stop',{offset:'0.6','stop-color':'#070b1c'},g);el('stop',{offset:'1','stop-color':C.sky},g);
+  el('rect',{width:1600,height:900,fill:`url(#${id}bg)`},svg);
+  const f=el('g',{},svg),r=rng(seed);
+  for(let i=0;i<n;i++){const x=r()*1600,y=r()*900;if(avoid&&x>avoid[0]&&x<avoid[2]&&y>avoid[1]&&y<avoid[3])continue;
+    const s=el('circle',{cx:x.toFixed(1),cy:y.toFixed(1),r:(0.5+r()*r()*1.9).toFixed(2),fill:'#fff'},f);
+    const o=0.25+r()*0.6;A(s,[{opacity:0},{opacity:o}],{duration:900,delay:r()*1400});
+    if(r()<0.35&&!REDUCED)s.animate([{opacity:o},{opacity:o*0.3},{opacity:o}],{duration:1800+r()*2600,delay:1500+r()*2000,iterations:Infinity});}
+  return defs;}
+function glowFilter(defs,id,sd=6){const f=el('filter',{id,x:'-50%',y:'-50%',width:'200%',height:'200%'},defs);
+  el('feGaussianBlur',{stdDeviation:sd,result:'b'},f);const m=el('feMerge',{},f);el('feMergeNode',{in:'b'},m);el('feMergeNode',{in:'SourceGraphic'},m);return f;}
+function latinSima(svg,G,dy,delay){const g=el('g',{transform:`translate(0 ${dy})`,opacity:0},svg);
+  el('path',{d:G.latin.path,fill:C.cream},g);const[x,y,r]=G.latin.star;el('path',{d:star4(x,y,r),fill:C.cream},g);
+  A(g,[{opacity:0,transform:`translate(0px,${dy+10}px)`},{opacity:0.92,transform:`translate(0px,${dy}px)`}],{duration:900,delay});return g;}
+function flare(parent,x,y,r,delay,col='#fff'){const g=el('g',{},parent);
+  const s=el('path',{d:star4(x,y,r,0.12),fill:col,style:`transform-origin:${x}px ${y}px`},g);
+  A(s,[{transform:'scale(0) rotate(-30deg)',opacity:0},{transform:'scale(2.6) rotate(0deg)',opacity:1,offset:0.35},{transform:'scale(1) rotate(0deg)',opacity:1}],{duration:1100,delay});
+  const h=el('circle',{cx:x,cy:y,r:r*2.4,fill:col,opacity:0,style:`filter:blur(${r*0.9}px)`},g);
+  A(h,[{opacity:0},{opacity:0.9,offset:0.3},{opacity:0.18}],{duration:1400,delay});return g;}
+const TAKES={};
+const T=(ms)=>REDUCED?0:ms;               // timing (collapses under reduced motion)
+const D=(ms)=>REDUCED?1:ms;
+
+/* 1 — Written in starlight: Nastaliq letters are traced in light, in writing order, then filled. */
+TAKES.write={name:'Written in starlight',run(svg,G,id){
+  const defs=skyfield(svg,id,11);glowFilter(defs,id+'gl',5);
+  const word=el('g',{},svg),trace=el('g',{filter:`url(#${id}gl)`},svg);
+  G.nast.letters.forEach((d,i)=>{const t0=500+i*520;
+    const f=el('path',{d,fill:C.cream,opacity:0},word);
+    const s=el('path',{d,fill:'none',stroke:'#fffbe8','stroke-width':2.2,pathLength:1,'stroke-dasharray':1,'stroke-dashoffset':1},trace);
+    A(s,[{strokeDashoffset:1},{strokeDashoffset:0}],{duration:D(900),delay:T(t0),easing:'cubic-bezier(.5,0,.3,1)'});
+    A(s,[{opacity:1},{opacity:0}],{duration:D(700),delay:T(t0+1000),fill:'forwards'});
+    A(f,[{opacity:0},{opacity:1}],{duration:D(600),delay:T(t0+650)});});
+  // the two dots fall in as stars
+  [[778,560,22,2700],[834,546,18,2860]].forEach(([x,y,r,t])=>{const g=flare(svg,x,y,r,T(t),C.cream);
+    A(g,[{transform:'translateY(-90px)'},{transform:'translateY(0px)'}],{duration:D(700),delay:T(t),easing:'cubic-bezier(.3,1.4,.5,1)'});});
+  latinSima(svg,G,70,T(3400));}};
+
+/* 2 — Constellation: stars appear at the letters' key points, lines join them like a star chart,
+   then the word condenses out of the figure. سيما means "a sign": the sky's signs become the word. */
+TAKES.constellation={name:'Constellation',run(svg,G,id){
+  const P=[[985,347],[968,402],[948,358],[880,440],[872,386],[812,446],[766,378],[724,432],[792,512],[690,521],[641,500],[627,265]];
+  const defs=skyfield(svg,id,23,150,[560,220,1040,620]);glowFilter(defs,id+'gl',4);
+  const word=el('g',{opacity:0,style:'filter:blur(14px)'},svg);
+  G.amiri.letters.forEach(d=>el('path',{d,fill:C.cream},word));
+  const lines=el('g',{stroke:'#cfd8ff','stroke-width':1.6,'stroke-linecap':'round',fill:'none'},svg),pts=el('g',{filter:`url(#${id}gl)`},svg);
+  P.forEach(([x,y],i)=>{const t=500+i*150;
+    const c=el('circle',{cx:x,cy:y,r:5,fill:'#fff',style:`transform-origin:${x}px ${y}px`},pts);
+    A(c,[{transform:'scale(0)',opacity:0},{transform:'scale(2)',opacity:1,offset:0.4},{transform:'scale(1)',opacity:1}],{duration:D(600),delay:T(t)});
+    A(c,[{opacity:1},{opacity:0}],{duration:D(700),delay:T(3000),fill:'forwards'});
+    if(i){const[a,b]=P[i-1];const l=el('line',{x1:a,y1:b,x2:x,y2:y,pathLength:1,'stroke-dasharray':1,'stroke-dashoffset':1,opacity:0.8},lines);
+      A(l,[{strokeDashoffset:1},{strokeDashoffset:0}],{duration:D(260),delay:T(t-120),easing:'linear'});}});
+  A(lines,[{opacity:1},{opacity:0}],{duration:D(900),delay:T(2700)});
+  A(word,[{opacity:0,filter:'blur(14px)'},{opacity:1,filter:'blur(0px)'}],{duration:D(1300),delay:T(2400)});
+  G.amiri.dots.forEach(([x,y,r],i)=>flare(svg,x,y,r*0.95,T(3300+i*160),C.cream));
+  latinSima(svg,G,60,T(3800));}};
+
+/* 3 — Aurora becomes the badge: a full-screen aurora rolls across, lights the word,
+   then the whole sky closes into the round logo. */
+TAKES.aurora={name:'Aurora into badge',run(svg,G,id){
+  const defs=skyfield(svg,id,37,160);
+  const gr=el('linearGradient',{id:id+'ray',x1:0,y1:1,x2:0,y2:0},defs);
+  [['0','#c9ffe2',1],['0.06',C.green,1],['0.35',C.green,0.55],['0.65',C.teal,0.3],['0.88','#a07cff',0.14],['1','#a07cff',0]].forEach(([o,c,a])=>el('stop',{offset:o,'stop-color':c,'stop-opacity':a},gr));
+  const cp=el('clipPath',{id:id+'cp'},defs);const cc=el('circle',{cx:800,cy:430,r:1100},cp);
+  const disc=el('circle',{cx:800,cy:430,r:300,fill:C.navy,opacity:0},svg);
+  const scene=el('g',{'clip-path':`url(#${id}cp)`},svg);
+  const cur=el('g',{style:'filter:blur(2px)'},scene),r=rng(5);
+  const hem=t=>[-60+t*1720,610-t*420+40*Math.sin(t*7+0.4)];
+  for(let i=0;i<220;i++){const t=i/219,[x,y]=hem(t);
+    const h=(230+120*(0.5*Math.sin(t*11+1)+0.3*Math.sin(t*29)+0.2*Math.sin(t*61)))*(0.85+r()*0.2);
+    const rc=el('rect',{x:(x-6).toFixed(1),y:(y-h).toFixed(1),width:12,height:h.toFixed(1),fill:`url(#${id}ray)`,opacity:(0.16+r()*0.3).toFixed(2),
+      style:`transform-box:fill-box;transform-origin:50% 100%`},cur);
+    A(rc,[{transform:'scaleY(0)'},{transform:'scaleY(1)'}],{duration:D(1100),delay:T(200+t*1300),easing:'cubic-bezier(.2,.8,.2,1)'});
+    if(!REDUCED)rc.animate([{transform:'scaleY(1) skewX(0deg)'},{transform:`scaleY(${0.82+r()*0.3}) skewX(${(r()-0.5)*8}deg)`},{transform:'scaleY(1) skewX(0deg)'}],{duration:2400+r()*2400,delay:1400+t*1300+r()*600,iterations:Infinity,easing:'ease-in-out'});}
+  let d='';for(let i=0;i<=120;i++){const[x,y]=hem(i/120);d+=(i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);}
+  const hm=el('path',{d,fill:'none',stroke:'#d4ffe8','stroke-width':2.4,pathLength:1,'stroke-dasharray':1,'stroke-dashoffset':1,opacity:0.9},scene);
+  A(hm,[{strokeDashoffset:1},{strokeDashoffset:0}],{duration:D(1500),delay:T(200),easing:'cubic-bezier(.3,0,.3,1)'});
+  const word=el('g',{fill:C.cream},svg);G.amiri.letters.forEach(dd=>el('path',{d:dd},word));
+  A(word,[{opacity:0,fill:C.green,filter:'blur(8px)'},{opacity:1,fill:'#bfffe0',filter:'blur(0px)',offset:0.5},{opacity:1,fill:C.cream,filter:'blur(0px)'}],{duration:D(1600),delay:T(1300)});
+  G.amiri.dots.forEach(([x,y,r],i)=>flare(svg,x,y,r*0.95,T(2500+i*150),C.cream));
+  A(cc,[{r:'1100px'},{r:'300px'}],{duration:D(1300),delay:T(3300),easing:'cubic-bezier(.7,0,.2,1)'});
+  A(disc,[{opacity:0},{opacity:1}],{duration:D(600),delay:T(3700)});
+  latinSima(svg,G,150,T(4300));}};
+
+/* 4 — Diamond ring: an eclipse's corona, the flare on its edge flies in and becomes the dot of ي. */
+TAKES.ring={name:'Diamond ring',run(svg,G,id){
+  const defs=skyfield(svg,id,41,140);glowFilter(defs,id+'gl',9);
+  const cx=800,cy=430,R=290;
+  const cor=el('g',{filter:`url(#${id}gl)`,opacity:0},svg);
+  const rg=el('radialGradient',{id:id+'co',cx:'50%',cy:'50%',r:'50%'},defs);
+  [['0.84','#9fb4ff',0],['0.9','#dfe6ff',0.95],['0.94','#9fb4ff',0.35],['1','#6070c0',0]].forEach(([o,c,a])=>el('stop',{offset:o,'stop-color':c,'stop-opacity':a},rg));
+  el('circle',{cx,cy,r:R*1.12,fill:`url(#${id}co)`},cor);
+  const r=rng(9),str=el('g',{style:`transform-origin:${cx}px ${cy}px`},cor);
+  for(let i=0;i<36;i++){const a=r()*Math.PI*2,l=R+20+r()*r()*170;
+    el('line',{x1:cx+R*Math.cos(a),y1:cy+R*Math.sin(a),x2:cx+l*Math.cos(a),y2:cy+l*Math.sin(a),stroke:'#cfd8ff','stroke-width':1+r()*2,opacity:0.12+r()*0.25,'stroke-linecap':'round'},str);}
+  if(!REDUCED)str.animate([{transform:'rotate(0deg)'},{transform:'rotate(8deg)'}],{duration:9000,fill:'both'});
+  el('circle',{cx,cy,r:R,fill:'#020308'},svg);
+  A(cor,[{opacity:0},{opacity:1}],{duration:D(1400),delay:T(200)});
+  A(cor,[{opacity:1},{opacity:0.35}],{duration:D(1200),delay:T(3200),fill:'forwards'});
+  // the diamond: a flare on the edge, up and to the right
+  const a=-48*Math.PI/180,fx=cx+R*Math.cos(a),fy=cy+R*Math.sin(a),[dx,dy]=G.amiri.dots[0];
+  const fl=el('g',{},svg);
+  el('circle',{cx:0,cy:0,r:36,fill:'#fff',style:'filter:blur(14px)'},fl);el('path',{d:star4(0,0,58,0.08),fill:'#fff'},fl);el('path',{d:star4(0,0,26,0.18),fill:'#fff',transform:'rotate(45)'},fl);
+  fl.style.offsetPath=`path('M${fx.toFixed(1)} ${fy.toFixed(1)} Q ${cx+60} ${cy-40} ${dx.toFixed(1)} ${dy.toFixed(1)}')`;fl.style.offsetRotate='0deg';
+  A(fl,[{offsetDistance:'0%',transform:'scale(0)',opacity:0},{offsetDistance:'0%',transform:'scale(1.4)',opacity:1,offset:0.35},{offsetDistance:'0%',transform:'scale(1)',opacity:1}],{duration:D(1100),delay:T(1400)});
+  A(fl,[{offsetDistance:'0%',transform:'scale(1)'},{offsetDistance:'100%',transform:'scale(0.42)'}],{duration:D(1100),delay:T(2600),easing:'cubic-bezier(.6,0,.2,1)',fill:'forwards'});
+  const word=el('g',{},svg);G.amiri.letters.forEach(d=>el('path',{d,fill:C.cream},word));
+  A(word,[{opacity:0,transform:'translateY(10px)'},{opacity:1,transform:'translateY(0)'}],{duration:D(1100),delay:T(2500)});
+  const[x2,y2,r2]=G.amiri.dots[1];flare(svg,x2,y2,r2*0.95,T(3600),C.cream);
+  latinSima(svg,G,150,T(4000));}};
+
+/* 5 — Spectrum scan: like SPHEREx sweeping its colours, a scan line passes right-to-left and paints
+   the word through the detectors' hues; a second pass settles it to starlight. */
+TAKES.spectrum={name:'Spectrum scan',run(svg,G,id){
+  const defs=skyfield(svg,id,53,140);glowFilter(defs,id+'gl',6);
+  const lg=el('linearGradient',{id:id+'sp',gradientUnits:'userSpaceOnUse',x1:600,y1:0,x2:1000,y2:0},defs);
+  C.d.forEach((c,i)=>el('stop',{offset:(i/5).toFixed(2),'stop-color':c},lg));
+  const mk=(n)=>{const cp=el('clipPath',{id:id+n},defs);return el('rect',{x:1060,y:200,width:0,height:420},cp);};
+  const c1=mk('c1'),c2=mk('c2');
+  const w1=el('g',{'clip-path':`url(#${id}c1)`},svg),w2=el('g',{'clip-path':`url(#${id}c2)`},svg);
+  G.amiri.letters.forEach(d=>{el('path',{d,fill:`url(#${id}sp)`},w1);el('path',{d,fill:C.cream},w2);});
+  el('path',{d:G.amiri.dotsPath,fill:'none'},w1);
+  const sweep=(rect,t,dur)=>A(rect,[{x:'1060px',width:'0px'},{x:'560px',width:'500px'}],{duration:D(dur),delay:T(t),easing:'cubic-bezier(.45,0,.25,1)'});
+  sweep(c1,500,1700);sweep(c2,2200,1300);
+  const line=(t,dur,col,w)=>{const l=el('line',{x1:0,y1:200,x2:0,y2:640,stroke:col,'stroke-width':w,filter:`url(#${id}gl)`,opacity:0},svg);
+    A(l,[{transform:'translateX(1060px)',opacity:0},{transform:'translateX(1000px)',opacity:1,offset:0.1},{transform:'translateX(600px)',opacity:1,offset:0.9},{transform:'translateX(560px)',opacity:0}],{duration:D(dur),delay:T(t),easing:'cubic-bezier(.45,0,.25,1)'});};
+  line(500,1700,'#ffffff',2.5);line(2200,1300,C.cream,1.5);
+  // a six-hue signature line under the word, drawn right to left
+  const sig=el('g',{},svg);C.d.slice().reverse().forEach((c,i)=>{const x=1000-(i+1)*66.6;
+    const s=el('rect',{x:x.toFixed(1),y:612,width:62,height:4,rx:2,fill:c,style:`transform-box:fill-box;transform-origin:100% 50%`},sig);
+    A(s,[{transform:'scaleX(0)'},{transform:'scaleX(1)'}],{duration:D(380),delay:T(3200+i*110)});});
+  G.amiri.dots.forEach(([x,y,r],i)=>flare(svg,x,y,r*0.95,T(3000+i*150),C.cream));
+  latinSima(svg,G,90,T(3900));}};
+
+const take=TAKES['aurora'];document.querySelector('.hint').textContent='Take 3 · '+take.name+' · click to replay';
+const s=document.getElementById('s');function play(){s.innerHTML='';take.run(s,G,'t');}play();s.onclick=play;</script></body></html>

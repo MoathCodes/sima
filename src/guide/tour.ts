@@ -95,8 +95,8 @@ const MAIN: Tour = {
     },
     {
       title: 'Taken on different dates',
-      body: 'SPHEREx comes back to this patch about every six months. Each letter on the date scale is one visit: A first, then B, then C.',
-      action: 'Press a letter on the date scale.',
+      body: 'SPHEREx comes back to this patch about every six months. Each dot on the date scale is one picture.',
+      action: 'Press a dot on the date scale.',
       ring: ['dates'],
       enter: () => pause(),
       done: (b) => S.epoch !== b.epoch,

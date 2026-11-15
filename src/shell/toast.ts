@@ -7,6 +7,7 @@
  * never counted as overlapping.
  */
 import { icon } from './icons.ts';
+import { t } from './i18n.ts';
 
 /**
  * Shows a short message above the bar.
@@ -35,7 +36,7 @@ export function toast(text: string, opts: { ms?: number; close?: boolean } = {})
   if (opts.close ?? (ms === 0 || ms >= 8000)) {
     const btn = document.createElement('button');
     btn.className = 'icon-btn sm';
-    btn.setAttribute('aria-label', 'Close the message');
+    btn.setAttribute('aria-label', t('toast.close'));
     btn.innerHTML = icon('close');
     btn.addEventListener('click', remove);
     el.append(btn);

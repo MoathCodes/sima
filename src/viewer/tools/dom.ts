@@ -126,3 +126,31 @@ export function token(name: string, fallback = '#888'): string {
   }
   return v || fallback;
 }
+
+/**
+ * Hangs a native popover (`popover="auto"`, opened by its button's `popovertarget`) from its
+ * button (a getter: the button may be redrawn while the popover stays). Call it once per popover: below it, or above when the room below is short; aligned with the button's right edge
+ * (`end`) or left edge (`start`). The popover's `.appear` motion settles toward the button. The
+ * browser closes it on Escape and on a click outside.
+ */
+export function hangPopover(
+  button: () => HTMLElement | null,
+  pop: HTMLElement,
+  align: 'start' | 'end' = 'end',
+  room = 240,
+): void {
+  pop.addEventListener('beforetoggle', (e) => {
+    const btn = button();
+    if (!btn) return;
+    const open = (e as ToggleEvent).newState === 'open';
+    btn.setAttribute('aria-expanded', String(open));
+    if (!open) return;
+    const r = btn.getBoundingClientRect();
+    const below = innerHeight - r.bottom >= room || r.top < room;
+    pop.style.top = below ? `${Math.round(r.bottom + 6)}px` : 'auto';
+    pop.style.bottom = below ? 'auto' : `${Math.round(innerHeight - r.top + 6)}px`;
+    pop.style.left = align === 'start' ? `${Math.round(Math.max(8, r.left))}px` : 'auto';
+    pop.style.right = align === 'end' ? `${Math.round(Math.max(8, innerWidth - r.right))}px` : 'auto';
+    pop.style.setProperty('--settle-y', below ? '-6px' : '6px');
+  });
+}
