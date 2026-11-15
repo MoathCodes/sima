@@ -85,6 +85,8 @@ const SOURCE: Record<string, { cls: string; text: string; tip: string }> = {
 
 /** Fills the frame and answers `aim` and `band`. Called once by main.ts. */
 export function startFrame(): void {
+  // Slate: opaque, for science (DESIGN-v2 D-3). frame.css draws it; lane F's class names it.
+  document.getElementById('frame')?.classList.add('slate');
   on('aim', (m) => {
     // A new spot loads: the frame shows, so its progress is always in view.
     hideFrame(false);

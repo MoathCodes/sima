@@ -225,7 +225,7 @@ async function sendToComputer(p: HTMLElement): Promise<void> {
 
 function skeleton(p: HTMLElement): void {
   if (p.querySelector('[data-wrap]')) return;
-  p.classList.add('ms-panel', 'appear');
+  p.classList.add('ms-panel', 'appear', 'slate');
   p.innerHTML = `
     <div class="ms-wrap" data-wrap>
       <div class="ms-main">

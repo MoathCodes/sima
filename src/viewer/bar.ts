@@ -30,7 +30,8 @@ function plainName(lam: number): string {
 export function startBar(): void {
   const bar = document.getElementById('bar');
   if (!bar) return;
-  bar.classList.add('sima-bar');
+  // Regular glass (lane F's material class in app.css gives the blur; frame.css the tint).
+  bar.classList.add('sima-bar', 'glass');
   bar.innerHTML = `
     <div class="bar-play" role="group" aria-label="Playback">
       <button class="icon-btn" data-step="-1" data-guide="prev" aria-label="Previous picture" data-tip="Previous (←)" data-tip-pos="above">${icon('prev')}</button>

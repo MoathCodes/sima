@@ -72,7 +72,7 @@ function render(): void {
   if (!panel) return;
   const show = S.tools && S.level === 'measure';
   panel.hidden = !show;
-  panel.classList.add('tl-panel', 'appear');
+  panel.classList.add('tl-panel', 'appear', 'slate');
   if (!show) {
     builtTab = null;
     return;
