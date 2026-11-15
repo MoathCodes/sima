@@ -256,6 +256,24 @@
     <!-- Lane H: "Explain the screen": a label on each part. -->
     <div id="explain" data-overlay="explain" data-escape="50" hidden></div>
 
+    <!-- v2.0 mount points (docs/design-v2/BEGINNER-AND-MOBILE.md section 13). Empty and hidden
+         until their lane builds them. Each lane adds data-card, data-guide and keep-clear as it
+         shows them. Escape order: coach 50; mission, success, settings, the sheet's Back 30. -->
+    <!-- Lane F: the view switch (Discover | Expert). Lane F places it in the top row. -->
+    <div id="view-switch" hidden></div>
+    <!-- Lane K: Discover's mission list, "Try another object" and the skills record. -->
+    <section id="discover-list" hidden></section>
+    <!-- Lane K: the mission card (brief, steps, hints). -->
+    <section id="mission" data-escape="30" hidden></section>
+    <!-- Lane K: the success card. -->
+    <section id="mission-success" data-escape="30" hidden></section>
+    <!-- Lane K: the coach card (first switch to Expert, first steps). -->
+    <div id="coach" data-escape="50" hidden></div>
+    <!-- Lane F: Settings (Panels: Glass or Solid, motion, Reset my progress). -->
+    <section id="settings" data-escape="30" hidden></section>
+    <!-- Lane M: the phone sheet (Slate, peek and half). Never over the picture. -->
+    <section id="sheet" hidden></section>
+
     <!-- Lane F: Share (a link and an embed code) and About. Opened with showModal(). -->
     <dialog id="share" class="dialog" data-overlay="share" data-guide="share-dialog"></dialog>
     <dialog id="about" class="dialog" data-overlay="about" data-guide="about-dialog"></dialog>

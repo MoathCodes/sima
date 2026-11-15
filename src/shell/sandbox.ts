@@ -28,6 +28,7 @@ import {
   yearlyShift,
   type DetectorNoise,
   type PretendPlanet,
+  type Verdict,
 } from '../core/sandbox.ts';
 import type { Det, Field } from '../core/types.ts';
 import { icon } from './icons.ts';
@@ -81,8 +82,64 @@ export function startSandbox(): void {
   addSearchSource({ name: 'sandbox', label: 'Sandbox', search: searchWords });
 }
 
-/** Opens the sandbox card (the search words, About's Planet X section). */
-export function openSandbox(): void {
+/** What the sandbox shows now, for Discover's Planet X mission (v2.0 contract "Sandbox reading"). */
+export interface SandboxReading {
+  /** The pretend planet as set on the card (a model input, never data). */
+  planet: PretendPlanet;
+  /** The model's verdict against this patch's measured noise (core/sandbox.ts). */
+  verdict: Verdict;
+  /** The patch the verdict is for: a check rejects a reading for another patch. */
+  patchKey: string;
+}
+
+const sandboxFns = new Set<(r: SandboxReading | null) => void>();
+
+/**
+ * The card's reading now. Null while the card is closed, without a patch, or while the patch's
+ * noise is still being measured (so a check never reads a half-made "unknown").
+ */
+export function sandboxState(): SandboxReading | null {
+  const field = S.field;
+  if (!sandboxOpen() || !field || !field.frames.length) return null;
+  const m = widths.get(field);
+  const pending = ([1, 2, 3, 4, 5, 6] as Det[]).some((d) => !m?.has(d) && field.frames.some((f) => f.det === d));
+  if (pending) return null;
+  return {
+    planet: { ...planet },
+    verdict: verdict(answer(planet, noises(field))),
+    patchKey: `${S.set?.key ?? 'field'}|${field.ra}|${field.dec}|${field.n}`,
+  };
+}
+
+/**
+ * Hear the reading change (the card filled again, opened or closed).
+ * @returns A function that stops listening.
+ */
+export function onSandbox(fn: (r: SandboxReading | null) => void): () => void {
+  sandboxFns.add(fn);
+  return () => {
+    sandboxFns.delete(fn);
+  };
+}
+
+function tellSandbox(): void {
+  const r = sandboxState();
+  for (const fn of [...sandboxFns]) {
+    try {
+      fn(r);
+    } catch (err) {
+      console.error('sandbox: an onSandbox listener failed', err);
+    }
+  }
+}
+
+/**
+ * Opens the sandbox card (the search words, About's Planet X section).
+ * @param opts `under`: v2.0, the element the card opens under (Discover's mission card on a
+ *   desktop, the steps in the phone sheet). Step 0 stub: accepted, not used yet (lane F).
+ */
+export function openSandbox(opts: { under?: HTMLElement } = {}): void {
+  void opts.under;
   const c = card();
   if (!c) return;
   closePlaces();
@@ -102,6 +159,7 @@ export function closeSandbox(): void {
   c.hidden = true;
   placing = false;
   draw();
+  tellSandbox();
 }
 
 // ----- Where it is ----------------------------------------------------------------------------
@@ -265,6 +323,7 @@ function fill(): void {
   const b = c.querySelector('.sb-body');
   if (b) b.scrollTop = keep;
   if (focused) c.querySelector<HTMLElement>(`[data-guide="${focused}"]`)?.focus();
+  tellSandbox();
 }
 
 function results(): HTMLElement[] {
@@ -410,7 +469,7 @@ function searchWords(query: string): SearchHit[] {
       line: 'Sandbox: place a pretend planet and see',
       icon: 'planet',
       score: 0.92,
-      choose: openSandbox,
+      choose: () => openSandbox(),
     },
   ];
 }

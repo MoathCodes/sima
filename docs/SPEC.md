@@ -645,18 +645,37 @@ These signatures are fixed in phase 0 (section 9.2). A lane may change its insid
 | `explore/game.ts` | H | `setLevel`, `openStarter`, `revealTarget`, `pointOut` |
 | `guide/index.ts` | H | `startGuide()` |
 
+**v2.0 contracts** (`docs/design-v2/BEGINNER-AND-MOBILE.md` section 13; fixed in v2.0 step 0, with
+stubs merged; lanes in `docs/lanes.md`). No new bus messages.
+
+| Module | Owner | What others may call |
+|---|---|---|
+| `shell/view.ts` | F | `getView(): View`, `setView(v: View): void`, `onView(fn: (v: View) => void): () => void`, `type View = 'discover' \| 'expert'`. Sets `html[data-view]`, writes `sima-view` (migrating `b102-level`), and calls `setLevel('explore')` for Discover, `setLevel('measure')` for Expert |
+| `viewer/state.ts` | DE | `S.measureOpen?: boolean` (written by DE's Measure): in Expert the Measure button opens and closes the panel without leaving the Measure level. Undefined until used |
+| `explore/game.ts` | H | `StarterId` gains `'ghost'`; `'too-faint'` stays as its old name for old links (`starterOf(id)` resolves it). `openStarter` through the `start` message stays the one way in |
+| `viewer/state.ts`, `viewer/motion.ts` | DE | `VIEWS.explore` is `['flip', 'two', 'diff', 'stack']`. The motion handle works at either level. `trialResult(): { key: string; motion: Motion; atCatalogue: boolean; result: StackResult } \| null`: null while the newest stack is being made or when the one on hand is for an older key; at the catalogue motion, the ordinary stack's result. The mission starts the arrow with `setTrial({ pmra: 0, pmdec: 0 })` |
+| `explore/progress.ts` | H | `progress(): Progress`, `onProgress(fn): () => void`, `startMission(id)`, `leaveMission()`, `stepDone(id, step, state: 'done' \| 'unavailable')`, `resetProgress()`. In `sima-missions`; in memory when storage is blocked |
+| `explore/missions.ts` | H | `MissionId`, `MISSION_IDS`; each check is a pure `Check = (inputs: CheckInputs) => CheckResult` with `CheckResult = { state: 'waiting' \| 'checking' \| 'done' \| 'unavailable' \| 'failed'; reason: string }`; inputs carry `key` and `keyNow`, and an old key is rejected (`keyCheck`) |
+| `shell/sandbox.ts` | F | `sandboxState(): { planet; verdict; patchKey } \| null`, `onSandbox(fn): () => void`, `openSandbox({ under })` |
+| `shell/sheet.ts` | M | `openSheet(el, { height: 'peek' \| 'half', label, back? })`, `back(): boolean`, `closeSheet()`, `layout(): { kind: 'desktop' \| 'phone-fit' \| 'phone-scroll'; pic; sheetH }`, `onLayout(fn): () => void` |
+| `viewer/link.ts` (re-exported by `url.ts`) | F | `readLink` reads `ui=discover\|expert` and `mission=runaway\|ghost\|planet-x`; `viewFor(link, hash, remembered)`: `ui` wins; else Expert settings in the link (`view`, `pic`, `det`, `date`, `#w=`) mean Expert; else the remembered view |
+| `shell/glass.ts` | F | `glassLevel(): 'glass' \| 'solid'`, `onGlass(fn): () => void`. Sets `html[data-glass]`; no other lane reads the media queries |
+
 ### 8.5 What is remembered, and what is in a link
 
 | Browser key | Holds | Owner |
 |---|---|---|
-| `b102-level` | Explore or Measure | H |
+| `b102-level` | Explore or Measure (v2.0: read once to migrate to `sima-view`) | H |
+| `sima-view` | v2.0: Discover or Expert | F |
+| `sima-missions` | v2.0: mission progress (never in a link) | H |
+| `sima-panels` | v2.0: the visitor's Panels choice, Glass or Solid | F |
 | `frame-box` | The frame's position and size | F |
 | `sky-places` | Saved places | G |
 | `sima-guide` | Tour progress, seen tips, "all numbers" | H |
 | `sima.tools` | Picture settings, threshold, list filter and order | E |
 
 Link parameters: `ra`, `dec`, `fov`, `det` (D1 to D6 or `color`), `view`, `target`, `date`, `pic`
-(picture settings), `embed`. A parameter that is not understood is named in a note, never ignored
+(picture settings), `embed`; v2.0 adds `ui` and `mission` (8.4, `viewer/link.ts`). A parameter that is not understood is named in a note, never ignored
 silently.
 
 ---

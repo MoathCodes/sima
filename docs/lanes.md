@@ -30,15 +30,15 @@ uv pip install -r scripts/requirements.txt -r scripts/places_requirements.txt
 
 ### Dev ports
 
-| Lane | Port |
+| Lane (v2.0) | Port |
 |---|---|
 | C. Sky | 5173 |
-| D. Frame and bar | 5174 |
-| E. Measure and tools | 5175 |
-| F. Shell | 5176 |
-| G. Places | 5177 |
-| H. Guide | 5178 |
+| DE. Frame, bar, Measure and tools | 5174 (5175 spare) |
+| F. Shell, glass, settings and places | 5176 (5177 spare) |
+| H. Missions engine | 5178 |
 | Integrator | 5180 |
+| K. Discover interface | 5181 |
+| M. Phone layout and sheet | 5182 |
 | Phase 0 | 5170 |
 
 Lanes A and B have no screen. If you need the page, use 5171 (A) or 5172 (B). The port is strict:
@@ -59,7 +59,31 @@ must say so (FRM-11), not call a service that is not there.
 - Only one service runs on the machine. Whichever dev server started it stops it when it stops;
   the other dev servers then lose it until they restart.
 
-## The lanes
+## The lanes (v2.0)
+
+v2.0 (Night Glass, Discover and phones) is built by six lanes plus the integrator. The plan is
+`docs/design-v2/BEGINNER-AND-MOBILE.md` section 14, with its eight lanes merged into six: F takes
+v1's F and G, DE takes D and E. Lanes A and B (data and science core) keep their files from the
+table below and are not active in v2.0. **No file has two owners.** Files marked * are new.
+
+| Lane | Builds | Owns |
+|---|---|---|
+| **F. Shell, glass, settings, places** | Night Glass tokens and materials, Solid and its fallbacks, the governor, Settings, the view switch, links (`ui=`, `mission=`), top rows, the phone menu, the sandbox reading exports; the places restyle (Raised place card, Discover wording, Arabic text face) | `index.html`, `src/styles/app.css`, `src/styles/shell.css`, `src/styles/fonts/*`, `src/shell/shell.ts`, `src/shell/layout.ts` (desktop card placement), `src/shell/escape.ts`, `src/shell/toast.ts`, `src/shell/icons.ts`, `src/shell/finds.ts`, `src/shell/view.ts`, `src/shell/glass.ts`, `src/shell/settings.ts`*, `src/styles/settings.css`*, `src/shell/sandbox.ts`, `src/viewer/url.ts`, `src/viewer/link.ts`, `src/viewer/share.ts`, `src/viewer/omnibox.ts`, `src/page/*`; from v1's G: `src/shell/places.ts`, `src/shell/objects.ts`, `src/shell/places/*`, `src/data/tours.ts`, `src/styles/places.css`; `tests/link-view.test.ts`, `tests/sandbox.test.ts`, `tests/places.test.ts` |
+| **C. Sky** | The globe at full zoom-out (SIN projection, 0.3 s cross-fade both ways), the intro → globe cross-fade, limb glow, mission beacons, labels on Thin chips over bright sky, keep-clear for Discover | `src/sky/*`, `src/styles/sky.css`, `public/sky-tiles-sw.js`, `scripts/seed-tiles.ts`, `tests/sky-*.test.ts`. The intro's files stay with the integrator; C listens for `html[data-intro]` and asks the integrator for a "globe turned" event if needed |
+| **DE. Frame, bar, Measure, tools** | Frame and bar in Slate and Regular; the Discover frame (56 px Play, date chips, four views); contract 4 (`trialResult`); the phone frame header and Expert-on-phone compact bar; Measure and the picture tools in Slate; `S.measureOpen`; Measure in the phone column | `src/viewer/*` except lane F's `url.ts`, `link.ts`, `share.ts`, `omnibox.ts`: so `state.ts` (a contract), `load.ts`, `render.ts`, `paint.ts`, `playback.ts`, `frame.ts`, `bar.ts`, `motion.ts`, `scrub.ts`, `strip.ts`, `surround.ts`, `preview.ts`, `chips.ts`*, `detail.ts`, `tools.ts`, `inbox.ts`, `src/viewer/measure/*`, `src/viewer/tools/*`; `src/styles/frame.css`, `src/styles/tools.css`; `tests/state.test.ts`, `tests/surround.test.ts`, `tests/trial-result.test.ts`, `tests/measure.test.ts`, `tests/tools*.test.ts`, `tests/viewer.test.ts` |
+| **H. Missions engine** | The three missions' data and pure checks, progress, plain sentences, Planet X's edge search, "Try another object" templates; the guide | `src/explore/*` (incl. `missions.ts`, `progress.ts`, `plain.ts`*, `plan-x.ts`*), `src/guide/*`, `src/styles/guide.css`, `tests/missions.test.ts`*, `tests/progress.test.ts`, `tests/guide.test.ts` |
+| **K. Discover interface** | Welcome, home (mission list, skills record, "Try another object"), mission card, success card, coach | `src/discover/*`*, `src/styles/discover.css`* |
+| **M. Phone layout and sheet** | Fit and scroll layouts, the sheet, the Back rule, full-height pages | `src/shell/sheet.ts`, `src/shell/phone.ts`* (the phone layout; section 14 calls it `layout.ts`, a name lane F already uses), `src/styles/sheet.css`*, `tests/sheet.test.ts`* |
+| **Integrator** | `main.ts` wiring; `workspace.css` on the tokens; smoke flows; the release gate (section 15) | `src/main.ts`, `src/styles/workspace.css`, `src/styles/extras.css`, `src/workspace/*`, `src/intro/*`, `src/styles/intro.css`, `src/shell/bus.ts`, `tests/smoke/*`, `docs/*`, and the build files listed below |
+
+Stylesheets: each lane styles only its own classes in its own stylesheet, on the `--v2-*` tokens
+in `app.css`. `backdrop-filter` is written only in `app.css` (GLS-1).
+
+**The logo is undecided.** Keep today's wordmark (سيما, then Sima) until the team picks one.
+
+**Requests between lanes** follow AGENTS.md: write the exact patch in your report.
+
+## The lanes (v1, for reference)
 
 | Lane | Builds | Requirements (SPEC 5) |
 |---|---|---|
@@ -74,6 +98,8 @@ must say so (FRM-11), not call a service that is not there.
 | **Integrator** | The build, the shared contracts, the smoke test, merges; the workspace (extra frames) | 11.1; SPEC 10 O-V1 to O-V4 |
 
 ## Every file and its owner
+
+For v2.0 the table "The lanes (v2.0)" above wins where the two differ. This table is v1's.
 
 A lane may add new files inside folders it owns. Name them in your report. Files marked *(to
 create)* do not exist yet; their lane creates them.
@@ -164,6 +190,15 @@ Everyone may read `S`. Write a field only if your lane is named. Assign whole va
 | `core/work.ts` (workspace) | B | `keepPatch(key, field, set)` gives the worker another patch to keep (up to eight); `stack(…, { field })` stacks on that field |
 | `workspace/index.ts` | Integrator | `startWorkspace(plain)`. Not started with `embed=1`. |
 | `guide/index.ts` | H | `startGuide()` |
+| `viewer/motion.ts` (v2.0) | DE | `trialResult()`, `TrialResult`, `pickTrialResult` (its pure decision), `setTrial`, `trialMotion` |
+| `shell/view.ts` (v2.0) | F | `getView`, `setView`, `onView`, `View`, `rememberedView`, `startView` (main.ts) |
+| `shell/glass.ts` (v2.0) | F | `glassLevel`, `onGlass`, `GlassLevel`, `startGlass` (main.ts) |
+| `shell/sheet.ts` (v2.0) | M | `openSheet`, `back`, `closeSheet`, `layout`, `onLayout`, `SheetHeight`, `LayoutKind`, `Layout`, `SheetOptions` |
+| `shell/sandbox.ts` (v2.0) | F | `sandboxState`, `onSandbox`, `openSandbox({ under })`, `SandboxReading` |
+| `viewer/link.ts` (v2.0) | F | `readLink`, `viewFor`, `Link` (also re-exported by `url.ts`) |
+| `explore/progress.ts` (v2.0) | H | `progress`, `onProgress`, `startMission`, `leaveMission`, `stepDone`, `resetProgress`, `Progress`, `StepState` |
+| `explore/missions.ts` (v2.0) | H | `MissionId`, `MISSION_IDS`, `isMissionId`, `CheckState`, `CheckResult`, `CheckInputs`, `Check`, `keyCheck`, `Mission`, `MISSIONS` |
+| `explore/game.ts` (v2.0) | H | `StarterId` gains `ghost` (`too-faint` is its old name); `starterOf(id)` |
 
 Each part's `start…()` function is called once by `src/main.ts` (integrator). A part that throws
 while starting is reported and the others still start.
@@ -215,7 +250,14 @@ fills the element and styles what is inside it; lane F (app.css, "Page skeleton"
 | `share`, `about` | F | Dialogs, opened with `showModal()`. |
 | `toasts` | F | Short messages above the bar. |
 | `tooltip` | F | The one tooltip, for every element with `data-tip`. |
-| `narrow-note` | F | "Open it on a computer" under 700 px (O-W3). |
+| `narrow-note` | F | "Open it on a computer" under 700 px (O-W3). v2.0 removes it once lane M's phone layout lands. |
+| `view-switch` (v2.0) | F | Discover \| Expert, in the top row. Empty and hidden in step 0. |
+| `discover-list` (v2.0) | K | Discover's mission list, "Try another object", the skills record. |
+| `mission` (v2.0) | K | The mission card. Escape 30. |
+| `mission-success` (v2.0) | K | The success card. Escape 30. |
+| `coach` (v2.0) | K | The coach card. Escape 50. |
+| `settings` (v2.0) | F | Settings: Panels, the motion line, Reset my progress. Escape 30. |
+| `sheet` (v2.0) | M | The phone sheet (Slate, peek and half). The Back rule is Escape 30. |
 | `workspace` | Integrator | The tool tray (popover) opened from the rail's last button: frame types, Compare, saved workspaces, files. |
 | `frames` | Integrator | Holds the extra frames (`.wf`, each a `[data-card]`), their shared menu `#wf-menu` and the "Six frames are open" dialog. |
 
@@ -246,7 +288,7 @@ Names in `index.html` are listed with the mount points above. Names inside parts
 | F | `guide-button`, `places-button`, `share-button`, `about-button`, `zoom-in`, `zoom-out`, `sky-map-button`, `grid-button`, `sky-map-spherex`, `sky-map-wise-w1`, `sky-map-wise-w2` |
 | G | `chip-stars`, `chip-nearby`, `chip-changing`, `chip-clusters`, `chip-nebulae`, `chip-galaxies`, `chip-tours`, `chip-surprise-me` |
 | Intro | `intro`, `intro-skip`, `play-intro` (in About) |
-| H | `starter-runaway`, `starter-made-of`, `starter-too-faint`, `welcome-own`, `hint` |
+| H | `starter-runaway`, `starter-made-of`, `starter-ghost` (was `starter-too-faint`), `welcome-own`, `hint` |
 | Integrator (workspace) | `workspace-button`, `workspace-tray`, `tool-blink`, `tool-two`, `tool-diff`, `tool-spectrum`, `tool-brightness`, `tool-stack`, `tool-info`, `compare-main`, `workspace-name`, `workspace-save`, `workspace-open`, `workspace-export`, `workspace-import`, `share-workspace`; in a frame: `wf-head`, `wf-menu`, `wf-compare`, `wf-close`, `wf-play`, `wf-next`, `wf-exif`; in its menu: `wf-type-<type>`, `wf-link-main`, `wf-link-<frame id>`, `wf-make-main`, `compare-det`, `compare-date`, `compare-type` |
 
 To add a name, add it in your own part and list it in your report.
@@ -278,7 +320,10 @@ Wrap every read and write in `try`; storage can be blocked.
 
 | Key | Holds | Owner |
 |---|---|---|
-| `b102-level` | Explore or Measure | H |
+| `b102-level` | Explore or Measure. v2.0: read once by `shell/view.ts` to migrate to `sima-view` | H |
+| `sima-view` | v2.0: the view, `discover` or `expert` | F |
+| `sima-missions` | v2.0: mission progress. Reset clears only this key; never in a link | H |
+| `sima-panels` | v2.0: the visitor's Panels choice, `glass` or `solid` | F |
 | `frame-box` | The frame's position and size | F |
 | `sky-places` | Saved places | G |
 | `sima-guide` | Tour progress, seen tips, "all numbers" | H (E writes `allNumbers`). Always merge into this entry, never overwrite it |
@@ -292,6 +337,10 @@ Wrap every read and write in `try`; storage can be blocked.
 `ra`, `dec` (degrees), `fov` (arcminutes), `det` (`D1` to `D6`, or `color`), `view` (a `Mode`),
 `target`, `date` (YYYY-MM-DD, UTC), `pic` (`core/picture.ts` `encodePic`), `embed=1`. Lane F's
 `url.ts` reads and writes them. A parameter it does not understand is named in a note.
+
+v2.0 adds `ui=discover|expert` and `mission=runaway|ghost|planet-x` (read in `viewer/link.ts`). The
+view a link opens (`viewFor`): `ui` wins; else Expert settings in the link (`view`, `pic`, `det`,
+`date`, `#w=`) mean Expert; else the remembered view. Progress is never in a link.
 
 A shared workspace adds `#w=` after them: the workspace as JSON with a schema version, deflated and
 base64url-encoded (`workspace/schema.ts`). The page reads it once and removes it from the address.

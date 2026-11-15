@@ -32,6 +32,8 @@ import { startGame } from './explore/game.ts';
 import { startGuide } from './guide/index.ts';
 import { startIntro } from './intro/intro.ts';
 import { startWorkspace } from './workspace/index.ts';
+import { startView } from './shell/view.ts';
+import { startGlass } from './shell/glass.ts';
 import { S } from './viewer/state.ts';
 import * as bus from './shell/bus.ts';
 
@@ -58,6 +60,8 @@ function start(name: string, fn: () => unknown): void {
   }
 }
 
+// v2.0: Glass or Solid is decided once, before anything is drawn (DESIGN-v2 section 6).
+start('glass', startGlass);
 // The intro first: it covers the page while every part starts under it as usual.
 if (!link.embed) start('intro', startIntro);
 start('shell', startShell);
@@ -68,6 +72,8 @@ start('measure', startMeasure);
 start('tools', startTools);
 start('motion', startMotion);
 start('game', startGame);
+// v2.0: Discover or Expert, after the game has restored the level (shell/view.ts).
+start('view', () => startView(link, location.hash));
 if (!link.embed) start('guide', startGuide);
 // The sky, places and the link start in the next task: starting every part in one task blocked
 // the page for over 100 ms (TLS-8).

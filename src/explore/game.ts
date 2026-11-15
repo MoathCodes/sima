@@ -41,8 +41,17 @@ import { pickerOn, startKeyPick, sync as syncKeyPick } from './keypick.ts';
 
 export type { PointAt } from '../guide/ring.ts';
 
-/** A starting point or a practice, as the welcome card and the Places menu offer them. */
-export type StarterId = 'runaway' | 'made-of' | 'too-faint' | 'warm-up' | 'planet-x';
+/**
+ * A starting point or a practice, as the welcome card and the Places menu offer them.
+ * `too-faint` is the old name of `ghost` (v2.0 contract 3), kept so old links and messages still
+ * open it; menus and copy use `ghost` only. Use `starterOf` to resolve it.
+ */
+export type StarterId = 'runaway' | 'made-of' | 'ghost' | 'warm-up' | 'planet-x' | 'too-faint';
+
+/** A starter's own name: `too-faint` becomes `ghost`; every other id is itself. */
+export function starterOf(id: StarterId): Exclude<StarterId, 'too-faint'> {
+  return id === 'too-faint' ? 'ghost' : id;
+}
 
 /** What a starter says and opens. */
 export interface Starter {
@@ -57,7 +66,7 @@ export interface Starter {
 }
 
 /** The starters, in the order they are offered. Words from the reference screenshots. */
-export const STARTERS: Readonly<Record<StarterId, Starter>> = Object.freeze({
+export const STARTERS: Readonly<Record<Exclude<StarterId, 'too-faint'>, Starter>> = Object.freeze({
   runaway: {
     title: 'Runaway star',
     line: 'One dot jumps. Tap it.',
@@ -70,7 +79,7 @@ export const STARTERS: Readonly<Record<StarterId, Starter>> = Object.freeze({
     target: 'eps-indi-b',
     simulated: false,
   },
-  'too-faint': {
+  ghost: {
     title: 'Too faint to see',
     line: 'Nothing in any single picture. Add them along its path.',
     target: 'wise-0855',
@@ -108,7 +117,8 @@ const foundFns = new Set<(key: string) => void>();
 /** Restores the level and "all numbers", answers `start`, and keeps the task line. */
 export function startGame(): void {
   on('start', (m) => {
-    const starter = STARTERS[m.starter as StarterId];
+    const id = m.starter as StarterId;
+    const starter = Object.hasOwn(STARTERS, starterOf(id)) ? STARTERS[starterOf(id)] : undefined;
     if (!starter) return;
     const welcome = document.getElementById('welcome');
     if (welcome) welcome.hidden = true;
