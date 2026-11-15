@@ -89,8 +89,10 @@ export function startView(link: Link, hash: string): View {
   drawSwitch();
   const remembered = rememberedView();
   const v = viewFor(link, hash, remembered ?? (DISCOVER_FIRST ? 'discover' : 'expert'));
-  if (v === 'discover' || DISCOVER_FIRST) setView(v);
-  else apply(v);
+  // A chosen Expert (remembered, or asked for in the link) sets the Measure level itself now that
+  // game.ts no longer restores b102-level. A first visit keeps today's start until Discover is first.
+  if (remembered === null && link.ui === null && v === 'expert' && !DISCOVER_FIRST) apply(v);
+  else setView(v);
   return v;
 }
 

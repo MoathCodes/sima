@@ -9,6 +9,27 @@ import { placeNear } from './place.ts';
 
 /** Parts by `data-guide` name: a short name and one plain sentence. Most specific first. */
 const PARTS: readonly [string, string, string][] = [
+  [
+    'view-switch',
+    'Discover and Expert',
+    'Switch views. Your star, date and wavelength stay the same.',
+  ],
+  ['view-discover', 'Discover', 'Learn Blink, Stack and What-if with missions.'],
+  [
+    'view-expert',
+    'Expert',
+    'Every number, picture tool, frame and workspace. Your missions are kept.',
+  ],
+  ['mission-step', 'Your step', 'One action to try in the pictures.'],
+  ['mission-hint', 'Hint', 'A little help with this step.'],
+  ['mission-show-me', 'Show me', 'Points to the answer. You still do the step yourself.'],
+  [
+    'mission-continue',
+    'Continue without it',
+    'Keeps this step as not available when it could not be measured.',
+  ],
+  ['settings-button', 'Settings', 'Choose Glass or Solid panels, or reset mission progress.'],
+
   ['play', 'Play', 'Flips through the dates. Space does the same; the arrow keys step.'],
   ['dates', 'The date scale', 'When each picture was taken. Each letter is one visit, months apart.'],
   [
