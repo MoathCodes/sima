@@ -3,7 +3,7 @@
  * live region, and putting a screen on the page: a panel on desktop, lane M's sheet on phones
  * (BEGINNER-AND-MOBILE.md section 11; `src/shell/sheet.ts`). Owner: lane K.
  */
-import { closeSheet, layout, openSheet, type SheetHeight } from '../shell/sheet.ts';
+import { closeSheet, layout, openSheet, sheetContent, type SheetHeight } from '../shell/sheet.ts';
 import { icon as shellIcon, type IconName } from '../shell/icons.ts';
 
 /** Escapes text for HTML. */
@@ -31,8 +31,6 @@ export function phone(): boolean {
 
 /** The body each mount shows, so a re-render updates in place instead of re-opening. */
 const shown = new WeakMap<HTMLElement, HTMLElement>();
-/** The body now in the sheet, if it is one of ours. */
-let inSheet: HTMLElement | null = null;
 
 /**
  * Puts `body` on the page: inside `mount` on desktop, or in the sheet on phones.
@@ -41,15 +39,12 @@ let inSheet: HTMLElement | null = null;
 export function present(mount: HTMLElement, body: HTMLElement, opts: { height: SheetHeight; label: string }): void {
   if (phone()) {
     mount.hidden = true;
-    if (inSheet === body) return;
-    inSheet = body;
+    // The sheet moves the element in, and puts it back when it leaves (shell/sheet.ts).
+    if (sheetContent() === body || body.closest('#sheet')) return;
     openSheet(body, opts);
     return;
   }
-  if (inSheet === body) {
-    inSheet = null;
-    closeSheet();
-  }
+  if (body.closest('#sheet')) closeSheet();
   if (shown.get(mount) !== body || body.parentElement !== mount) {
     mount.replaceChildren(body);
     shown.set(mount, body);
@@ -61,10 +56,7 @@ export function present(mount: HTMLElement, body: HTMLElement, opts: { height: S
 /** Takes a screen off the page (its panel, or the sheet when it shows this body). */
 export function dismiss(mount: HTMLElement, body: HTMLElement | null): void {
   mount.hidden = true;
-  if (body && inSheet === body) {
-    inSheet = null;
-    closeSheet();
-  }
+  if (body && sheetContent() === body) closeSheet();
 }
 
 /** A polite live region (A11Y-2): each message is announced once. */
@@ -82,12 +74,17 @@ export function say(region: HTMLElement, text: string): void {
   window.setTimeout(() => (region.textContent = text), 30);
 }
 
+const drawn = new WeakMap<HTMLElement, string>();
+
 /**
  * Replaces `body`'s content and keeps keyboard focus on the same control (`data-k`). When that
  * control is gone (it finished the step), focus moves to `fallback` (section 10: focus moves only
  * when it was on the control that finished the step).
  */
 export function rerender(body: HTMLElement, html: string, fallback: string): void {
+  // Nothing changed: keep the nodes, so a press in progress is never swapped out from under it.
+  if (drawn.get(body) === html) return;
+  drawn.set(body, html);
   const a = document.activeElement;
   const k = a instanceof HTMLElement && body.contains(a) ? (a.dataset.k ?? null) : null;
   body.innerHTML = html;

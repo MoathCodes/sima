@@ -50,7 +50,7 @@
   z-index: var(--z-card);
 }
 #discover-list {
-  inset-inline-start: var(--v2-gutter);
+  inset-inline-start: var(--dsc-left, var(--v2-gutter));
   top: 76px;
   width: 372px;
   /* Never over the sky note (H1): it sits in the bottom 56 px. */
@@ -64,7 +64,7 @@
 #mission,
 #mission-success {
   /* Left edge; wider than 1500 px, directly left of the frame (index.ts sets --dsc-x). */
-  inset-inline-start: var(--dsc-x, var(--v2-gutter));
+  inset-inline-start: var(--dsc-x, var(--dsc-left, var(--v2-gutter)));
   top: 76px;
   max-height: calc(100vh - 76px - 60px);
   display: flex;
@@ -880,8 +880,7 @@
 
 /* ----- Phones (section 11) --------------------------------------------------------------------
    In lane M's layouts the screens live in the sheet, which is Slate and draws the surface: the
-   cards drop their own. Until lane M lands, narrow windows get a bottom panel with the same rule:
-   never over the picture's top, opaque, 48 px targets. */
+   cards drop their own. Hit areas are 48 px (MOB-2). */
 
 #sheet .dsc-card {
   background: transparent;
@@ -899,7 +898,7 @@ html[data-layout^='phone'] .dsc-icon-btn {
   width: var(--v2-hit-phone);
 }
 /* The welcome card in the sheet at half (11.6): no fixed place, no wordmark (the top row has it). */
-#sheet > #dsc-welcome {
+#sheet #dsc-welcome {
   position: static;
   transform: none;
   width: auto;
@@ -932,54 +931,26 @@ html[data-layout^='phone'] .dsc-icon-btn {
 #sheet .dsc-mission .dsc-st {
   font-size: 18px;
 }
+/* Success at half: the main button is pinned at the sheet's bottom edge; the rest scrolls (5.4). */
 #sheet .dsc-success .dsc-actions {
   position: sticky;
   bottom: 0;
+  z-index: 1;
   padding-block: 8px;
-  background: rgb(var(--v2-tint) / 0.96);
+  background: var(--v2-st-bg);
+}
+#sheet .dsc-hintcard {
+  display: grid;
+  gap: 10px;
+  padding: 4px 16px 16px;
 }
 
-@media (max-width: 699px) {
-  #discover-list,
-  #mission,
-  #mission-success,
-  #dsc-welcome {
-    inset-inline: 0;
-    top: auto;
-    bottom: 0;
-    transform: none;
-    width: auto;
-    max-height: 50vh;
-    border-radius: var(--v2-r-sheet) var(--v2-r-sheet) 0 0;
-  }
-  #discover-list > .dsc-card,
-  #mission > .dsc-card,
-  #mission-success > .dsc-card,
-  #dsc-welcome {
-    border-radius: var(--v2-r-sheet) var(--v2-r-sheet) 0 0;
-    overflow-y: auto;
-  }
-  #dsc-welcome {
-    padding: 20px 20px 16px;
-  }
-  .dsc-wm {
-    display: none;
-  }
-  .dsc-btn,
-  .dsc-icon-btn,
-  .dsc-m,
-  .dsc-o {
-    min-height: 48px;
-  }
-  .dsc-icon-btn {
-    width: 48px;
-  }
-  .dsc-keys {
-    display: none;
-  }
-  .dsc-mission .dsc-scroll {
-    overflow: visible;
-  }
+html[data-layout^='phone'] .dsc-keys {
+  display: none;
+}
+/* In the sheet, its body is the one scrolling part (lane M): the cards do not scroll inside. */
+#sheet .dsc-scroll {
+  overflow: visible;
 }
 
 /* High contrast and forced colours (DESIGN-v2 5): plain borders, system colours. */
@@ -995,3 +966,6 @@ html[data-layout^='phone'] .dsc-icon-btn {
   }
 }
 #sheet [data-k="picture"] { display: none; }
+html[data-layout^='phone'] .dsc-link {
+  min-height: var(--v2-hit-phone);
+}

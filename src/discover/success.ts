@@ -15,15 +15,16 @@ import { BAND_EDGES } from '../core/instrument.ts';
 import { S } from '../viewer/state.ts';
 import { targetMeasurements } from '../viewer/load.ts';
 import type { TrialResult } from '../viewer/motion.ts';
-import type { SandboxReading } from '../shell/sandbox.ts';
-import { MEASURING, MISSION_COPY, plainKind } from './copy.ts';
+import type { MissionInputs } from '../explore/missions.ts';
+import { MEASURING, MISSION_COPY } from './copy.ts';
+import { ghostLines } from '../explore/plain.ts';
 import { esc, icon, liveRegion, rerender, say } from './ui.ts';
 
 /** What the mission left for its result. */
 export interface Outcome {
   id: MissionId;
   stack: TrialResult | null;
-  reading: SandboxReading | null;
+  reading: MissionInputs['sandbox'];
 }
 
 const body = document.createElement('div');
@@ -67,7 +68,7 @@ export function showSuccess(o: Outcome): void {
         });
   }
   render();
-  say(live, `${MISSION_COPY[o.id].win} ${resultWords()}`);
+  say(live, `${MISSIONS[o.id].heading ?? ''} ${resultWords()}`);
 }
 
 /** Clears the card. */
@@ -88,7 +89,6 @@ function render(): void {
   const o = outcome;
   if (!o) return;
   const m = MISSIONS[o.id];
-  const c = MISSION_COPY[o.id];
   const n = MISSION_IDS.indexOf(o.id) + 1;
   const next = nextMission(o.id);
   body.dataset.simulated = String(m.simulated);
@@ -97,7 +97,7 @@ function render(): void {
       <p class="dsc-pill ${m.simulated ? 'sim' : 'done'}">${m.simulated ? 'Simulated · ' : icon('check')}Mission ${n} complete</p>
       <button class="dsc-icon-btn" type="button" data-k="close" data-close aria-label="Back to the missions" data-tip="Back to the missions">${icon('close')}</button>
     </div>
-    <h2 class="dsc-title" tabindex="-1" data-k="title">${esc(c.win)}</h2>
+    <h2 class="dsc-title" tabindex="-1" data-k="title">${esc(m.heading ?? '')}</h2>
     <div class="dsc-scroll" data-scroll>
       <div class="dsc-result${m.simulated ? ' sim' : ''}">${result(o)}</div>
       ${
@@ -105,12 +105,12 @@ function render(): void {
           ? ''
           : `<button class="dsc-link" type="button" data-k="expert" data-guide="success-expert">${icon('chart')}How was this measured? Open Expert view</button>`
       }
-      <p class="dsc-skill">${icon('check')}<span><b>Skill learned: ${esc(m.skill)}.</b> ${esc(c.skillLine)}</span></p>
+      <p class="dsc-skill">${icon('check')}<span><b>Skill learned: ${esc(m.skill)}.</b> ${esc(m.lesson ?? '')}</span></p>
     </div>
     <div class="dsc-actions">
       ${
         next
-          ? `<button class="dsc-btn primary lg" type="button" data-k="next" data-next="${next}" data-guide="success-next">Next: ${esc(MISSION_COPY[next].title)}${icon('arrow-right')}</button>`
+          ? `<button class="dsc-btn primary lg" type="button" data-k="next" data-next="${next}" data-guide="success-next">Next: ${esc(MISSION_COPY[next].name)}${icon('arrow-right')}</button>`
           : `<button class="dsc-btn primary lg" type="button" data-k="close" data-guide="success-next">Back to the missions</button>`
       }
       ${o.id === 'runaway' ? `<button class="dsc-btn lg" type="button" data-k="object" data-object="rw-aur" data-guide="object-rw-aur">Try Blink on RW Aurigae</button>` : ''}
@@ -154,28 +154,27 @@ function runaway(): string {
 
 function ghost(r: TrialResult | null): string {
   const t = targetByKey('wise-0855');
-  const type = t ? /\(([^)]*)\)\s*$/.exec(t.kind)?.[1] : null;
-  const typeLine = type
-    ? `<p class="dsc-fine">SIMBAD lists it as a ${esc(plainKind(t!.kind).toLowerCase())} of type ${esc(type)}.</p>`
-    : '';
+  const type = t ? (/\(([^)]*)\)\s*$/.exec(t.kind)?.[1] ?? null) : null;
+  const d = r?.result.det ?? 5;
+  const lam = `${BAND_EDGES[d - 1]!.toFixed(2)}–${BAND_EDGES[d]!.toFixed(2)}`;
+  // Lane H's sentences (explore/plain.ts), filled from the stack that passed the check.
+  const l = ghostLines(r?.result ?? null, lam, type, 'no stack was finished.');
   const a = r?.result.along.snr ?? Number.NaN;
   if (!r || !Number.isFinite(a))
-    return `<p class="dsc-big not">This time Sima could not make the stack: ${r ? 'it could not be measured at its position' : 'no stack was finished'}.</p>${typeLine}`;
-  const [still, opp] = r.result.controls;
-  const d = r.result.det;
-  const lam = `${BAND_EDGES[d - 1]!.toFixed(2)}–${BAND_EDGES[d]!.toFixed(2)}`;
+    return `<p class="dsc-big not">${esc(l.measured)}</p><p class="dsc-fine">${esc(l.type)}</p>`;
   const how = r.atCatalogue
     ? 'along the catalogue motion'
     : `along your arrow (${(Math.hypot(r.motion.pmra, r.motion.pmdec) / 1000).toFixed(1)}″ a year)`;
   return `<p class="dsc-label">Measured by Sima, ${esc(how)}</p>
     <p class="dsc-big" data-guide="success-value">${a.toFixed(1)}× the noise</p>
-    <p class="dsc-cat">Added along its path, ${r.result.frames} pictures show it at ${a.toFixed(1)}× the noise, in ${lam} µm light (D${d}).</p>
-    <p class="dsc-cat">Not shifted: ${fmt(still.snr)}. Opposite motion: ${fmt(opp.snr)}. Only the right motion makes it this strong.</p>
-    ${typeLine}
-    <p class="dsc-src">Measured from SPHEREx pixels · Motion: Luhman &amp; Esplin 2016 · Type: SIMBAD</p>`;
+    <p class="dsc-cat">${esc(l.measured)}</p>
+    <p class="dsc-cat">${esc(l.controls)}</p>
+    ${l.notDetected ? `<p class="dsc-cat">${esc(l.notDetected)}</p>` : ''}
+    <p class="dsc-fine">${esc(l.type)}</p>
+    <p class="dsc-src">${esc(l.sources)}</p>`;
 }
 
-function planetX(r: SandboxReading | null): string {
+function planetX(r: MissionInputs['sandbox']): string {
   const none = `<p class="dsc-big not">Not worked out: this patch has no measured noise to compare with.</p>`;
   const observed = `<p class="dsc-cat"><b>Nothing here was observed.</b></p>`;
   if (!r || r.verdict.kind === 'unknown') return `${none}${observed}`;
@@ -190,10 +189,6 @@ function planetX(r: SandboxReading | null): string {
     <p class="dsc-cat">By a simple model and this patch's measured noise: with your pretend planet at <b>${Math.round(p.distance)} AU</b> and <b>${p.radius.toFixed(1)} times Earth's width</b>, ${say}.</p>
     ${observed}
     <p class="dsc-src">Model: Sima's sandbox · Noise: measured from SPHEREx pixels</p>`;
-}
-
-function fmt(x: number): string {
-  return Number.isFinite(x) ? `${x.toFixed(1)}×` : 'not measured';
 }
 
 /** The result in one sentence, for the live region. */

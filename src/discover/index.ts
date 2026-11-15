@@ -13,17 +13,17 @@
  *
  * For lane C's mission beacons: `focusMission(id)` opens the home list and focuses that row.
  */
-import { MISSION_IDS, isMissionId, type MissionId } from '../explore/missions.ts';
+import { MISSION_IDS, OBJECTS, isMissionId, type MissionId } from '../explore/missions.ts';
 import { leaveMission, onProgress, progress } from '../explore/progress.ts';
 import { getView, onView, setView } from '../shell/view.ts';
 import { closable } from '../shell/escape.ts';
+import { emit } from '../shell/bus.ts';
 import { hideFrame, onFrameMove, openPlace } from '../shell/shell.ts';
 import { onLayout } from '../shell/sheet.ts';
 import { selectTab, detail } from '../viewer/detail.ts';
 import { S, watch } from '../viewer/state.ts';
 import type { Link } from '../viewer/link.ts';
 import { targetByKey } from '../core/targets.ts';
-import { OBJECTS } from './copy.ts';
 import { renderList, renderObject, renderWelcome } from './home.ts';
 import { askLeave, hint, missionBody, openMission, running, startMissions } from './mission.ts';
 import { clearSuccess, showSuccess, successBody } from './success.ts';
@@ -209,16 +209,22 @@ function sync(): void {
  */
 function place(): void {
   const frame = document.getElementById('frame');
-  for (const id of ['mission', 'mission-success']) {
+  // Keep clear of the rail while it shows (lane F hides it in Discover: then the gutter is 16 px).
+  const rail = document.getElementById('rail');
+  const rr = rail?.checkVisibility() ? rail.getBoundingClientRect() : null;
+  const left = rr?.width && !phone() ? Math.round(rr.right + 12) : 16;
+  for (const id of ['discover-list', 'mission', 'mission-success']) {
     const m = mount(id);
     if (!m) continue;
+    m.style.setProperty('--dsc-left', `${left}px`);
+    if (id === 'discover-list') continue;
     const r = frame && !frame.hidden ? frame.getBoundingClientRect() : null;
     if (phone() || innerWidth <= 1500 || !r?.width) {
       m.style.removeProperty('--dsc-x');
       continue;
     }
     const w = m.offsetWidth || (id === 'mission' ? 380 : 420);
-    m.style.setProperty('--dsc-x', `${Math.max(16, Math.round(r.left - 16 - w))}px`);
+    m.style.setProperty('--dsc-x', `${Math.max(left, Math.round(r.left - 16 - w))}px`);
   }
 }
 
@@ -235,6 +241,9 @@ function openObject(key: string): void {
   if (S.target !== key || !S.field) openPlace({ name: t.name, ra: t.ra, dec: t.dec, target: key, fov: 6 });
   else hideFrame(false);
   if (S.mode !== 'flip') S.mode = 'flip';
+  // Each object opens at the detector lane H chose for it, named in words on the card (5.5).
+  const det = OBJECTS.find((o) => o.target === key)?.det;
+  if (det && S.det !== det) emit('band', { det });
   renderObject(objectCard, key);
   go('object');
 }
@@ -280,7 +289,7 @@ function onClick(e: MouseEvent): void {
       return;
     }
     case 'object-expert':
-      toExpert(OBJECTS.find((o) => o.key === objectKey)?.tab ?? null);
+      toExpert(OBJECTS.find((o) => o.target === objectKey)?.tab ?? null);
       return;
     case 'next': {
       const id = el.dataset.next;

@@ -10,11 +10,11 @@
  * - The object card for "Try another object": ungraded, with what to look for and the way to
  *   Expert. Its counts are taken from the pictures shown, never typed (H9).
  */
-import { MISSIONS, MISSION_IDS, type MissionId } from '../explore/missions.ts';
+import { MISSIONS, MISSION_IDS, OBJECTS, objectLine, type MissionId } from '../explore/missions.ts';
 import { progress } from '../explore/progress.ts';
 import { targetByKey } from '../core/targets.ts';
 import { S } from '../viewer/state.ts';
-import { MISSION_COPY, OBJECTS, WELCOME, bandWords, plainKind } from './copy.ts';
+import { MISSION_COPY, WELCOME, bandWords, plainKind } from './copy.ts';
 import { esc, icon } from './ui.ts';
 import { nextMission } from './success.ts';
 
@@ -89,19 +89,19 @@ function missionRow(id: MissionId, suggested: MissionId | null): string {
   const s = rowState(id, suggested);
   const meta = `${m.simulated ? '<span class="dsc-pill sim">Simulated</span>' : ''}<span>Skill: ${esc(m.skill)} · ${c.minutes} min</span>`;
   return `<li><button class="dsc-m ${s.cls}" type="button" data-mission="${id}" data-guide="mission-${id}"
-      aria-label="${esc(`${m.simulated ? 'Simulated: ' : ''}${c.title}. ${c.line}. Skill: ${m.skill}, about ${c.minutes} minute${c.minutes > 1 ? 's' : ''}. ${s.words}.`)}">
+      aria-label="${esc(`${m.simulated ? 'Simulated: ' : ''}${c.name}. ${c.line}. Skill: ${m.skill}, about ${c.minutes} minute${c.minutes > 1 ? 's' : ''}. ${s.words}.`)}">
     <span class="dsc-node" aria-hidden="true">${icon(NODE_ICON[id])}</span>
-    <span class="dsc-mt"><span class="t">${esc(c.title)}</span>${s.cls.includes('done') ? '' : `<span class="d">${esc(c.line)}</span>`}<span class="k">${meta}</span></span>
+    <span class="dsc-mt"><span class="t">${esc(c.name)}</span>${s.cls.includes('done') ? '' : `<span class="d">${esc(c.line)}</span>`}<span class="k">${meta}</span></span>
     <span class="dsc-side">${s.side}</span>
   </button></li>`;
 }
 
 function objectRows(): string {
   return OBJECTS.map((o) => {
-    const t = targetByKey(o.key);
-    return `<li><button class="dsc-o" type="button" data-object="${o.key}" data-guide="object-${o.key}">
-      <span class="dsc-onode" aria-hidden="true">${icon(OBJECT_ICON[o.key] ?? 'star')}</span>
-      <span class="dsc-mt"><span class="t">${esc(o.name)}</span>${t ? `<span class="d">${esc(plainKind(t.kind))}</span>` : ''}</span>
+    const t = targetByKey(o.target);
+    return `<li><button class="dsc-o" type="button" data-object="${o.target}" data-guide="object-${o.target}">
+      <span class="dsc-onode" aria-hidden="true">${icon(OBJECT_ICON[o.target] ?? 'star')}</span>
+      <span class="dsc-mt"><span class="t">${esc(o.title)}</span>${t ? `<span class="d">${esc(plainKind(t.kind))}</span>` : ''}</span>
       <span class="dsc-go" aria-hidden="true">${icon('arrow-right')}</span>
     </button></li>`;
   }).join('');
@@ -122,7 +122,7 @@ export function renderList(el: HTMLElement, phone: boolean): void {
     el.innerHTML = `
       <div class="dsc-list-hd"><h2 class="dsc-h" tabindex="-1" data-k="title">Suggested next · Mission ${n} of ${MISSION_IDS.length}</h2><span class="dsc-faint">${done} of ${MISSION_IDS.length} done</span></div>
       <div class="dsc-suggest">
-        <p class="t">${m.simulated ? '<span class="dsc-pill sim">Simulated</span> ' : ''}${esc(c.title)}</p>
+        <p class="t">${m.simulated ? '<span class="dsc-pill sim">Simulated</span> ' : ''}${esc(c.name)}</p>
         <p class="d">${esc(c.line)} · ${c.minutes} min</p>
         <button class="dsc-btn primary lg" type="button" data-mission="${suggested}" data-guide="mission-start">Start mission${icon('arrow-right')}</button>
       </div>
@@ -146,28 +146,22 @@ export function renderList(el: HTMLElement, phone: boolean): void {
 
 // ----- The object card -------------------------------------------------------------------------
 
-/** Fills the card for "Try another object". Counts come from the pictures on screen. */
+/** Fills the card for "Try another object". Counts come from the pictures on screen (lane H's line). */
 export function renderObject(el: HTMLElement, key: string): void {
-  const o = OBJECTS.find((x) => x.key === key);
+  const o = OBJECTS.find((x) => x.target === key);
   const t = targetByKey(key);
   if (!o || !t) return;
   el.className = 'dsc-card dsc-object';
   el.dataset.material = 'raised';
   const field = S.target === key && S.source === 'real' ? S.field : null;
-  let line = `${plainKind(t.kind)} (SIMBAD).`;
-  if (key === 'eps-indi-b') line = `${plainKind(t.kind)} (SIMBAD), next to the star Epsilon Indi A.`;
-  else if (field?.frames.length) {
-    const mjds = field.frames.map((f) => f.mjd).filter(Number.isFinite);
-    const months = mjds.length ? Math.round((Math.max(...mjds) - Math.min(...mjds)) / 30.44) : 0;
-    line = `${plainKind(t.kind)} (SIMBAD). ${field.frames.length} real pictures${months >= 1 ? ` over ${months} months` : ''}.`;
-  }
+  const line = field ? objectLine(key, field, `${plainKind(t.kind)} (SIMBAD)`) : `${plainKind(t.kind)} (SIMBAD).`;
   const band = field ? `<p class="dsc-fine">Shown in ${bandWords(S.det)} light (D${S.det}).</p>` : '';
   el.innerHTML = `
     <div class="dsc-hd">
       <p class="dsc-eyebrow">Try another object · no mission</p>
       <button class="dsc-icon-btn" type="button" data-k="close" data-close aria-label="Back to the missions" data-tip="Back to the missions">${icon('close')}</button>
     </div>
-    <h2 class="dsc-title" tabindex="-1" data-k="title">${esc(o.name)}</h2>
+    <h2 class="dsc-title" tabindex="-1" data-k="title">${esc(o.title)}</h2>
     <p class="dsc-obj">${esc(line)}</p>
     <p class="dsc-lead">${esc(o.look)}</p>
     ${band}
