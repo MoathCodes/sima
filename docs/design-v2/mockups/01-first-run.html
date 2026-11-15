@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en" data-theme="night">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sima v2: first run after the intro</title>
+<link rel="stylesheet" href="glass.css"><link rel="stylesheet" href="discover.css">
+<style>:root { --gcx: calc(50% + 330px); --gcy: 50%; --gd: min(880px, calc(100vh - 140px)); }
+@media (max-width: 1500px) { :root { --gcx: calc(50% + 250px); --gd: min(640px, calc(100vh - 120px)); } }
+@media (max-width: 699px) { :root { --gcx: 50%; --gcy: 250px; --gd: calc(100vw - 48px); } .limb-tag { display: none; } }
+</style>
+</head>
+<body>
+<!-- Background: the real app's sky map at a wide view, centred on Barnard's Star, where the intro lands (captured 15 Nov 2026). -->
+<div class="space"></div>
+<!-- The globe: the real shipped SPHEREx sky (2.00 µm, D3) in Aladin Lite's SIN view, centred on Barnard's Star (rendered 15 Nov 2026). -->
+<div class="globe" role="img" aria-label="The whole sky as a globe, centred on Barnard's Star"></div>
+
+<div class="gat sky-label d-only" style="--px:521;--py:264">Vega</div>
+<div class="gat sky-label d-only" style="--px:319;--py:551">Altair</div>
+<div class="gat sky-label d-only" style="--px:324;--py:201">Deneb</div>
+<div class="gat sky-label d-only" style="--px:802;--py:907">Antares</div>
+
+<div class="gat beacon" style="--px:600;--py:600">
+  <div class="ring"></div>
+  <div class="tag glass-thin">Barnard's Star <small>Your first mission</small></div>
+</div>
+
+<header class="top">
+  <div class="glass brand"><span class="wordmark"><span class="ar">سيما</span><span class="la">Sima</span></span></div>
+  <div class="spacer"></div>
+  <div class="glass switch2"><span class="on"><svg class="icon"><use href="icons.svg#sun"/></svg>Discover</span><span><svg class="icon"><use href="icons.svg#chart"/></svg>Expert</span></div>
+</header>
+
+<section class="welcome glass-raised" role="dialog" aria-labelledby="w-h">
+  <div class="grabber m-only"></div>
+  <div class="wm d-only"><span class="ar">سيما</span><span class="la">Sima</span></div>
+  <h1 class="sheet-h" id="w-h">This is the real infrared sky.</h1>
+  <p class="lead">NASA's SPHEREx telescope photographs the whole sky again and again. Put its pictures side by side and you can catch stars that move, breathe and hide.</p>
+  <button class="btn primary start"><span><span class="s1">Start your first mission</span><span class="s2">The runaway · about 2 minutes</span></span><svg class="icon"><use href="icons.svg#arrow"/></svg></button>
+  <div class="row2">
+    <button class="btn">Look around first</button>
+    <button class="btn"><svg class="icon"><use href="icons.svg#chart"/></svg>I know astronomy</button>
+  </div>
+  <div class="fine">Every picture here is real and says where it came from. Your progress stays in this browser.</div>
+</section>
+
+<div class="sky-note glass-thin"><b>Average of all dates:</b> moving things blur here · SPHEREx 2.00 µm</div>
+<div class="limb-tag glass-thin d-only" style="left:calc(var(--gcx) + var(--gd) / 2 - 150px);top:calc(var(--gcy) - var(--gd) / 2 + 10px)">Drag to turn the sky</div>
+</body>
+</html>
