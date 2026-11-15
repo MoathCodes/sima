@@ -56,12 +56,31 @@ function listening(host: string, port: number): Promise<boolean> {
   });
 }
 
+/** True when the live service on LIVE_PORT answers its health check within 2 s. */
+async function healthy(): Promise<boolean> {
+  try {
+    const res = await fetch(`http://${LIVE_HOST}:${LIVE_PORT}/api/health`, {
+      signal: AbortSignal.timeout(2000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 /** Uses a running live service, or starts scripts/live.py and waits for it to listen. */
 async function startLive(): Promise<Live> {
   if (process.env.SIMA_LIVE === 'off')
     return { up: false, why: 'off (SIMA_LIVE=off)', child: null };
   if (await listening(LIVE_HOST, LIVE_PORT)) {
-    return { up: true, why: `using the one already on ${LIVE_HOST}:${LIVE_PORT}`, child: null };
+    // A leftover service can hold the port and answer nothing: use it only if it answers.
+    return (await healthy())
+      ? { up: true, why: `using the one already on ${LIVE_HOST}:${LIVE_PORT}`, child: null }
+      : {
+          up: false,
+          why: `off (something on ${LIVE_HOST}:${LIVE_PORT} does not answer /api/health; stop it and restart)`,
+          child: null,
+        };
   }
   if (!existsSync(LIVE_SCRIPT)) {
     return { up: false, why: `off (${LIVE_SCRIPT} does not exist)`, child: null };
