@@ -36,7 +36,7 @@ import {
   setWidening,
   widerPatch,
 } from './surround.ts';
-import { SEED_BASE, seedFor } from './seed.ts';
+import { SEED_BASE, resolveFolder, seedFor } from './seed.ts';
 import type {
   Det,
   Field,
@@ -50,6 +50,11 @@ import type {
 
 /** The live service's address (`/api/patch` in dev), or '' when there is none (FRM-11). */
 export const LIVE_API: string = (import.meta.env.VITE_LIVE_API ?? '').replace(/\/$/, '');
+
+/** `resolveFolder` for this page and its service. */
+export function liveFolder(folder: string): string {
+  return resolveFolder(folder, LIVE_API, location.href);
+}
 /** How often the live service is asked how far it got (docs/live-service.md). */
 export const POLL_MS = 1500;
 /** A spot this close to a shipped target's track opens the target's own pictures, degrees. */
@@ -413,7 +418,7 @@ async function showLive(
   if (!folder) return false;
   try {
     const set = await fetchSet(
-      folder.endsWith('/') ? folder : `${folder}/`,
+      liveFolder(folder),
       status.id,
       'live',
       signal,
@@ -646,7 +651,7 @@ async function pollWider(
     const folder = step === 'full' ? status.full : step === 'first' ? status.first : null;
     if (step && folder) {
       try {
-        const set = await fetchSet(folder.endsWith('/') ? folder : `${folder}/`, status.id, 'live', signal);
+        const set = await fetchSet(liveFolder(folder), status.id, 'live', signal);
         if (!live()) return;
         got = step;
         keep(set);
