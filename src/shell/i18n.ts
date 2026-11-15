@@ -203,3 +203,11 @@ export function ltrEl(text: string): HTMLElement {
   b.textContent = text;
   return b;
 }
+
+/**
+ * A place's name for the current language: in Arabic, its real Arabic name when the data has one
+ * (Wikidata, the Arabic star-name list); otherwise the name as catalogues write it. Never coined.
+ */
+export function localName(name: string, arabic?: string | null): string {
+  return current === 'ar' && arabic ? arabic : name;
+}
