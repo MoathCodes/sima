@@ -562,7 +562,7 @@ async function measureResult(
     const field = S.field;
     const dated = field
       ? S.groups
-          .map((g) => ({ letter: g.letter, mjd: groupDate(field, g) }))
+          .map((g) => ({ mjd: groupDate(field, g) }))
           .filter((d) => Number.isFinite(d.mjd))
           .sort((a, b) => a.mjd - b.mjd)
       : [];
@@ -573,8 +573,8 @@ async function measureResult(
     return {
       html,
       moved: movedLine(
-        `${first.letter} (${formatDate(first.mjd, 'month')})`,
-        `${last.letter} (${formatDate(last.mjd, 'month')})`,
+        formatDate(first.mjd, 'month'),
+        formatDate(last.mjd, 'month'),
         fit.total * years,
         fit.totalErr * years,
         field.scale,

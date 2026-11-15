@@ -10,6 +10,7 @@
 import { S } from '../viewer/state.ts';
 import { drawHooks, groupDate, type PictureView } from '../viewer/render.ts';
 import { targetAt } from './track.ts';
+import { formatDate } from '../core/astro.ts';
 
 /** What is drawn: nothing, the search circle, the ring on this date, or the full close-up. */
 export type Marks = 'none' | 'circle' | 'ring' | 'closeup';
@@ -36,9 +37,9 @@ interface Pt {
   y: number;
 }
 
-/** A ring's place and the letter of its date on the date scale. */
+/** A ring's place and its date (month and year). */
 interface Dated extends Pt {
-  letter: string;
+  label: string;
 }
 
 function token(name: string): string {
@@ -52,7 +53,7 @@ function track(view: Readonly<PictureView>): { all: Dated[]; now: Pt | null } {
   for (const g of S.groups) {
     const at = targetAt(field, S.target, groupDate(field, g));
     const p = at ? view.skyToPic(at.ra, at.dec) : null;
-    if (p) all.push({ ...p, letter: g.letter });
+    if (p) all.push({ ...p, label: formatDate(groupDate(field, g), 'month') });
   }
   const mjd = view.mjd ?? (view.group ? groupDate(field, view.group) : Number.NaN);
   const at = targetAt(field, S.target, Number.isFinite(mjd) ? mjd : (S.groups[0]?.mjd ?? NaN));
@@ -182,7 +183,7 @@ function inset(
   });
   for (const p of all) circle(ctx, inside(p), ringR * 0.75 * zoom * 0.6, token('--st-accent-2'), 1, [3, 3]);
   circle(ctx, inside(now), ringR * zoom * 0.6, token('--mark'), 2, sim ? [5, 4] : []);
-  ends(ctx, all.map((p) => ({ ...inside(p), letter: p.letter })), ringR * zoom * 0.6);
+  ends(ctx, all.map((p) => ({ ...inside(p), label: p.label })), ringR * zoom * 0.6);
   ctx.restore();
   // Frame and label.
   ctx.save();
@@ -207,14 +208,13 @@ function inset(
 }
 
 /**
- * The letters of the first and last date beside their rings, to one side of the path (up or right,
- * away from the label at the bottom), so the close-up reads "from A to C" like the date scale and the task
- * line.
+ * The first and last date beside their rings, to one side of the path (up or right, away from
+ * the label at the bottom), so the close-up reads from one date to the other.
  */
 function ends(ctx: CanvasRenderingContext2D, pts: readonly Dated[], r: number): void {
   const a = pts[0];
   const b = pts[pts.length - 1];
-  if (!a || !b || a.letter === b.letter) return;
+  if (!a || !b || a.label === b.label) return;
   const len = Math.hypot(b.x - a.x, b.y - a.y);
   const ux = len > 0.5 ? (b.x - a.x) / len : 0;
   const uy = len > 0.5 ? (b.y - a.y) / len : -1;
@@ -235,8 +235,8 @@ function ends(ctx: CanvasRenderingContext2D, pts: readonly Dated[], r: number): 
     ctx.lineWidth = 3;
     ctx.strokeStyle = '#000';
     ctx.setLineDash([]);
-    ctx.strokeText(p.letter, x, y);
+    ctx.strokeText(p.label, x, y);
     ctx.fillStyle = token('--st-ink');
-    ctx.fillText(p.letter, x, y);
+    ctx.fillText(p.label, x, y);
   }
 }
