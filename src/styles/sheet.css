@@ -1,0 +1,226 @@
+/* Lane M: the phone layout and the sheet (BEGINNER-AND-MOBILE.md section 11; DESIGN-v2 8.3).
+   src/shell/phone.ts sets html[data-layout] and --pic, --sheet-h, --sheet-top on <html>.
+   - The sheet is Slate (opaque) at every height, 28 px top corners, never glass, never over the
+     picture: it starts under the frame's bottom edge.
+   - Full-height pages (Settings, About, Find on phones) are the sheet at data-height="page".
+   - Placement only for other lanes' cards (where the frame, the bar and Measure sit on a phone);
+     their looks stay in their own stylesheets. */
+
+/* ----- The sheet ----------------------------------------------------------------------------- */
+
+.sheet {
+  --sheet-pad: var(--v2-gutter, 16px);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  color: var(--v2-on-glass);
+  background: var(--v2-slate-sheen), var(--v2-slate-tint);
+  box-shadow: var(--v2-lift-2);
+}
+.sheet[hidden] {
+  display: none !important;
+}
+/* On desktop the sheet is not used; only a full-height page shows. */
+html:not([data-layout^='phone']) .sheet:not([data-height='page']) {
+  display: none;
+}
+
+/* The grabber: a button (11.2). The bar it shows is small; its hit area is 48 px tall. */
+.sheet-grab {
+  flex: none;
+  align-self: center;
+  display: grid;
+  place-items: start center;
+  width: 96px;
+  height: var(--v2-hit-phone, 48px);
+  margin: 0 auto -16px;
+  padding: 10px 0 0;
+  border: 0;
+  border-radius: var(--v2-r-control);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.sheet-grab-bar {
+  width: 36px;
+  height: 5px;
+  border-radius: var(--v2-r-pill);
+  background: var(--v2-on-glass-3);
+}
+.sheet-grab:hover .sheet-grab-bar {
+  background: var(--v2-on-glass-2);
+}
+.sheet-grab:focus-visible {
+  outline: 2px solid var(--v2-on-glass);
+  outline-offset: -4px;
+}
+.sheet-grab[hidden],
+.sheet-head[hidden] {
+  display: none;
+}
+
+/* Back, and a page's title. */
+.sheet-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--v2-hit-gap-phone, 8px);
+  min-height: 56px;
+  padding: 0 var(--sheet-pad) 0 calc(var(--sheet-pad) - 8px);
+}
+.sheet-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: var(--v2-hit-phone, 48px);
+  min-height: var(--v2-hit-phone, 48px);
+  padding: 0 12px 0 6px;
+  border: 0;
+  border-radius: var(--v2-r-control);
+  background: none;
+  color: var(--v2-on-glass);
+  font: 600 16px/1 var(--font);
+  cursor: pointer;
+}
+.sheet-back:hover {
+  background: var(--v2-fill-1);
+}
+.sheet-back:focus-visible {
+  outline: 2px solid var(--v2-on-glass);
+  outline-offset: -2px;
+}
+.sheet-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font: 600 17px/1.2 var(--font);
+  overflow-wrap: anywhere;
+}
+.sheet-title:empty {
+  display: none;
+}
+
+.sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 8px var(--sheet-pad) var(--sheet-pad);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* A sheet that starts with a Back row needs no gap above its content. */
+.sheet-head:not([hidden]) + .sheet-body {
+  padding-top: 0;
+}
+.sheet-item[hidden] {
+  display: none !important;
+}
+
+/* ----- A full-height page (Settings, About, Find on phones) ------------------------------------- */
+
+.sheet[data-height='page'] {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-popover) + 4); /* above the sheet, under coach cards (DESIGN-v2 8.5) */
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  border-radius: 0;
+  background: var(--v2-slate-sheen), var(--v2-st-bg);
+  box-shadow: none;
+}
+.sheet[data-height='page'] .sheet-head {
+  border-bottom: 1px solid var(--v2-rule);
+}
+.sheet[data-height='page'] .sheet-body {
+  padding-top: var(--sheet-pad);
+}
+
+/* ----- Phones: what every phone layout shares --------------------------------------------------- */
+
+/* The note "Sima is made for a desktop screen" goes once phones work (lane F removes it). */
+html[data-layout^='phone'] #narrow-note {
+  display: none !important;
+}
+/* Picture tools, several frames and workspaces need a computer (11.5): not shown on phones.
+   The frame's resize grip has nothing to do on a phone. */
+html[data-layout^='phone'] :is(#tools, #frames, #frame-grip, #rail, #sky-coords) {
+  display: none !important;
+}
+
+/* ----- Phone fit: the frame under the top row, the sheet under the frame ------------------------- */
+
+html[data-layout='phone-fit'] #frame {
+  position: fixed !important;
+  top: calc(env(safe-area-inset-top, 0px) + 56px) !important;
+  right: calc(env(safe-area-inset-right, 0px) + var(--v2-gutter-phone, 12px)) !important;
+  left: calc(env(safe-area-inset-left, 0px) + var(--v2-gutter-phone, 12px)) !important;
+  width: auto !important;
+  max-height: none !important;
+  translate: none !important;
+  --pic-max: var(--pic) !important;
+}
+html[data-layout='phone-fit'] .sheet:not([data-height='page']) {
+  position: fixed;
+  top: var(--sheet-top, auto);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: calc(var(--z-popover) + 2); /* the phone sheet: above popovers, under pages */
+  padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  border-radius: var(--v2-r-sheet) var(--v2-r-sheet) 0 0;
+  border-top: 1px solid var(--v2-rule);
+  transition: top var(--v2-settle) var(--v2-ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-layout='phone-fit'] .sheet {
+    transition: none;
+  }
+}
+
+/* ----- Phone scroll: one column that scrolls (rotation, short screens, 400% zoom, Expert) -------- */
+
+html[data-layout='phone-scroll'] body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--v2-gutter-phone, 12px);
+  box-sizing: border-box;
+  padding: calc(env(safe-area-inset-top, 0px) + 56px + 8px)
+    calc(env(safe-area-inset-right, 0px) + var(--v2-gutter-phone, 12px))
+    calc(env(safe-area-inset-bottom, 0px) + var(--v2-gutter-phone, 12px))
+    calc(env(safe-area-inset-left, 0px) + var(--v2-gutter-phone, 12px));
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+/* In the column's flow, in this order: the frame, the bar, Measure, then what the sheet holds. */
+html[data-layout='phone-scroll'] :is(#frame, #bar, #measure, .sheet:not([data-height='page'])) {
+  position: relative !important;
+  inset: auto !important;
+  flex: none;
+  width: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  translate: none !important;
+  z-index: var(--z-card);
+}
+html[data-layout='phone-scroll'] #frame {
+  order: 1;
+  --pic-max: var(--pic) !important;
+}
+html[data-layout='phone-scroll'] #bar {
+  order: 2;
+}
+html[data-layout='phone-scroll'] #measure {
+  order: 3;
+}
+html[data-layout='phone-scroll'] .sheet:not([data-height='page']) {
+  order: 4;
+  border-radius: var(--v2-r-card);
+}
+/* No sheet heights in the column: the content is in the page, so no grabber either. */
+html[data-layout='phone-scroll'] .sheet-grab {
+  display: none;
+}
+html[data-layout='phone-scroll'] .sheet-body {
+  overflow: visible;
+}
