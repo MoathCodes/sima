@@ -183,12 +183,12 @@
   padding: 0;
   border: 2px solid var(--st-accent-2);
   border-radius: var(--r-pill);
-  background: rgba(9, 13, 28, 0.55);
+  background: rgb(var(--v2-tint) / 0.55);
   cursor: grab;
   touch-action: none;
 }
 .mh-knob:hover {
-  background: rgba(9, 13, 28, 0.85);
+  background: rgb(var(--v2-tint) / 0.85);
 }
 :root[data-motion-drag] .mh-knob {
   cursor: grabbing;

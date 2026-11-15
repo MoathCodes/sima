@@ -14,12 +14,19 @@
 .btn.pl-chip:hover {
   background: var(--mat-bg); /* the Thin material, not .btn's fill */
 }
-/* Hover darkens the tint (never lightens it), so the text keeps its contrast over bright sky. */
+/* Hover lifts the tint to a nearly opaque lighter grey, so the text keeps its contrast over
+   bright sky; on is the opaque chosen grey. The change fades (--dur-1). */
+.pl-chip {
+  transition:
+    background-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out),
+    scale var(--dur-1) var(--ease-out);
+}
 html[data-glass='glass'] .pl-chip:hover {
-  --mat-tint: rgb(var(--v2-tint) / 0.78);
+  --mat-tint: var(--v2-hover-tint);
 }
 .pl-chip:is([aria-pressed='true'], [aria-expanded='true']) {
-  --mat-tint: var(--v2-action-soft);
+  --mat-tint: var(--v2-chosen);
   color: var(--on-action-soft);
 }
 .pl-chip > .icon {

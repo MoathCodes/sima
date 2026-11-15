@@ -325,7 +325,7 @@ async function miniChart(host: HTMLElement, c: Candidate): Promise<void> {
   if (!canvas || !note) return;
   if (c.kind === 'mover') {
     // Its own evidence in place (TLS-5): the positions behind the fit and the fitted line.
-    const tint = (frame: number) => token(`--p${((S.set?.frames[frame]?.meta.window ?? 0) % 4) + 1}`, '#c3cbea');
+    const tint = (frame: number) => token(`--p${((S.set?.frames[frame]?.meta.window ?? 0) % 4) + 1}`, '#c9c9cf');
     const ringed = new Set(S.field?.frames.filter((f) => f.window === c.window).map((f) => f.src));
     drawPath(canvas, moverPath(c, tint, (fr) => ringed.has(fr)));
     note.textContent = 'Its position on each exposure (colours are survey passes, rings its date) and the fitted line.';

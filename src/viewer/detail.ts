@@ -780,7 +780,7 @@ function curveFor(): DetectorCurve | null {
 
 /** Pass tint for a window: four tints of the ink, oldest pass first (DESIGN.md). */
 function tint(window: number): string {
-  return token(`--p${(window % 4) + 1}`, '#c3cbea');
+  return token(`--p${(window % 4) + 1}`, '#c9c9cf');
 }
 
 /** The source exposures (RealSet indices) of the picture on screen, for rings. */

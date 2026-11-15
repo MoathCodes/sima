@@ -204,7 +204,7 @@ function drawHistogram(root: HTMLElement): void {
   if (why) {
     if (unit) unit.textContent = why;
     if (ctx) {
-      ctx.fillStyle = token('--st-ink-2', '#aab2d0');
+      ctx.fillStyle = token('--st-ink-2', '#a8a8b0');
       ctx.font = '500 12px Archivo, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('No histogram for this picture', canvas.clientWidth / 2, canvas.clientHeight / 2 + 4);
@@ -231,14 +231,14 @@ function drawHistogram(root: HTMLElement): void {
   const ax = axis(h.edges);
   if (ctx && h.counts.length) {
     const peak = Math.max(...h.counts.map((c) => Math.log1p(c)));
-    ctx.fillStyle = token('--st-ink-2', '#aab2d0');
+    ctx.fillStyle = token('--st-ink-2', '#a8a8b0');
     h.counts.forEach((c, i) => {
       const x0 = ax.x(h.edges[i] ?? 0) * W;
       const x1 = ax.x(h.edges[i + 1] ?? 0) * W;
       const bh = (Math.log1p(c) / (peak || 1)) * (H - 16);
       ctx.fillRect(x0, H - 14 - bh, Math.max(1, x1 - x0 - 0.5), bh);
     });
-    ctx.fillStyle = token('--st-ink-3', '#7c86ab');
+    ctx.fillStyle = token('--st-ink-3', '#7d7d86');
     ctx.font = '400 11px Archivo, sans-serif';
     ctx.textAlign = 'center';
     for (const t of [0, 10, 100, 1000, 10000]) {
@@ -246,7 +246,7 @@ function drawHistogram(root: HTMLElement): void {
       if (x > 0.02 && x < 0.98) ctx.fillText(String(t), x * W, H - 2);
     }
   } else if (ctx) {
-    ctx.fillStyle = token('--st-ink-2', '#aab2d0');
+    ctx.fillStyle = token('--st-ink-2', '#a8a8b0');
     ctx.font = '500 12px Archivo, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('No histogram: the pixel values are not counted yet', W / 2, H / 2);
@@ -331,11 +331,11 @@ function savePng(): void {
   out.height = src.height + pad * 2 + lineH * label.length;
   const ctx = out.getContext('2d');
   if (!ctx) return;
-  ctx.fillStyle = token('--st-bg', '#090d1c');
+  ctx.fillStyle = token('--st-bg', '#0c0c0e');
   ctx.fillRect(0, 0, out.width, out.height);
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(src, 0, 0);
-  ctx.fillStyle = token('--st-ink', '#eef0f8');
+  ctx.fillStyle = token('--st-ink', '#f4f4f5');
   ctx.font = '500 12px Archivo, sans-serif';
   label.forEach((l, i) => ctx.fillText(l, pad, src.height + pad + lineH * (i + 0.8), out.width - 2 * pad));
   out.toBlob((blob) => {

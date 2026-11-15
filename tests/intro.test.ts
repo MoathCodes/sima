@@ -119,3 +119,18 @@ test('the globe hands over to the sky map at the map’s own scale, and lands on
     assert.ok(end.done && Math.abs(end.radius / mapScale(w, fov) - 1) < 1e-9, `${w}: lands on 1.9°`);
   }
 });
+
+test('the ring fades in from when its first picture is ready, never popping in half bright', async () => {
+  const { sceneAt, T } = await import('../src/intro/scene.ts');
+  const [w, h] = [1366, 768];
+  const land = { q: lookAt(269.4485, 4.7394), fov: 1.9, x: w / 2, y: h / 2, from: 55, fromScale: 2000 };
+  const plan = { reduced: false, skyChannel: 42, revealAt: null, handAt: null, land };
+  const has = () => true;
+  // On time: as before.
+  assert.equal(sceneAt(plan, T.ringIn[0], w, h, has, 0).ring, 0);
+  // A picture that comes late, at 1.2 s: still dark then, and the full fade-in from there.
+  assert.equal(sceneAt(plan, 1.2, w, h, has, 1.2).ring, 0);
+  assert.ok(sceneAt(plan, 1.3, w, h, has, 1.2).ring < 0.05, 'a gentle start');
+  const span = T.ringIn[1] - T.ringIn[0];
+  assert.ok(Math.abs(sceneAt(plan, 1.2 + span, w, h, has, 1.2).ring - 1) < 1e-9, 'full after the fade');
+});

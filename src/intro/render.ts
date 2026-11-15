@@ -65,6 +65,8 @@ export function startPainter(
   }
   const loaded = new Map<number, Channel>();
   const has = (ch: number) => loaded.has(ch);
+  /** When the ring's first picture was ready (seconds from the start): it fades in from then. */
+  let ringFrom: number | null = null;
   /** The sharp faces of the default channel, once every tile is in. */
   let faces: WebGLTexture | null = null;
 
@@ -150,7 +152,8 @@ export function startPainter(
       return;
     }
     const t = Math.max(0, (now() - init.start) / 1000);
-    const s = sceneAt(plan, t, size.w, size.h, has);
+    if (ringFrom === null && RING_CHANNELS.some(has)) ringFrom = t;
+    const s = sceneAt(plan, t, size.w, size.h, has, ringFrom ?? 0);
     const a = loaded.get(RING_CHANNELS[s.ringA]!) ?? null;
     const b = loaded.get(RING_CHANNELS[s.ringB]!) ?? a;
     const k = Math.max(0, Math.min(4, Math.floor(s.hue)));
