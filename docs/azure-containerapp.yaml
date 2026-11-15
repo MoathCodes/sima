@@ -1,0 +1,64 @@
+# Render ${...} placeholders using the commands in deploy.md; never store keys here.
+name: ${APP}
+location: ${LOCATION}
+type: Microsoft.App/containerApps
+identity:
+  type: UserAssigned
+  userAssignedIdentities:
+    '${IDENTITY}': {}
+properties:
+  managedEnvironmentId: ${ENV_ID}
+  configuration:
+    activeRevisionsMode: Single
+    ingress:
+      external: true
+      targetPort: 8080
+      transport: auto
+      allowInsecure: false
+    registries:
+      - server: ${REGISTRY}
+        identity: ${IDENTITY}
+  template:
+    containers:
+      - name: sima
+        image: ${REGISTRY}/sima:judging-v1
+        resources:
+          cpu: 2
+          memory: 4Gi
+        env:
+          - name: PORT
+            value: '8080'
+          - name: SIMA_CACHE
+            value: /cache
+        volumeMounts:
+          - volumeName: cache
+            mountPath: /cache
+        probes:
+          - type: Startup
+            httpGet: {path: /api/health, port: 8080, scheme: HTTP}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
+          - type: Readiness
+            httpGet: {path: /api/health, port: 8080, scheme: HTTP}
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          - type: Liveness
+            httpGet: {path: /api/health, port: 8080, scheme: HTTP}
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+    scale:
+      minReplicas: 1
+      maxReplicas: 1
+      rules:
+        - name: http
+          http:
+            metadata: {concurrentRequests: '40'}
+    volumes:
+      - name: cache
+        storageType: AzureFile
+        storageName: cache
+        mountOptions: uid=10001,gid=10001,dir_mode=0770,file_mode=0660
