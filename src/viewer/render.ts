@@ -43,7 +43,6 @@ import {
   aroundMapReady,
   coverageMask,
   maskOutline,
-  widening,
 } from './surround.ts';
 
 /** How bright the sky map is drawn around the real exposures: dimmed, so it never passes for them. */
@@ -378,7 +377,6 @@ interface Parts {
   badge: HTMLElement;
   scale: HTMLElement;
   divider: HTMLElement;
-  around: HTMLElement;
 }
 let parts: Parts | null = null;
 
@@ -399,16 +397,13 @@ function ensure(): Parts | null {
   const badge = make('pic-badge window-badge');
   const scale = make('pic-scale');
   const divider = make('pic-divider');
-  const around = make('pic-around window-badge');
-  around.hidden = true;
-  around.setAttribute('role', 'status');
   divider.hidden = true;
   divider.setAttribute('role', 'slider');
   divider.setAttribute('aria-label', 'Swipe between the two dates');
   divider.tabIndex = 0;
   edge.setAttribute('aria-hidden', 'true');
-  host.prepend(canvas, edge, badge, scale, around, divider);
-  parts = { host, canvas, edge, badge, scale, divider, around };
+  host.prepend(canvas, edge, badge, scale, divider);
+  parts = { host, canvas, edge, badge, scale, divider };
   watchPointer(canvas);
   watchDivider(divider);
   new ResizeObserver(() => draw()).observe(host);
@@ -547,8 +542,7 @@ function paint(now = false): void {
       ctx.restore();
     }
   }
-  labels(p, size, k, field);
-  aroundLabel(p.around, bare && !!group, !!map);
+  labels(p, size, k, field, !!map);
   if (field && group) warmNext(field);
 }
 
@@ -716,45 +710,12 @@ function outlineOf(field: Field, mask: Uint8Array): [number, number, number, num
   return o;
 }
 
-/**
- * The label of the sky map around the exposures, and the fetch of wider real ones: what it is,
- * that it is not a dated picture, and how far the fetch has got.
- */
-function aroundLabel(el: HTMLElement, bare: boolean, map: boolean): void {
-  const w = widening;
-  const show = bare && (map || (!!w && w.state !== 'off'));
-  el.hidden = !show;
-  if (!show) return;
-  const known = !!w && w.state === 'busy' && w.total !== null && w.done !== null && w.total > 0;
-  const pct = known && w ? Math.round((100 * (w.done ?? 0)) / (w.total ?? 1)) : 0;
-  const head = map
-    ? '<b>Sky map (all dates averaged)</b><span>outside the dashed line</span>'
-    : '<span>No real exposures outside the dashed line yet</span>';
-  const bar =
-    w && w.state === 'busy'
-      ? `<span class="pic-around-bar${known ? ' known' : ''}" style="--done:${pct}%"><span></span></span>`
-      : '';
-  // The wider fetch failed (the reason is on the line above the picture): it can be asked again.
-  const again =
-    w && w.state === 'failed'
-      ? '<button type="button" class="link pic-around-retry" data-widen-retry>Ask again for real exposures</button>'
-      : '';
-  const html = head + bar + again;
-  if (el.dataset.html !== html) {
-    el.dataset.html = html;
-    el.innerHTML = html;
-  }
-  // Below lane E's "Processed:" label when it shows in the same corner.
-  const processed = document.querySelector('#pic-tools [data-processed]:not([hidden])');
-  el.style.top = processed ? '40px' : '';
-}
-
 function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#fff';
 }
 
 /** The picture's own labels: date badge, the pass tint at the edge, scale bar and north/east. */
-function labels(p: Parts, size: number, k: number, field: Field | null): void {
+function labels(p: Parts, size: number, k: number, field: Field | null, map: boolean): void {
   const h = hud();
   const g = S.groups[S.epoch];
   p.badge.hidden = !h;
@@ -763,9 +724,13 @@ function labels(p: Parts, size: number, k: number, field: Field | null): void {
       ? `<span class="pic-letter" style="--tint:var(--p${((g?.window ?? 0) % 4) + 1})">${h.letter}</span>`
       : '';
     const warn = h.warn ? `<span class="pic-warn">${esc(h.warn)}</span>` : '';
+    // Around the real exposures, the sky map: said on the badge that says what the picture is (H1).
+    const around = map
+      ? '<span class="pic-around"><b>Sky map (all dates averaged)</b> outside the dashed line</span>'
+      : '';
     p.badge.innerHTML = `${warn}<span class="pic-title">${tile}<b>${esc(h.title)}</b></span>${h.lines
       .map((l) => `<span>${esc(l)}</span>`)
-      .join('')}`;
+      .join('')}${around}`;
   }
   // The edge takes the tint of the pass on screen while the pictures flip (DESIGN "Data windows").
   const tinted = !!g && !S.color && (S.mode === 'flip' || S.mode === 'trail');

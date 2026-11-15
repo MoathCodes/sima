@@ -13,7 +13,7 @@ import { LIVE_API, POLL_MS, TARGET_RADIUS, centreOf, fetchSet, liveFov, releaseN
 import { buildField, keepPatch } from '../core/work.ts';
 import { TARGETS } from '../core/targets.ts';
 import { separation } from '../core/astro.ts';
-import { covers, widerPatch } from '../viewer/surround.ts';
+import { covers, nominal, pinCentre, widerPatch } from '../viewer/surround.ts';
 import { targetAt } from '../core/real.ts';
 import type { Field, LiveStatus, RealSet, Target } from '../core/types.ts';
 
@@ -262,6 +262,7 @@ function withTarget(set: RealSet, own: RealSet): RealSet {
   if (!out) {
     const { catalogue, neighbours, neighboursFrom } = own.data;
     out = { ...set, data: { ...set.data, catalogue, neighbours, neighboursFrom } };
+    pinCentre(out.data, nominal(set.data));
     grafted.set(set, out);
   }
   return out;

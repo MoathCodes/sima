@@ -47,9 +47,24 @@ export function offsetArcmin(
   return { x: dra * Math.cos((c.dec * Math.PI) / 180) * 60, y: (dec - c.dec) * 60 };
 }
 
-/** The square a set's cutouts were cut for: its centre and side, arcmin. */
+const pinned = new WeakMap<TargetData, { ra: number; dec: number }>();
+
+/**
+ * Records where a live patch was asked for, for a copy of its data whose `catalogue` now holds
+ * a test target instead (load.ts gives a wider field around a shipped target its catalogue).
+ */
+export function pinCentre(data: TargetData, centre: { ra: number; dec: number }): void {
+  pinned.set(data, centre);
+}
+
+/**
+ * The square a set's cutouts were cut for: its centre and side, arcmin. A live patch is centred
+ * where it was asked for (its `catalogue`): the median of its cutout centres can sit a few tenths
+ * of an arcminute off, because wide cutouts are clipped at the detector's edges.
+ */
 export function nominal(data: TargetData): { ra: number; dec: number; side: number } {
-  return { ...centreOf(data), side: Math.max(0, data.size * 60 - MARGIN_ARCMIN) };
+  const c = pinned.get(data) ?? (data.live ? data.catalogue : centreOf(data));
+  return { ra: c.ra, dec: c.dec, side: Math.max(0, data.size * 60 - MARGIN_ARCMIN) };
 }
 
 /**

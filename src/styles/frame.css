@@ -95,13 +95,52 @@
 
 /* The loading line keeps one line's height, words or not, so the frame never grows (O-I5). */
 .frame-load {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   height: 17px;
   margin: 0 0 4px;
   overflow: hidden;
   color: var(--ink-2);
   font: var(--text-label);
   white-space: nowrap;
+}
+.load-text {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
+}
+/* The wider field's fetch: a short bar before the words (as the cover's bar for a new spot). */
+.load-bar {
+  position: relative;
+  flex: none;
+  width: 56px;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 1px;
+  background: var(--card-3);
+}
+.load-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 30%;
+  background: var(--ink-2);
+  animation: cover-run 1.4s var(--ease-out) infinite;
+}
+.load-bar.known > span {
+  width: var(--done);
+  animation: none;
+  transition: width var(--t-slide) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .load-bar > span {
+    animation: none;
+  }
+}
+.frame-load .load-retry {
+  flex: none;
+  font: var(--text-label);
+  font-weight: 600;
 }
 
 /* ----- The picture --------------------------------------------------------------------------- */
@@ -212,58 +251,14 @@
   stroke: none;
   font: var(--text-scale);
 }
-/* The label of the sky map around the real exposures (surround.ts), top right. */
-.pic-around {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: grid;
-  justify-items: end;
-  gap: 1px;
-  max-width: 46%;
-  text-align: right;
-  pointer-events: none;
+/* The badge's line about the sky map around the real exposures (surround.ts; H1). */
+.pic-badge .pic-around {
+  color: var(--st-ink-2);
+  white-space: normal;
 }
 .pic-around b {
-  font-weight: 600;
-}
-.pic-around > span:not(.pic-around-bar) {
-  color: var(--st-ink-2);
-}
-.pic-around .pic-around-retry {
-  margin-top: 2px;
   color: var(--st-ink);
-  font: var(--text-label);
   font-weight: 600;
-  text-decoration: underline;
-  pointer-events: auto;
-  cursor: pointer;
-}
-.pic-around-bar {
-  position: relative;
-  width: 104px;
-  height: 2px;
-  margin-top: 4px;
-  overflow: hidden;
-  border-radius: 1px;
-  background: var(--st-line);
-}
-.pic-around-bar > span {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 30%;
-  background: var(--st-ink-2);
-  animation: cover-run 1.4s var(--ease-out) infinite;
-}
-.pic-around-bar.known > span {
-  width: var(--done);
-  animation: none;
-  transition: width var(--t-slide) var(--ease-out);
-}
-@media (prefers-reduced-motion: reduce) {
-  .pic-around-bar > span {
-    animation: none;
-  }
 }
 .pic-divider {
   position: absolute;

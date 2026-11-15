@@ -26,7 +26,16 @@ import { TARGETS, targetByKey } from '../core/targets.ts';
 import { SCENARIOS } from '../core/field.ts';
 import { simulate } from '../core/frames.ts';
 import { formatCoords, separation } from '../core/astro.ts';
-import { centreOf, covers, liveFov, overlaps, setWidening, widerPatch } from './surround.ts';
+import {
+  centreOf,
+  covers,
+  liveFov,
+  nominal,
+  overlaps,
+  pinCentre,
+  setWidening,
+  widerPatch,
+} from './surround.ts';
 import type {
   Det,
   Field,
@@ -84,6 +93,11 @@ let home: { set: RealSet; target: Target | null } | null = null;
 /** Real sets fetched live for wider fields, newest last; kept across loads for reuse. */
 const onHand: RealSet[] = [];
 const ON_HAND = 4;
+/**
+ * The field last asked for (`place`): centre and size. `S` takes them only once its pictures are
+ * cut, so a wider set arriving meanwhile is placed by this, not by `S`.
+ */
+let wanted: { ra: number; dec: number; fov: Fov } | null = null;
 
 /** Starts a new load: the older one's answers are ignored from now on. */
 function begin(): { id: number; signal: AbortSignal } {
@@ -96,6 +110,7 @@ function begin(): { id: number; signal: AbortSignal } {
   liveJob = null;
   missingPasses = [];
   home = null;
+  wanted = null;
   stopWidening();
   return { id: seq, signal: abort.signal };
 }
@@ -461,6 +476,7 @@ function forHome(set: RealSet): RealSet {
   if (!out) {
     const { catalogue, neighbours, neighboursFrom } = own.data;
     out = { ...set, data: { ...set.data, catalogue, neighbours, neighboursFrom } };
+    pinCentre(out.data, nominal(set.data));
     withTarget.set(set, out);
     grafted.add(out);
   }
@@ -480,6 +496,9 @@ async function place(
   const h = home;
   if (!h) return;
   const { ra, dec } = centre;
+  wanted = { ra, dec, fov };
+  // The size shows at once (the pictures on screen rescale), so a second press steps on from it.
+  S.fov = fov;
   const fit = [h.set, ...[...onHand].sort((a, b) => a.data.size - b.data.size)].find((s) =>
     covers(s.data, ra, dec, fov),
   );
@@ -496,7 +515,8 @@ async function place(
 export function retryWider(): void {
   if (!home || !S.set) return;
   stopWidening();
-  askWider({ ra: S.ra, dec: S.dec }, S.fov);
+  const v = wanted ?? { ra: S.ra, dec: S.dec, fov: S.fov };
+  askWider({ ra: v.ra, dec: v.dec }, v.fov);
 }
 
 function stopWidening(): void {
@@ -596,11 +616,12 @@ async function pollWider(
         if (!live()) return;
         got = step;
         keep(set);
-        // Shown only if it holds the field on screen now (the user may have moved on).
-        if (covers(set.data, S.ra, S.dec, S.fov) && home) {
+        // Shown only if it holds the field wanted now (the user may have moved on).
+        const v = wanted ?? { ra: S.ra, dec: S.dec, fov: S.fov };
+        if (covers(set.data, v.ra, v.dec, v.fov) && home) {
           const keepMjd = S.groups[S.epoch]?.mjd ?? null;
           const source: PatchSource = home.set.origin === 'shipped' ? 'real' : 'live';
-          await show(forHome(set), home.target, { ra: S.ra, dec: S.dec }, S.fov, source, keepMjd);
+          await show(forHome(set), home.target, { ra: v.ra, dec: v.dec }, v.fov, source, keepMjd);
         }
         if (step === 'full' && status.state === 'ready') {
           widen = null;

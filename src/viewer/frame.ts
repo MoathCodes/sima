@@ -143,7 +143,7 @@ export function startFrame(): void {
     draw();
   });
   document
-    .getElementById('frame-pic')
+    .getElementById('frame-load')
     ?.addEventListener('click', (e) => {
       if ((e.target as Element | null)?.closest('[data-widen-retry]')) retryWider();
     });
@@ -168,7 +168,7 @@ function header(): void {
   const embedded = document.documentElement.hasAttribute('data-embed');
   head.className = 'frame-head';
   head.dataset.drag = '';
-  head.innerHTML = `
+  const html = `
     <div class="frame-name">
       <h2 class="frame-title"></h2>
       <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span></p>
@@ -181,6 +181,10 @@ function header(): void {
       <button class="btn text frame-measure" data-measure aria-pressed="${measure}" data-guide="measure" data-tip="${measure ? 'Back to the simple view' : 'Measure: numbers, charts and all six views'}">${icon('chart')}<span>Measure</span></button>
       ${embedded ? '' : `<button class="icon-btn sm" data-hide aria-label="Hide the frame" data-tip="Hide the frame" data-guide="frame-hide">${icon('close')}</button>`}
     </div>`;
+  // Redrawn only when it changes: a redraw while the user presses − or + would lose the press.
+  if (head.dataset.html === html + S.label) return;
+  head.dataset.html = html + S.label;
+  head.innerHTML = html;
   const title = head.querySelector<HTMLElement>('.frame-title');
   if (title) {
     title.textContent = S.label;
@@ -238,14 +242,33 @@ function lines(): void {
     // The line keeps its height whether or not it has words, so the frame never grows (O-I5).
     load.className = 'frame-load';
     const busy = S.source === 'loading' && S.load;
-    // While wider real pictures are fetched, or cannot be, the line says so (FRM-6).
-    const note = [widening?.what ?? stepNote, liveNote].filter(Boolean).join(' · ');
-    load.textContent = busy
+    // While wider real pictures are fetched, or cannot be, the line says so (FRM-6), with the
+    // fetch's progress bar first and, after a failure, Ask again.
+    const w = busy ? null : widening;
+    const note = [w?.what ?? stepNote, liveNote].filter(Boolean).join(' · ');
+    const text = busy
       ? 'Loading this spot. The sky keeps working meanwhile.'
       : note
         ? `${note.replace(/[.…]$/, '')}${note.endsWith('…') ? '…' : '.'}`
         : '';
-    load.dataset.tip = load.textContent;
+    const known = !!w && w.total !== null && w.done !== null && w.total > 0;
+    const pct = known && w ? Math.round((100 * (w.done ?? 0)) / (w.total ?? 1)) : 0;
+    const key = `${text}|${w?.state ?? ''}|${pct}`;
+    if (load.dataset.key !== key) {
+      load.dataset.key = key;
+      load.innerHTML = `${
+        w?.state === 'busy'
+          ? `<span class="load-bar${known ? ' known' : ''}" style="--done:${pct}%" role="progressbar" aria-label="Real exposures of the wider field" ${known ? `aria-valuenow="${pct}"` : ''}><span></span></span>`
+          : ''
+      }${
+        w?.state === 'failed'
+          ? '<button type="button" class="link load-retry" data-widen-retry>Ask again</button>'
+          : ''
+      }<span class="load-text"></span>`;
+      const t = load.querySelector('.load-text');
+      if (t) t.textContent = text;
+    }
+    load.dataset.tip = text;
   }
 }
 

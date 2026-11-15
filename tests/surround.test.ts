@@ -9,7 +9,9 @@ import {
   covers,
   liveFov,
   maskOutline,
+  nominal,
   offsetArcmin,
+  pinCentre,
   overlaps,
   widerPatch,
 } from '../src/viewer/surround.ts';
@@ -51,6 +53,28 @@ test('covers: a live 24′ patch (0.41° cutouts) holds 24′ at its centre', as
   assert.ok(!covers(wide, c.ra, c.dec, 48));
   const p = moved(c, 5, 5);
   assert.ok(covers(wide, p.ra, p.dec, 12));
+});
+
+test('covers: a live patch is centred where it was asked for, also after its catalogue changes', async () => {
+  const set = await loadSet('barnard');
+  const asked = { ra: 269.446, dec: 4.769 };
+  // Wide cutouts clipped at the detector edge pull the median of their centres 0.3′ north.
+  const frames = set.data.frames.map((f) => ({
+    ...f,
+    wcs: { ...f.wcs, crval: [asked.ra, asked.dec + 0.3 / 60] as [number, number] },
+  }));
+  const live: TargetData = {
+    ...set.data,
+    frames,
+    fov: 48,
+    size: 0.81,
+    catalogue: { ...set.data.catalogue, ra: asked.ra, dec: asked.dec },
+    live: { id: '0a288932db960c09', step: 'full', fetched: '', found: 1, windows: 1 },
+  };
+  assert.ok(covers(live, asked.ra, asked.dec, 48));
+  const grafted: TargetData = { ...live, catalogue: set.data.catalogue };
+  pinCentre(grafted, nominal(live));
+  assert.ok(covers(grafted, asked.ra, asked.dec, 48));
 });
 
 test('overlaps: a pan still on the exposures, and one off them', async () => {
