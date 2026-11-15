@@ -148,7 +148,14 @@ export const flows: Flow[] = [
     path: '/?target=barnard&ui=expert',
     steps: [
       noWelcome,
-      pressStep('measure', 'Open Measure'),
+      {
+        name: 'Open Measure (Expert may open with it already)',
+        async run(page) {
+          await page.waitForTimeout(500);
+          const open = await page.evaluate(() => !document.getElementById('measure')?.hidden);
+          if (!open) await page.locator(guide('measure')).first().click();
+        },
+      },
       expectStep(
         'Measure shows at the Measure level',
         `${S('level')} === 'measure' && !document.getElementById('measure').hidden`,
@@ -185,12 +192,31 @@ export const flows: Flow[] = [
     owner: 'DE',
     path: '/?target=barnard&ui=expert',
     sizes: [{ width: 390, height: 844 }],
+    // Expert on a phone is one scrolling column (11.5).
+    scrolls: true,
     steps: [
       noWelcome,
       {
         name: 'The phone layout (lane M sets it; set here until it does)',
         async run(page) {
           await page.evaluate(async () => {
+            // Until lane F removes v1's "made for a desktop screen" note (v2.0 drops it, section
+            // 13), its rule hides the page on phones: take it out here.
+            for (const sh of document.styleSheets) {
+              let rules: CSSRuleList;
+              try {
+                rules = sh.cssRules;
+              } catch {
+                continue;
+              }
+              for (let i = rules.length - 1; i >= 0; i--)
+                if (rules[i]!.cssText.includes('narrow-note')) sh.deleteRule(i);
+            }
+            document.getElementById('narrow-note')?.remove();
+            // This flow checks lane DE's cards only: the top row and sky note get their phone
+            // forms from lanes F and C (their own flows check them).
+            for (const el of document.querySelectorAll<HTMLElement>('[data-card]'))
+              if (!['frame', 'measure'].includes(el.id) && !el.closest('#frame, #measure')) el.style.display = 'none';
             const url = '/src/shell/sheet.ts';
             const sheet = (await import(/* @vite-ignore */ url)) as typeof import('../../../src/shell/sheet.ts');
             if (sheet.layout().kind === 'desktop') {

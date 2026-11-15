@@ -965,7 +965,16 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
 html[data-view='discover'] {
   --frame-picture: min(560px, calc(100vh - 330px));
 }
-html[data-view='discover'] #bar,
+/* The bar collapses to nothing at its place, not display: none, so the frame's placement
+   (layout.ts measures the bar's top) lets the frame reach down to it. */
+html[data-view='discover']:not([data-layout^='phone']) #bar {
+  height: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  visibility: hidden;
+  box-shadow: none;
+}
 html[data-view='discover'] #frame-exif,
 html[data-view='discover'] .frame-head :is([data-fov], .frame-fov) {
   display: none;
