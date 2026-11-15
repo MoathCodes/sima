@@ -171,8 +171,14 @@ export function sceneAt(
     radius = r0 * Math.exp(d1 * x * x * x);
   }
   // The globe's centre moves to the sky map's centre on screen once the globe's
-  // edge has left the window.
-  const fill = smooth(Math.hypot(w, h) / 2, land.fromScale * 0.98, radius);
+  // edge has left the window. Landing on Discover's whole globe (smaller than the window), it
+  // moves there while it turns, after the name has gone (DESIGN-v2 11).
+  const onGlobe = land.fromScale < Math.hypot(w, h) / 2;
+  const fill = onGlobe
+    ? R === null
+      ? 0
+      : ease(T.turn[0], T.turn[1], r)
+    : smooth(Math.hypot(w, h) / 2, land.fromScale * 0.98, radius);
   const cx = w / 2 + (land.x - w / 2) * fill;
   const cy = h / 2 + (land.y - h / 2) * fill;
 

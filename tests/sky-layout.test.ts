@@ -189,3 +189,30 @@ test('labels stay calm while the view moves: kept sides, nothing new until it st
   for (const [d, side] of kept) assert.equal(rest.find((p) => all[p.index] === d)?.side, side);
   assert.ok(rest.filter((p) => p.side >= 0).length >= kept.size);
 });
+
+test('ux-audit #7: a label never runs through another place\'s dot; a ringed dot\'s label clears its ring', () => {
+  const v = viewOf(0, 0, 10);
+  const c = project(v, 0, 0)!;
+  // Two dots 30 px apart on one line: the first's label (60 px wide, to the right) would cross
+  // the second dot.
+  const degPerPx = 10 / W;
+  const a: LayoutInput = { ra: 0, dec: 0, tier: 0, always: true, width: 60 };
+  const b: LayoutInput = { ra: -30 * degPerPx, dec: 0, tier: 0, always: true, width: 60 };
+  const placed = layout([a, b], v, W, H, 10, []);
+  const dots = placed.map((p) => ({ x: p.x, y: p.y }));
+  assert.ok(Math.abs((dots[1]?.x ?? 0) - (dots[0]?.x ?? 0)) > 20, 'the two dots are apart on screen');
+  for (const p of placed) {
+    if (!p.label) continue;
+    for (const d of dots) {
+      if (d.x === p.x && d.y === p.y) continue;
+      const inside = d.x >= p.label.left && d.x <= p.label.right && d.y >= p.label.top && d.y <= p.label.bottom;
+      assert.ok(!inside, `a label covers another dot at ${d.x},${d.y}`);
+    }
+  }
+  const ringed = layout([{ ...a, gap: 11 }], v, W, H, 10, [])[0]!;
+  assert.ok(ringed.label, 'the ringed dot is labelled');
+  const l = ringed.label!;
+  const dx = Math.max(l.left - c.x, 0, c.x - l.right);
+  const dy = Math.max(l.top - c.y, 0, c.y - l.bottom);
+  assert.ok(Math.hypot(dx, dy) > 8, 'the label starts outside the 8 px ring');
+});
