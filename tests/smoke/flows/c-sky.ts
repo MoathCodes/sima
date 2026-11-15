@@ -113,8 +113,10 @@ export const flows: Flow[] = [
         },
       },
       keyStep('Escape', 'Escape closes it again'),
-      // Expert opens with Measure, which covers the patch in the middle of the sky.
+      // Expert opens with Measure, which covers the patch in the middle of the sky; at 1366 the
+      // frame, gliding back to the right, then covers it: hide it too for the drag.
       pressStep('measure', 'Close Measure'),
+      pressStep('frame-hide', 'Hide the frame'),
       {
         name: 'The patch is grabbed from inside and dropped; the sky stays still (FRM-2)',
         async run(page) {
