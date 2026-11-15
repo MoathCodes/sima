@@ -20,6 +20,7 @@ import {
 } from './glass.ts';
 import { resetProgress } from '../explore/progress.ts';
 import { leavePage, onPhone, phonePage } from './pages.ts';
+import { languageGroup } from './language.ts';
 
 let opener: HTMLElement | null = null;
 
@@ -67,6 +68,7 @@ export function startSettings(): void {
       </div>
       <p class="st-note st-done" data-reset-done role="status"></p>
     </section>`;
+  el.append(languageGroup()); // English | العربية (language.ts)
 
   const q = <T extends HTMLElement>(sel: string) => el.querySelector<T>(sel)!;
   const radios = [...el.querySelectorAll<HTMLElement>('[data-panels]')];

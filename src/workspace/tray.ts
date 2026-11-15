@@ -7,6 +7,7 @@
 import { camera, toWorld } from '../sky/sky.ts';
 import { icon } from '../shell/icons.ts';
 import { toast } from '../shell/toast.ts';
+import { t as tr } from '../shell/i18n.ts';
 import { FRAME_TYPES, MAX_FRAMES, TYPE_WORDS, type FrameType } from './schema.ts';
 import { addFrame, frames, onChange } from './frames.ts';
 import { TYPE_ICONS } from './card.ts';
@@ -127,7 +128,7 @@ function onClick(e: MouseEvent, tray: HTMLElement): void {
     fill(tray);
   } else if (t.closest('[data-delete-ws]')) {
     remove(n);
-    toast(`Deleted “${n}”.`);
+    toast(tr('ws.deleted', { name: n }));
   } else if (t.closest('[data-export]')) {
     exportFile();
   }
@@ -166,7 +167,7 @@ function startDrag(e: PointerEvent, type: FrameType, tray: HTMLElement): void {
     const under = document.elementsFromPoint(ev.clientX, ev.clientY).find((el) => el.closest('[data-card], [popover], dialog'));
     const at = toWorld(ev.clientX, ev.clientY);
     if (under || !at) {
-      toast('Drop it on the sky, not on a card.');
+      toast(tr('ws.dropOnSky'));
       return;
     }
     addFrame(type, at, { fresh: true });
