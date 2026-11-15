@@ -38,6 +38,7 @@ import { closeSandbox, onSandbox, openSandbox, sandboxState, type SandboxReading
 import { targetByKey } from '../core/targets.ts';
 import { KEYS, LEAVE_ASK, MEASURING, MISSION_COPY, plainKind } from './copy.ts';
 import { esc, icon, liveRegion, rerender, say } from './ui.ts';
+import { t as tr } from '../shell/i18n.ts';
 
 /** A mission as it runs on this page. */
 interface Run {
@@ -163,7 +164,7 @@ export function openMission(id: MissionId): void {
   if (S.target === m.target && S.field && S.fov !== 6) void setFov(6);
   evaluate();
   render();
-  say(live, `${m.title}. Step ${index() + 1}: ${instruction()?.title ?? ''}`);
+  say(live, `${m.title}. ${tr('dm.step', { n: index() + 1 })}: ${instruction()?.title ?? ''}`);
 }
 
 /** Stops the mission on this page (Leave). Progress keeps what was recorded. */
@@ -332,7 +333,7 @@ function evaluate(): void {
     clearInterval(pollTimer);
     pollTimer = 0;
   }
-  if (index() !== before) say(live, `Step ${index() + 1}: ${instruction()?.title ?? ''}`);
+  if (index() !== before) say(live, `${tr('dm.step', { n: index() + 1 })}: ${instruction()?.title ?? ''}`);
   render();
 }
 
@@ -390,15 +391,15 @@ function finish(): void {
 
 function hintLabels(): string[] {
   const hints = instruction()?.hints ?? [];
-  const labels: string[] = hints.map((_, i) => (i === 0 ? 'Hint' : 'Another hint'));
-  if (run?.id === 'runaway' && step() === 'tap') labels.push('Look closer');
+  const labels: string[] = hints.map((_, i) => (i === 0 ? tr('dm.hint') : tr('dm.another')));
+  if (run?.id === 'runaway' && step() === 'tap') labels.push(tr('dm.closer'));
   return labels;
 }
 
 function hintText(): string {
   const hints = instruction()?.hints ?? [];
   if (!run?.help) return '';
-  return hints[run.help - 1] ?? 'It is inside the dashed circle.';
+  return hints[run.help - 1] ?? tr('dm.inCircle');
 }
 
 // ----- The card --------------------------------------------------------------------------------
@@ -456,7 +457,7 @@ function objectLine(r: Run): string {
   const type = /\(([^)]*)\)\s*$/.exec(t.kind)?.[1];
   const ly = t.plx ? 3261.56 / t.plx : null;
   return `${esc(t.name)} · ${esc(plainKind(t.kind).toLowerCase())}${type ? ` (SIMBAD: ${esc(type)})` : ''}${
-    ly && r.id === 'runaway' ? `, ${Math.round(ly)} light-years away (Gaia DR3)` : ''
+    ly && r.id === 'runaway' ? tr('dm.ly', { n: String(Math.round(ly)) }) : ''
   }`;
 }
 
@@ -477,8 +478,8 @@ export function render(): void {
       const how = r.did[s.id];
       if (how) {
         const mark = how === 'done' ? icon('check') : '–';
-        const tail = how === 'unavailable' ? ' <span class="dsc-faint">(not available)</span>' : '';
-        return `<li class="dsc-step done"><span class="dsc-n" aria-hidden="true">${mark}</span><span class="dsc-st">${esc(label)}${tail}<span class="dsc-sr"> ${how === 'done' ? 'done' : 'not available'}</span></span></li>`;
+        const tail = how === 'unavailable' ? ` <span class="dsc-faint">(${tr('dm.na')})</span>` : '';
+        return `<li class="dsc-step done"><span class="dsc-n" aria-hidden="true">${mark}</span><span class="dsc-st">${esc(label)}${tail}<span class="dsc-sr"> ${how === 'done' ? tr('dh.doneLower') : tr('dm.na')}</span></span></li>`;
       }
       if (s !== now) {
         return `<li class="dsc-step next"><span class="dsc-n" aria-hidden="true">${j + 1}</span><span class="dsc-st">${esc(label)}</span></li>`;
@@ -490,8 +491,8 @@ export function render(): void {
           ${s.line ? `<p class="dsc-how">${esc(s.line)}</p>` : ''}
           ${stateLine(r)}
           ${helpBoxes(r)}
-          ${r.id === 'planet-x' && s.id === 'check' ? `<button class="dsc-btn primary" data-k="check" type="button">Check</button>` : ''}
-          ${r.id === 'planet-x' && s.id !== 'check' ? `<button class="dsc-btn quiet" data-k="sandbox" type="button">${icon('planet')}Show the sandbox card</button>` : ''}
+          ${r.id === 'planet-x' && s.id === 'check' ? `<button class="dsc-btn primary" data-k="check" type="button">${tr('dm.check')}</button>` : ''}
+          ${r.id === 'planet-x' && s.id !== 'check' ? `<button class="dsc-btn quiet" data-k="sandbox" type="button">${icon('planet')}${tr('dm.sandbox')}</button>` : ''}
         </div>
       </li>`;
     })
@@ -506,11 +507,11 @@ export function render(): void {
     body,
     `
     <div class="dsc-hd">
-      <h2 class="dsc-title" tabindex="-1" data-k="title">${m.simulated ? '<span class="dsc-pill sim">Simulated</span>' : ''}${esc(c.name)}</h2>
+      <h2 class="dsc-title" tabindex="-1" data-k="title">${m.simulated ? `<span class="dsc-pill sim">${tr('honest.simulated')}</span>` : ''}${esc(c.name)}</h2>
       <span class="dsc-segs" role="progressbar" aria-label="Mission progress: step ${i} of ${total}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${did}">${m.steps
         .map((_, j) => `<span class="${j < did ? 'on' : j === did ? 'now' : ''}"></span>`)
         .join('')}</span>
-      <button class="dsc-icon-btn" type="button" data-k="leave-x" data-close data-guide="mission-leave" aria-label="Leave the mission" data-tip="Leave the mission">${icon('close')}</button>
+      <button class="dsc-icon-btn" type="button" data-k="leave-x" data-close data-guide="mission-leave" aria-label="${tr('dm.leaveMission')}" data-tip="${tr('dm.leaveMission')}">${icon('close')}</button>
     </div>
     <p class="dsc-obj">Mission ${n} of ${MISSION_IDS.length} · ${objectLine(r)}</p>
     <div class="dsc-scroll" data-scroll>
@@ -518,13 +519,13 @@ export function render(): void {
     </div>
     <div class="dsc-hint-row" data-peek-end>
       ${nextLabel ? `<button class="dsc-btn" type="button" data-k="hint" data-guide="mission-hint">${icon('bulb')}${esc(nextLabel)}</button>` : ''}
-      ${now && !r.shown ? `<button class="dsc-btn quiet" type="button" data-k="show" data-guide="mission-show-me">${icon('eye')}Show me</button>` : ''}
-      ${r.id === 'runaway' && step() === 'tap' ? `<button class="dsc-btn quiet" type="button" data-k="picture">Go to the picture</button>` : ''}
+      ${now && !r.shown ? `<button class="dsc-btn quiet" type="button" data-k="show" data-guide="mission-show-me">${icon('eye')}${tr('ms.showMe')}</button>` : ''}
+      ${r.id === 'runaway' && step() === 'tap' ? `<button class="dsc-btn quiet" type="button" data-k="picture">${tr('dm.toPicture')}</button>` : ''}
       <span class="dsc-keys" tabindex="0" role="note" aria-label="${esc(KEYS)}" data-tip="${esc(KEYS)}">${icon('keyboard')}</span>
     </div>
     ${
       r.asking
-        ? `<div class="dsc-ask" role="group" aria-label="${esc(LEAVE_ASK)}"><p>${esc(LEAVE_ASK)}</p><div class="dsc-row"><button class="dsc-btn primary" type="button" data-k="leave">Leave</button><button class="dsc-btn" type="button" data-k="stay">Stay</button></div></div>`
+        ? `<div class="dsc-ask" role="group" aria-label="${esc(LEAVE_ASK)}"><p>${esc(LEAVE_ASK)}</p><div class="dsc-row"><button class="dsc-btn primary" type="button" data-k="leave">${tr('dm.leave')}</button><button class="dsc-btn" type="button" data-k="stay">${tr('dm.stay')}</button></div></div>`
         : ''
     }`,
     '[data-k="step"], .dsc-title',
@@ -560,7 +561,7 @@ function arrive(r: Run): void {
 function helpBoxes(r: Run): string {
   let html = '';
   if (r.help) html += `<p class="dsc-hintbox">${icon('bulb')}<span>${esc(hintText())}</span></p>`;
-  if (r.shown && r.shown !== 'Show me')
+  if (r.shown && r.shown !== tr('ms.showMe'))
     html +=
       r.id === 'ghost' && step() === 'motion'
         ? `<button class="dsc-btn" data-k="snap" type="button">${icon('path')}${esc(r.shown)}</button>`
@@ -574,13 +575,13 @@ function stateLine(r: Run): string {
   if (s.state === 'checking')
     return `<p class="dsc-state checking"><span class="dsc-busy" aria-hidden="true"></span>${esc(MEASURING)}</p>`;
   if (s.state === 'unavailable')
-    return `<p class="dsc-state warn">Not measured: ${esc(s.reason.replace(/\.$/, ''))}.</p><button class="dsc-btn" type="button" data-k="continue" data-guide="mission-continue">Continue without it</button>`;
+    return `<p class="dsc-state warn">${tr('honest.notMeasuredWhy', { reason: esc(s.reason.replace(/\.$/, '')) })}.</p><button class="dsc-btn" type="button" data-k="continue" data-guide="mission-continue">${tr('mis.continue')}</button>`;
   // The ghost's three numbers are the frame's own readout under the picture (Along, Not shifted,
   // Opposite): the card does not repeat them (redesign: one thing, one place).
   const numbers = '';
   // The ghost's "not yet": the stack is checked again as the arrow moves, so no Try again.
   if (s.state === 'failed' && r.id === 'ghost') return `${numbers}<p class="dsc-state">${esc(s.reason)}</p>`;
   if (s.state === 'failed')
-    return `<p class="dsc-state warn">That didn't work: ${esc(s.reason.replace(/\.$/, ''))}.</p><button class="dsc-btn" type="button" data-k="retry">Try again</button>`;
+    return `<p class="dsc-state warn">${tr('dm.didnt', { reason: esc(s.reason.replace(/\.$/, '')) })}.</p><button class="dsc-btn" type="button" data-k="retry">${tr('dm.retry')}</button>`;
   return numbers;
 }

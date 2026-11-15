@@ -595,6 +595,42 @@ export const en = {
   "mis.o.noDates": "{type}. No dated pictures available.",
   "mis.o.over": "{type}. {n} pictures over {months} months.",
   "mis.o.real": "{type}. {n} real pictures.",
+
+  // Discover home (discover/home.ts).
+  'dh.another': 'Try another object',
+  "dh.done": "Done",
+  "dh.doneLower": "done",
+  "dh.inProgress": "in progress, step {k} of {n}",
+  "dh.suggested": "suggested next",
+  "dh.notStarted": "not started",
+  "dh.skillAbout": { one: "Skill: {skill}, about {n} minute", other: "Skill: {skill}, about {n} minutes" },
+  "dh.count": "{done} of {n} done",
+  "dh.missionOf": "Mission {n} of {of}",
+  "dh.min": "{n} min",
+  "dh.startN": "Start mission {n}",
+  "dh.start": "Start",
+  "dh.allDone": "All missions done",
+  "dh.tryBelow": "Try an object below",
+  "dh.thisSpot": "This spot",
+  "dh.chosenSpot": "A spot you chose",
+  "dh.closePics": "Close the pictures",
+
+  // The mission card (discover/mission.ts).
+  "dm.step": "Step {n}",
+  "dm.hint": "Hint",
+  "dm.another": "Another hint",
+  "dm.closer": "Look closer",
+  "dm.inCircle": "It is inside the dashed circle.",
+  "dm.ly": ", {n} light-years away (Gaia DR3)",
+  "dm.na": "not available",
+  "dm.check": "Check",
+  "dm.sandbox": "Show the sandbox card",
+  "dm.leaveMission": "Leave the mission",
+  "dm.toPicture": "Go to the picture",
+  "dm.leave": "Leave",
+  "dm.stay": "Stay",
+  "dm.didnt": "That didn't work: {reason}",
+  "dm.retry": "Try again",
 } as const satisfies Record<string, string | EnPlural>;
 
 /** A message key. */
