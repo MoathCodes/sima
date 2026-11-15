@@ -320,3 +320,57 @@
   color: var(--ink-3);
   font: var(--text-group);
 }
+
+/* ----- The view switch: Discover | Expert (DESIGN-v2 section 9) ----------------------------- */
+/* A Regular pill, 46px tall; the chosen segment is a white 18% tile with on-glass text. */
+#view-switch {
+  display: flex;
+  gap: var(--gap-group);
+  padding: 5px;
+}
+.vs-seg {
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 13px; /* 18px card − 5px padding: concentric */
+  background: transparent;
+  color: var(--ink-2);
+  font: var(--text-control);
+  white-space: nowrap;
+}
+.vs-seg:hover {
+  background: var(--card-2);
+  color: var(--ink);
+}
+.vs-seg[aria-checked='true'] {
+  background: var(--card-4);
+  color: var(--ink);
+  box-shadow: var(--shadow-chosen);
+}
+.vs-seg > .icon {
+  width: 18px;
+  height: 18px;
+}
+@media (max-width: 699px) {
+  #view-switch {
+    padding: 4px;
+  }
+  /* Two 48px segments: the whole switch is 56px tall on the phone top row. */
+  .vs-seg {
+    min-height: var(--v2-hit-phone);
+    padding: 0 8px;
+  }
+  .vs-seg > .icon {
+    display: none;
+  }
+}
+@media (max-width: 339px) {
+  .vs-seg {
+    font: 600 12px/1 var(--font);
+  }
+}

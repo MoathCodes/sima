@@ -1289,12 +1289,37 @@ samp {
   overflow: clip;
   overflow-clip-margin: 16px;
 }
+/* Top right: the actions, then the view switch at the right edge (DESIGN-v2 8.1). */
+:root {
+  --view-switch-w: 222px;
+}
 #actions {
+  position: fixed;
+  top: var(--top);
+  right: calc(var(--gutter) + var(--view-switch-w) + 10px);
+  z-index: var(--z-top);
+  height: var(--h-top);
+}
+#view-switch {
   position: fixed;
   top: var(--top);
   right: var(--gutter);
   z-index: var(--z-top);
+  width: var(--view-switch-w);
   height: var(--h-top);
+  border-radius: var(--r-panel);
+}
+/* The phone menu hangs under its button, right-aligned (shell.ts sets top and right). */
+#phone-menu {
+  width: 240px;
+}
+/* Discover's top row is the wordmark, Find, Settings, About and the switch: no chips, rail,
+   Guide, Places or Share (BEGINNER-AND-MOBILE.md section 4). */
+html[data-view='discover'] :is(#chips, #rail, #actions [data-expert-only]) {
+  display: none;
+}
+html[data-view='discover'] #top-left {
+  grid-template-columns: auto 340px;
 }
 #sky-loading {
   position: fixed;
@@ -1589,21 +1614,98 @@ samp {
   }
 }
 
-/* Lane F: phones are not designed yet (O-W3). Under 700px only the sky and one note show. */
-#narrow-note {
+/* Lane F: the phone top row (under 700 px; BEGINNER-AND-MOBILE.md 11.3). 56 px tall with 48 px
+   hit areas: the wordmark (Arabic only under 360 px), the menu button, the view switch. Search
+   moves behind the menu's Find, a full-height Slate page. Lane M lays out the rest. */
+.phone-menu-btn,
+.find-back {
   display: none;
 }
 @media (max-width: 699px) {
-  body > :not(#sky, #narrow-note, script) {
-    display: none !important;
+  :root {
+    --top: 4px;
+    --h-top: 56px; /* the top row: 48px hit areas inside */
+    --gutter: var(--v2-gutter-phone);
+    --view-switch-w: 176px;
   }
-  #narrow-note {
-    position: fixed;
-    inset: auto var(--gutter) var(--gutter);
-    z-index: var(--z-toast);
-    display: block;
-    padding: 14px 16px;
-    font: var(--text-body);
+  #top-left {
+    grid-template-columns: auto;
+  }
+  html:not([data-find]) #top-left > :not(#wordmark) {
+    display: none;
+  }
+  #wordmark {
+    padding: 0 12px;
+  }
+  .wordmark-ar {
+    font-size: 26px;
+  }
+  #actions {
+    right: calc(var(--gutter) + var(--view-switch-w) + 8px);
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  #actions > :not(.phone-menu-btn) {
+    display: none;
+  }
+  #actions .phone-menu-btn {
+    display: inline-grid;
+    width: var(--v2-hit-phone);
+    height: var(--v2-hit-phone);
+    border-radius: var(--r-panel);
+    /* The menu button is its own small card on the sky (Regular; Solid on phones by default). */
+    background: linear-gradient(var(--v2-regular-tint), var(--v2-regular-tint));
+    box-shadow: var(--v2-rim-shadow), var(--v2-lift-1);
+  }
+  html[data-glass='solid'] #actions .phone-menu-btn {
+    background: var(--v2-solid-tint);
+  }
+  body > :is(#rail, #chips, #sky-loading) {
+    display: none;
+  }
+  #phone-menu .menu-item {
+    min-height: var(--v2-hit-phone);
+  }
+  /* Find: a full-height Slate page with Back, the field at the top, suggestions under it. */
+  html[data-find] #top-left {
+    inset: 0;
+    z-index: var(--z-tip);
+    grid-template-columns: 1fr;
+    grid-template-rows: 56px var(--v2-hit-phone) 1fr;
+    align-content: start;
+    gap: 8px;
+    padding: 0 var(--v2-gutter-phone);
+    background: var(--v2-slate-tint);
+    pointer-events: auto;
+  }
+  html[data-find] #top-left > :is(#wordmark, #chips) {
+    display: none;
+  }
+  html[data-find] .find-back {
+    display: inline-flex;
+  }
+  html[data-find] .find-back {
+    align-self: center;
+    justify-self: start;
+    min-height: var(--v2-hit-phone);
+  }
+  html[data-find] #search {
+    grid-area: auto;
+    height: var(--v2-hit-phone);
+  }
+  html[data-find] #search-results {
+    top: calc(56px + var(--v2-hit-phone) + 16px);
+    left: var(--v2-gutter-phone);
+    right: var(--v2-gutter-phone);
+    width: auto;
+  }
+}
+@media (max-width: 359px) {
+  .wordmark-latin {
+    display: none;
   }
 }
 

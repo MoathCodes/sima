@@ -9,11 +9,12 @@
  */
 import { emit } from './bus.ts';
 import { icon } from './icons.ts';
-import { closeTop, nativeOpen, startEscape } from './escape.ts';
+import { RANK, closable, closeTop, nativeOpen, startEscape } from './escape.ts';
 import { startLayout } from './layout.ts';
 import { camera, flyTo, grid, retry, setLayer, type SkyLayer } from '../sky/sky.ts';
 import { openShare, startShare } from '../viewer/share.ts';
 import { openAbout, startAbout } from '../page/about.ts';
+import { startSettings } from './settings.ts';
 
 export { onFrameMove } from './layout.ts';
 export { toast } from './toast.ts';
@@ -59,10 +60,12 @@ export function startShell(): void {
   fill(
     'actions',
     `
-    <button class="btn quiet" popovertarget="guide-menu" data-guide="guide-button">${icon('compass')}<span class="action-word">Guide</span></button>
-    <button class="btn quiet" popovertarget="places-menu" data-guide="places-button">${icon('pin')}<span class="action-word">Places</span></button>
-    <button class="icon-btn" data-open="share" aria-label="Share" data-tip="Share this view" data-guide="share-button">${icon('share')}</button>
-    <button class="icon-btn" data-open="about" aria-label="About Sima" data-tip="About Sima" data-guide="about-button">${icon('info')}</button>`,
+    <button class="btn quiet" popovertarget="guide-menu" data-guide="guide-button" data-expert-only>${icon('compass')}<span class="action-word">Guide</span></button>
+    <button class="btn quiet" popovertarget="places-menu" data-guide="places-button" data-expert-only>${icon('pin')}<span class="action-word">Places</span></button>
+    <button class="icon-btn" data-open="share" aria-label="Share" data-tip="Share this view" data-guide="share-button" data-expert-only>${icon('share')}</button>
+    <button class="icon-btn" data-open="settings" aria-label="Settings" aria-expanded="false" aria-controls="settings" data-tip="Settings" data-guide="settings-button">${icon('settings')}</button>
+    <button class="icon-btn" data-open="about" aria-label="About Sima" data-tip="About Sima" data-guide="about-button">${icon('info')}</button>
+    <button class="icon-btn phone-menu-btn" popovertarget="phone-menu" aria-label="Menu" data-guide="phone-menu">${icon('menu')}</button>`,
   );
 
   fill(
@@ -89,12 +92,23 @@ export function startShell(): void {
   );
 
   fill(
+    'phone-menu',
+    `
+    <button class="menu-item" data-find data-guide="phone-find">${icon('search')}Find</button>
+    <button class="menu-item" data-open="settings" data-guide="phone-settings">${icon('settings')}Settings</button>
+    <button class="menu-item" data-open="share" data-guide="phone-share">${icon('share')}Share</button>
+    <button class="menu-item" data-open="about" data-guide="phone-about">${icon('info')}About</button>`,
+  );
+  startFind();
+
+  fill(
     'frame-show',
     `<button class="btn quiet" data-show-frame data-guide="frame-show">${icon('flip')}Show the frame</button>`,
   );
 
   startShare();
   startAbout();
+  startSettings();
   startEscape();
   startLayout();
   startPopovers();
@@ -224,6 +238,50 @@ function setCard(card: HTMLElement, load: SkyLoad, pct: number): void {
   card.querySelector('[data-retry]')?.addEventListener('click', retry);
 }
 
+// ----- Find on phones (BEGINNER-AND-MOBILE.md 11.2, 11.3) ---------------------------------------
+
+/**
+ * On phones the search field lives behind the menu's Find: a full-height Slate page with Back
+ * (`html[data-find]`), the field at the top and the suggestions under it.
+ */
+function startFind(): void {
+  const top = document.getElementById('top-left');
+  if (!top) return;
+  const back = document.createElement('button');
+  back.type = 'button';
+  back.className = 'btn quiet find-back';
+  back.dataset.close = '';
+  back.dataset.guide = 'find-back';
+  back.innerHTML = `${icon('back')}Back`;
+  top.prepend(back);
+  // In the Escape order only while the page is open (top-left is always rendered).
+  let unregister: (() => void) | null = null;
+  const close = () => {
+    if (!('find' in document.documentElement.dataset)) return;
+    unregister?.();
+    unregister = null;
+    delete document.documentElement.dataset.find;
+    top.removeAttribute('role');
+    top.removeAttribute('aria-label');
+    document.getElementById('search-results')?.hidePopover?.();
+    document.querySelector<HTMLElement>('[data-guide="phone-menu"]')?.focus();
+  };
+  back.addEventListener('click', close);
+  document.addEventListener('click', (e) => {
+    if (!(e.target instanceof Element) || !e.target.closest('[data-find]')) return;
+    document.getElementById('phone-menu')?.hidePopover();
+    document.documentElement.dataset.find = '';
+    unregister ??= closable(top, RANK.list, close);
+    top.setAttribute('role', 'dialog');
+    top.setAttribute('aria-label', 'Find a star, galaxy or nebula');
+    document.querySelector<HTMLInputElement>('#search input')?.focus();
+  });
+  // Leaving the phone width closes the page.
+  matchMedia('(max-width: 699px)').addEventListener('change', (e) => {
+    if (!e.matches) close();
+  });
+}
+
 // ----- Clicks, keys, popovers and tooltips ------------------------------------------------------
 
 function layerItem(layer: SkyLayer, name: string, line: string, on: boolean): string {
@@ -252,6 +310,7 @@ function onClick(e: MouseEvent): void {
     document.getElementById('sky-layers')?.hidePopover();
   }
   const open = el.closest<HTMLElement>('[data-open]');
+  if (open?.closest('#phone-menu')) document.getElementById('phone-menu')?.hidePopover();
   if (open?.dataset.open === 'share') openShare();
   if (open?.dataset.open === 'about') openAbout();
   if (el.closest('[data-show-frame]')) hideFrame(false);
@@ -308,6 +367,7 @@ function startPopovers(): void {
   const actions = () => document.getElementById('actions')?.getBoundingClientRect();
   under('places-menu', actions, 'right');
   under('guide-menu', actions, 'right');
+  under('phone-menu', () => document.querySelector('[data-guide="phone-menu"]')?.getBoundingClientRect(), 'right');
   const layers = document.getElementById('sky-layers');
   layers?.addEventListener('beforetoggle', (e) => {
     if ((e as ToggleEvent).newState !== 'open') return;
