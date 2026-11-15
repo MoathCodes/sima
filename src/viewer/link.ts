@@ -7,8 +7,13 @@ import { TARGETS } from '../core/targets.ts';
 import { SCENARIOS } from '../core/field.ts';
 import type { Det } from '../core/types.ts';
 import { MISSION_IDS, isMissionId, type MissionId } from '../explore/missions.ts';
-import type { View } from '../shell/view.ts';
 import { workspaceInHash } from '../workspace/schema.ts';
+
+/**
+ * The two views (v2.0): Discover and Expert. Also the link's `ui=` values. Defined here so the
+ * pure link code has no page dependencies; `shell/view.ts` re-exports it.
+ */
+export type View = 'discover' | 'expert';
 
 /** A link, read. Null means the link does not say. */
 export interface Link {

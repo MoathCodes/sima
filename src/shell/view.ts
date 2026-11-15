@@ -12,10 +12,10 @@
  * Discover is ready, the integrator sets `DISCOVER_FIRST` to true (B-2: a first visit opens it).
  */
 import { setLevel } from '../explore/game.ts';
-import { viewFor, type Link } from '../viewer/link.ts';
+import { viewFor, type Link, type View } from '../viewer/link.ts';
 
-/** The two views. Also the link's `ui=` values. */
-export type View = 'discover' | 'expert';
+/** The two views, Discover and Expert. Also the link's `ui=` values. */
+export type { View };
 
 /** The browser key (SPEC 8.5). */
 export const VIEW_KEY = 'sima-view';
