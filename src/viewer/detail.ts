@@ -373,13 +373,12 @@ function render(): void {
 
   if (state === 'none') {
     // MSR-6: nothing from the last place.
-    title.textContent = 'Nothing to measure here';
+    const loading = S.source === 'loading';
+    title.textContent = loading ? 'Waiting for pictures' : 'Nothing to measure here';
     kind.textContent = '';
-    head.innerHTML = `<p class="ms-sub">${esc(
-      S.source === 'loading'
-        ? 'The pictures of this spot are still loading. Measure fills in when they arrive.'
-        : 'There are no SPHEREx pictures of this spot, so there is nothing to measure. Open one of the five test targets, or move the frame to a spot with pictures.',
-    )}</p>`;
+    head.innerHTML = loading
+      ? ''
+      : `<p class="ms-sub">No SPHEREx pictures of this spot. Open a test target, or move the frame.</p>`;
     under.innerHTML = '';
     return;
   }

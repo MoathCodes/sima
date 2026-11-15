@@ -23,6 +23,17 @@ for (const t of (process.env.T ?? 'barnard').split(',')) {
     console.log(t, await page.evaluate(() => { const m = document.getElementById('measure')!; return [m.scrollHeight, m.clientHeight, m.getBoundingClientRect().bottom, document.getElementById('bar')!.getBoundingClientRect().top]; }));
     await page.click('[data-guide="all-numbers"]');
   }
+  if (process.env.SET) {
+    await page.locator('[data-open="settings"]').first().hover();
+    await page.waitForTimeout(600);
+    await page.locator('[data-open="settings"]').first().click();
+    await page.mouse.move(5, 5);
+    const b = (await page.locator('[data-open="settings"]').first().boundingBox())!;
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 4 });
+    await page.waitForTimeout(800);
+    await shot(`settings-${t}`);
+    await page.keyboard.press('Escape');
+  }
   if (process.env.POP) {
     await page.click('[data-guide="frame-info"]');
     await page.waitForTimeout(500);
