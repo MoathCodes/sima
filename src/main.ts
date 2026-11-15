@@ -15,6 +15,7 @@ import './styles/guide.css';
 import './styles/intro.css';
 import './styles/extras.css';
 import './styles/workspace.css';
+import './styles/discover.css';
 import './styles/sheet.css';
 
 import { startShell } from './shell/shell.ts';
@@ -35,6 +36,7 @@ import { startIntro } from './intro/intro.ts';
 import { startWorkspace } from './workspace/index.ts';
 import { startView } from './shell/view.ts';
 import { startGlass } from './shell/glass.ts';
+import { startDiscover } from './discover/index.ts';
 import { startPhone } from './shell/phone.ts';
 import { S } from './viewer/state.ts';
 import * as bus from './shell/bus.ts';
@@ -90,6 +92,8 @@ if (!link.embed) {
   start('sandbox', startSandbox);
 }
 start('url', () => startUrl(link));
+// v2.0: Discover's screens (lane K), once the sky, the frame and the link have started.
+if (!link.embed) start('discover', () => startDiscover(link));
 if (!link.embed) {
   const plain = !link.target && link.ra === null && !link.unknown.length && !link.view && !link.det && !link.date;
   start('workspace', () => startWorkspace(plain));
