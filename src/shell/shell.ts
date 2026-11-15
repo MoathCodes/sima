@@ -218,11 +218,15 @@ export function skyReady(load: SkyLoad): void {
   setCard(card, load, sky.pct);
   placeLoading(card);
   if (!card.hidden || sky.timer) return;
-  if (load.first && !sky.firstDone) card.hidden = false;
-  else {
+  // Placed again once shown: only then does it have a height to fit (placeLoading).
+  if (load.first && !sky.firstDone) {
+    card.hidden = false;
+    placeLoading(card);
+  } else {
     sky.timer = window.setTimeout(() => {
       sky.timer = 0;
       card.hidden = false;
+      placeLoading(card);
     }, 300);
   }
 }
@@ -232,8 +236,9 @@ export function skyReady(load: SkyLoad): void {
  * as wide as that gap allows (UX audit #9: at 1280 px a fixed width cut its words, at 1024 it
  * sat on the search field), centred on the row's middle line: in a narrow gap its words wrap to
  * three lines, which hung from the row's top reach past the 76 px line where the frame and
- * Measure hang. Under 250 px they would wrap to four, so it hangs under the search field
- * instead, left of the frame, and the chips row gives way to it (layout.ts).
+ * Measure hang. When its words wrap so far that, even centred, it reaches that line, it hangs
+ * under the search field instead, left of the frame, and the chips row gives way to it
+ * (layout.ts). While hidden it has no height: skyReady places it again once shown.
  */
 function placeLoading(card: HTMLElement): void {
   const search = document.getElementById('search')?.getBoundingClientRect();
@@ -242,13 +247,15 @@ function placeLoading(card: HTMLElement): void {
   const left = search.right + 10;
   const right = actions.left - 10;
   const room = right - left;
-  if (room >= 250) {
+  const middle = (search.top + search.bottom) / 2;
+  if (room > 0) {
     const w = Math.min(320, room);
     card.style.left = `${Math.round(left + (room - w) / 2)}px`;
-    card.style.top = `${Math.round((search.top + search.bottom) / 2)}px`;
+    card.style.top = `${Math.round(middle)}px`;
     card.style.transform = 'translateY(-50%)';
     card.style.width = `${Math.round(w)}px`;
-  } else {
+  }
+  if (room <= 0 || middle + card.offsetHeight / 2 > 76) {
     card.style.transform = '';
     const frame = frameRect();
     const end = frame ? Math.min(search.right, frame.left - 10) : search.right;
