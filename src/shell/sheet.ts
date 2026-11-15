@@ -38,6 +38,7 @@
  * The Back history itself is `SheetStack`, a plain class with no DOM, tested in Node.
  */
 import { closable, RANK } from './escape.ts';
+import { t as tr } from './i18n.ts';
 
 /**
  * The sheet's heights. `peek`: the content's first part only (down to its `[data-peek-end]`
@@ -203,7 +204,7 @@ function build(): Parts | null {
   backBtn.className = 'sheet-back';
   backBtn.dataset.guide = 'sheet-back';
   backBtn.innerHTML =
-    '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back</span>';
+    `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-icon="back"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${tr('word.back')}</span>`;
   backBtn.addEventListener('click', () => back());
   const title = document.createElement('h2');
   title.className = 'sheet-title';
@@ -370,12 +371,12 @@ function show(): void {
   else p.root.removeAttribute('aria-label');
   p.title.textContent = page ? t.label : '';
   p.head.hidden = !stack.canGoBack();
-  p.backBtn.setAttribute('aria-label', page ? `Back from ${t.label}` : 'Back');
+  p.backBtn.setAttribute('aria-label', page ? tr('sh.backFrom', { name: t.label }) : tr('word.back'));
   const open = !!t && t.height !== 'peek';
   const top = !!t && levels.indexOf(t.height as SheetHeight) === levels.length - 1;
   p.grab.hidden = !t || page;
   p.grab.setAttribute('aria-expanded', String(open));
-  p.grab.setAttribute('aria-label', top ? 'Show less' : 'Show more');
+  p.grab.setAttribute('aria-label', top ? tr('sh.less') : tr('sh.more'));
   // At peek only the content's first part shows: never a scrolled middle.
   if (t?.height === 'peek') p.body.scrollTop = 0;
   setInert(page);

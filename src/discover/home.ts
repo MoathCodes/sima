@@ -18,6 +18,7 @@ import { targetByKey } from '../core/targets.ts';
 import { MISSION_COPY, WELCOME, plainKind } from './copy.ts';
 import { esc, icon } from './ui.ts';
 import { nextMission } from './success.ts';
+import { t as tr } from '../shell/i18n.ts';
 
 const NODE_ICON: Record<MissionId, Parameters<typeof icon>[0]> = {
   runaway: 'flip',
@@ -54,23 +55,23 @@ function rowState(id: MissionId, suggested: MissionId | null): { cls: string; si
   const steps = MISSIONS[id].steps;
   const recorded = steps.filter((k) => k in p.steps[id]).length;
   if (p.learned.includes(id))
-    return { cls: 'done', side: `<span class="dsc-state-tag">${icon('check')}Done</span>`, words: 'done' };
+    return { cls: 'done', side: `<span class="dsc-state-tag">${icon('check')}${tr('dh.done')}</span>`, words: tr('dh.doneLower') };
   if (p.current === id || recorded > 0) {
     const k = Math.min(recorded + 1, steps.length);
     return {
       cls: id === suggested ? 'next going' : 'going',
       side: `<span class="dsc-state-tag">${k}/${steps.length}</span><span class="dsc-go" aria-hidden="true">${icon('play')}</span>`,
-      words: `in progress, step ${k} of ${steps.length}`,
+      words: tr('dh.inProgress', { k, n: steps.length }),
     };
   }
   if (id === suggested)
-    return { cls: 'next', side: `<span class="dsc-go" aria-hidden="true">${icon('play')}</span>`, words: 'suggested next' };
-  return { cls: '', side: `<span class="dsc-go" aria-hidden="true">${icon('play')}</span>`, words: 'not started' };
+    return { cls: 'next', side: `<span class="dsc-go" aria-hidden="true">${icon('play')}</span>`, words: tr('dh.suggested') };
+  return { cls: '', side: `<span class="dsc-go" aria-hidden="true">${icon('play')}</span>`, words: tr('dh.notStarted') };
 }
 
 /** "Simulated" first on Planet X (H3): a dashed pill before the name. */
 function name(id: MissionId): string {
-  return `${MISSIONS[id].simulated ? '<span class="dsc-pill sim">Simulated</span>' : ''}${esc(MISSION_COPY[id].name)}`;
+  return `${MISSIONS[id].simulated ? `<span class="dsc-pill sim">${tr('honest.simulated')}</span>` : ''}${esc(MISSION_COPY[id].name)}`;
 }
 
 function missionRow(id: MissionId, suggested: MissionId | null): string {
@@ -78,7 +79,7 @@ function missionRow(id: MissionId, suggested: MissionId | null): string {
   const c = MISSION_COPY[id];
   const s = rowState(id, suggested);
   return `<li><button class="dsc-m ${s.cls}" type="button" data-mission="${id}" data-guide="mission-${id}"
-      aria-label="${esc(`${m.simulated ? 'Simulated: ' : ''}${c.name}. ${c.line}. Skill: ${m.skill}, about ${c.minutes} minute${c.minutes > 1 ? 's' : ''}. ${s.words}.`)}">
+      aria-label="${esc(`${m.simulated ? `${tr('honest.simulated')}: ` : ''}${c.name}. ${c.line}. ${tr('dh.skillAbout', { skill: m.skill, n: c.minutes })}. ${s.words}.`)}">
     <span class="dsc-node" aria-hidden="true">${icon(NODE_ICON[id])}</span>
     <span class="dsc-mt"><span class="t">${name(id)}</span><span class="d">${esc(c.line)} · ${c.minutes} min</span></span>
     <span class="dsc-side">${s.side}</span>
@@ -101,7 +102,7 @@ export function renderList(el: HTMLElement, phone: boolean): void {
   const p = progress();
   const suggested = nextMission(null);
   const done = p.learned.length;
-  const count = `<span class="dsc-faint">${done} of ${MISSION_IDS.length} done</span>`;
+  const count = `<span class="dsc-faint">${tr('dh.count', { done, n: MISSION_IDS.length })}</span>`;
   el.className = `dsc-card dsc-list${phone ? ' phone' : ''}`;
   el.dataset.material = 'regular';
   if (phone) {
@@ -109,27 +110,27 @@ export function renderList(el: HTMLElement, phone: boolean): void {
     const peek = suggested
       ? `<div class="dsc-next" data-peek-end>
           <span class="dsc-node" aria-hidden="true">${icon(NODE_ICON[suggested])}</span>
-          <span class="dsc-mt"><span class="t">${name(suggested)}</span><span class="d">Mission ${n} of ${MISSION_IDS.length} · ${MISSION_COPY[suggested].minutes} min</span></span>
+          <span class="dsc-mt"><span class="t">${name(suggested)}</span><span class="d">${tr('dh.missionOf', { n, of: MISSION_IDS.length })} · ${tr('dh.min', { n: MISSION_COPY[suggested].minutes })}</span></span>
           <button class="dsc-btn primary" type="button" data-mission="${suggested}" data-guide="mission-start"
-            aria-label="${esc(`Start mission ${n}: ${MISSIONS[suggested].simulated ? 'Simulated: ' : ''}${MISSION_COPY[suggested].name}`)}">${icon('play')}Start</button>
+            aria-label="${esc(`${tr('dh.startN', { n })}: ${MISSIONS[suggested].simulated ? `${tr('honest.simulated')}: ` : ''}${MISSION_COPY[suggested].name}`)}">${icon('play')}${tr('dh.start')}</button>
         </div>`
-      : `<div class="dsc-next" data-peek-end><span class="dsc-node done" aria-hidden="true">${icon('check')}</span><span class="dsc-mt"><span class="t">All missions done</span><span class="d">Try an object below</span></span></div>`;
+      : `<div class="dsc-next" data-peek-end><span class="dsc-node done" aria-hidden="true">${icon('check')}</span><span class="dsc-mt"><span class="t">${tr('dh.allDone')}</span><span class="d">${tr('dh.tryBelow')}</span></span></div>`;
     // Find opens the search page (shell.ts listens for [data-find]): a name or RA and Dec.
     el.innerHTML = `
-      <h2 class="dsc-sr" tabindex="-1" data-k="title">Missions</h2>
-      <button class="dsc-find" type="button" data-find data-guide="sheet-find">${icon('search')}<span>Star, galaxy or RA Dec</span></button>
+      <h2 class="dsc-sr" tabindex="-1" data-k="title">${tr('word.missions')}</h2>
+      <button class="dsc-find" type="button" data-find data-guide="sheet-find">${icon('search')}<span>${tr('search.placeholder')}</span></button>
       ${peek}
-      <div class="dsc-sub-hd"><h3 class="dsc-sub">Missions</h3>${count}</div>
+      <div class="dsc-sub-hd"><h3 class="dsc-sub">${tr('word.missions')}</h3>${count}</div>
       <ul class="dsc-mlist">${MISSION_IDS.map((id) => missionRow(id, suggested)).join('')}</ul>
-      <div class="dsc-sub-hd"><h3 class="dsc-sub">Try another object</h3></div>
+      <div class="dsc-sub-hd"><h3 class="dsc-sub">${tr('dh.another')}</h3></div>
       <ul class="dsc-olist">${objectRows()}</ul>`;
     return;
   }
   el.innerHTML = `
-    <div class="dsc-list-hd"><h2 class="dsc-h" tabindex="-1" data-k="title">Missions</h2>${count}</div>
+    <div class="dsc-list-hd"><h2 class="dsc-h" tabindex="-1" data-k="title">${tr('word.missions')}</h2>${count}</div>
     <div class="dsc-scroll" data-scroll>
       <ul class="dsc-mlist">${MISSION_IDS.map((id) => missionRow(id, suggested)).join('')}</ul>
-      <div class="dsc-sub-hd"><h3 class="dsc-sub">Try another object</h3></div>
+      <div class="dsc-sub-hd"><h3 class="dsc-sub">${tr('dh.another')}</h3></div>
       <ul class="dsc-olist">${objectRows()}</ul>
     </div>`;
 }
@@ -149,12 +150,12 @@ export function renderObject(el: HTMLElement): void {
   el.className = 'dsc-card dsc-objcard';
   // The frame's header names it already: the card says what it is and what to try (its name is
   // the heading for screen readers only).
-  const name = S.label || t?.name || 'This spot';
+  const name = S.label || t?.name || tr('dh.thisSpot');
   el.innerHTML = `
     <div class="dsc-ohd">
       <h2 class="dsc-sr" tabindex="-1" data-k="title">${esc(name)}</h2>
-      <p class="dsc-kind">${esc(kind || 'A spot you chose')}</p>
-      <button class="dsc-icon-btn" type="button" data-k="close-frame" data-close data-guide="object-close" aria-label="Close the pictures" data-tip="Close">${icon('close')}</button>
+      <p class="dsc-kind">${esc(kind || tr('dh.chosenSpot'))}</p>
+      <button class="dsc-icon-btn" type="button" data-k="close-frame" data-close data-guide="object-close" aria-label="${tr('dh.closePics')}" data-tip="${tr('word.close')}">${icon('close')}</button>
     </div>
     ${tip ? `<p class="dsc-tip">${icon('bulb')}<span>${esc(tip)}</span></p>` : ''}
     <button class="dsc-btn quiet dsc-to-missions" type="button" data-k="close-frame" data-guide="object-missions" data-peek-end>${icon('arrow-right')}Missions</button>`;

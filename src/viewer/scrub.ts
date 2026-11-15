@@ -17,10 +17,16 @@
 import { S } from './state.ts';
 import { pause, setEpoch } from './playback.ts';
 import { groupDate, passName, pair } from './render.ts';
+import { intlTag, locale, t as tr } from '../shell/i18n.ts';
 import { formatDate } from '../core/astro.ts';
 import type { Group } from '../core/types.ts';
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS =
+  locale() === 'ar'
+    ? Array.from({ length: 12 }, (_, m) =>
+        new Intl.DateTimeFormat(intlTag(), { month: 'short', timeZone: 'UTC' }).format(Date.UTC(2025, m, 15)),
+      )
+    : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAY_MS = 86_400_000;
 const MJD_UNIX = 40587;
 
@@ -75,7 +81,7 @@ export function paintDates(el: HTMLElement, why = ''): void {
     const major = m % 3 === 0;
     parts.push(`<span class="ds-tick${major ? ' major' : ''}" style="left:${x(mjdOf(d))}"></span>`);
     if (major) {
-      const text = m === 0 ? `Jan ${d.getUTCFullYear()}` : MONTHS[m];
+      const text = m === 0 ? `${MONTHS[0]} ${d.getUTCFullYear()}` : MONTHS[m];
       parts.push(`<span class="ds-month" style="left:${x(mjdOf(d))}">${text}</span>`);
     }
   }
@@ -120,7 +126,9 @@ export function paintDates(el: HTMLElement, why = ''): void {
       const label =
         S.field?.monthly && first
           ? formatDate(at(first), 'month')
-          : passName(S.field, w).replace('Survey p', 'P');
+          : S.field?.monthly
+            ? passName(S.field, w)
+            : tr('pic.passShort', { n: String(w + 1) });
       parts.push(`<span class="ds-passname" style="left:${x(c)}">${label}</span>`);
     });
     groups.forEach((g, i) => {

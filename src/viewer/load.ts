@@ -47,6 +47,7 @@ import type {
   Target,
   TargetData,
 } from '../core/types.ts';
+import { targetName, t as tr } from '../shell/i18n.ts';
 
 /** The live service's address (`/api/patch` in dev), or '' when there is none (FRM-11). */
 export const LIVE_API: string = (import.meta.env.VITE_LIVE_API ?? '').replace(/\/$/, '');
@@ -154,11 +155,11 @@ async function loadShipped(target: Target, fov?: number): Promise<void> {
   const { id, signal } = begin();
   pause();
   S.target = target.key;
-  S.label = target.name;
+  S.label = targetName(target);
   S.ra = target.ra;
   S.dec = target.dec;
   S.fov = nearestFov(fov ?? S.fov);
-  startLoading('shipped', `Loading the real SPHEREx exposures of ${target.name}…`);
+  startLoading('shipped', tr('ld.loadingOf', { name: targetName(target) }));
   announce();
   try {
     const base = `${import.meta.env.BASE_URL}data/${target.key}/`;
@@ -252,7 +253,7 @@ export async function aimAt(ra: number, dec: number, fov?: number, name?: string
   }
   // A tour stop or top place fetched ahead of time (the static seed) opens from there.
   if (SEED_BASE) {
-    startLoading('queued', 'Opening real SPHEREx exposures of this spot…');
+    startLoading('queued', tr('ld.opening'));
     announce();
     if ((await showSeed(id, signal)) || !current(id)) return;
   }
@@ -265,7 +266,7 @@ export async function aimAt(ra: number, dec: number, fov?: number, name?: string
     announce();
     return;
   }
-  startLoading('queued', 'Asking for the real SPHEREx exposures of this spot…');
+  startLoading('queued', tr('ld.asking'));
   announce();
   void preview(id, signal);
   await pollLive(id, signal);

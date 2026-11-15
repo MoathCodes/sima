@@ -228,3 +228,20 @@ export function localName(name: string, arabic?: string | null): string {
 export function ltrText(text: string): string {
   return `⁦${text}⁩`;
 }
+
+/**
+ * One of the five targets' names in the current language (`tg.<key>`): "نجم برنارد", "R التنين";
+ * catalogue designations stay in Latin. Any other place keeps the name it was given.
+ */
+export function targetName(target: { key: string; name: string }): string {
+  const k = `tg.${target.key}`;
+  return k in en ? t(k as Key) : target.name;
+}
+
+/**
+ * A part of a line in its own first-strong isolate in Arabic (FSI … PDI), so parts joined with
+ * " · " keep their own order: "SPHEREx DR1", "16–18 أغسطس 2025", "1.67–1.79 µm". English as is.
+ */
+export function iso(text: string): string {
+  return current === 'ar' ? `⁨${text}⁩` : text;
+}

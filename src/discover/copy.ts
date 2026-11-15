@@ -8,6 +8,7 @@
  * (src/explore/missions.ts); these are only the words the screens show.
  */
 import type { MissionId } from '../explore/missions.ts';
+import { t } from '../shell/i18n.ts';
 
 /**
  * What Discover adds to lane H's mission words (src/explore/missions.ts: titles, step sentences,
@@ -25,37 +26,37 @@ export interface MissionCopy {
 
 export const MISSION_COPY: Readonly<Record<MissionId, MissionCopy>> = {
   runaway: {
-    name: 'The runaway',
-    line: "Catch Barnard's Star moving",
+    name: t('mission.runaway'),
+    line: t('dc.runaway.line'),
     minutes: 1,
-    labels: { play: 'Press Play', tap: 'Tap the star that jumps' },
+    labels: { play: t('dc.pressPlay'), tap: t('dc.tapJump') },
   },
   ghost: {
-    name: 'The ghost',
-    line: 'Add the pictures up to make it appear',
+    name: t('mission.ghost'),
+    line: t('dc.ghost.line'),
     minutes: 3,
-    labels: { play: 'Press Play and look inside the circle', stack: 'Press Stack', motion: 'Turn and stretch the arrow' },
+    labels: { play: t('dc.playCircle'), stack: t('dc.pressStack'), motion: t('dc.turnArrow') },
   },
   'planet-x': {
-    name: 'Planet X',
-    line: 'A pretend planet',
+    name: t('about.sec.planetX'),
+    line: t('dc.px.line'),
     minutes: 2,
-    object: "A pretend planet, against the measured noise of Barnard's Star's pictures",
-    labels: { check: 'Could SPHEREx see it at 500 AU?', closer: 'Bring it closer', bigger: 'Or make it bigger at 500 AU' },
+    object: t('dc.px.object'),
+    labels: { check: t('dc.px.check'), closer: t('dc.px.closer'), bigger: t('dc.px.bigger') },
   },
 };
 
 export const WELCOME = {
-  heading: 'This is the real infrared sky.',
-  body: "NASA's SPHEREx photographs the whole sky again and again. Compare the dates and catch stars that move.",
-  start: 'Start your first mission',
-  startLine: 'One star jumps · 1 min',
-  look: 'Look around first',
+  heading: t('dc.w.heading'),
+  body: t('dc.w.body'),
+  start: t('dc.w.start'),
+  startLine: t('dc.w.startLine'),
+  look: t('dc.w.look'),
 };
 
-export const MEASURING = 'Measuring…';
-export const LEAVE_ASK = 'Leave the mission? Your step is kept.';
-export const KEYS = 'Tab into the picture: the arrow keys move a crosshair, Enter answers. H: a hint.';
+export const MEASURING = t('hl.measuring');
+export const LEAVE_ASK = t('dc.leave');
+export const KEYS = t('dc.keys');
 
 /** SIMBAD's type, in plain words, from the shipped `kind` field ("Red dwarf (M4V)"). */
 export function plainKind(kind: string): string {

@@ -41,6 +41,7 @@ import { askLeave, hint, missionBody, openMission, render as renderMission, runn
 import { clearSuccess, showSuccess, successBody } from './success.ts';
 import { dismiss, phone, present } from './ui.ts';
 import { startField } from './field.ts';
+import { t as tr } from '../shell/i18n.ts';
 
 type Screen = 'welcome' | 'home' | 'mission' | 'success';
 
@@ -85,7 +86,7 @@ export function startDiscover(link: Link): void {
 
   listMount.dataset.card = 'discover-list';
   listMount.dataset.guide = 'discover-list';
-  listMount.setAttribute('aria-label', 'Missions');
+  listMount.setAttribute('aria-label', tr('word.missions'));
   missionMount.dataset.card = 'mission';
   missionMount.dataset.guide = 'mission';
   successMount.dataset.card = 'mission-success';
@@ -93,7 +94,7 @@ export function startDiscover(link: Link): void {
   welcome.id = 'dsc-welcome';
   welcome.dataset.card = 'dsc-welcome';
   welcome.dataset.guide = 'discover-welcome';
-  welcome.setAttribute('aria-label', 'Welcome');
+  welcome.setAttribute('aria-label', tr('di.welcome'));
   welcome.hidden = true;
   // Focus order (section 10): the top row, then the card that says what to do, then the picture.
   // The mount points are last in index.html; they are moved in front of the frame.
@@ -183,7 +184,7 @@ function startPlaceCard(): void {
     const open = !card.hidden;
     if (open && phone() && !inSheet && getView() === 'discover') {
       inSheet = true;
-      openSheet(card, { height: 'half', label: 'Place', back: true });
+      openSheet(card, { height: 'half', label: tr('di.place'), back: true });
     } else if (!open && inSheet && sheetContent() === card) back();
   }).observe(card, { attributes: true, attributeFilter: ['hidden'] });
   onSheet(() => {
@@ -253,7 +254,7 @@ function sync(): void {
     if (phone()) delete welcome.dataset.card;
     else welcome.dataset.card = 'dsc-welcome';
     // Short phones: the welcome peeks (heading and Start), so the globe stays large.
-    if (phone()) present(stub, welcome, { height: innerHeight < 720 ? 'peek' : 'half', label: 'Welcome' });
+    if (phone()) present(stub, welcome, { height: innerHeight < 720 ? 'peek' : 'half', label: tr('di.welcome') });
     else {
       dismiss(stub, welcome);
       if (welcome.parentElement !== document.body) (listMount.parentElement ?? document.body).insertBefore(welcome, listMount);
@@ -261,17 +262,17 @@ function sync(): void {
     shown = welcome;
   } else if (want === 'home') {
     // Phones: the globe first; the sheet peeks with Find and the next mission (redesign).
-    present(listMount, list, { height: 'peek', label: 'Missions' });
+    present(listMount, list, { height: 'peek', label: tr('word.missions') });
     shown = list;
   } else if (want === 'object') {
     renderObject(objectCard);
-    present(objectStub, objectCard, { height: 'peek', label: S.label || 'Pictures' });
+    present(objectStub, objectCard, { height: 'peek', label: S.label || tr('di.pictures') });
     shown = objectCard;
   } else if (want === 'mission') {
     present(missionMount, missionBody(), { height: 'peek', label: `Mission: ${running() ?? ''}` });
     shown = missionBody();
   } else {
-    present(successMount, successBody(), { height: 'half', label: 'Mission complete' });
+    present(successMount, successBody(), { height: 'half', label: tr('di.complete') });
     shown = successBody();
   }
   place();

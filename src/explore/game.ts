@@ -21,6 +21,7 @@ import { detail } from '../viewer/detail.ts';
 import { on, emit } from '../shell/bus.ts';
 import { openPlace } from '../shell/shell.ts';
 import { icon } from '../shell/icons.ts';
+import { targetName, t as tr } from '../shell/i18n.ts';
 import { fitMotion } from '../core/fit.ts';
 import { formatDate } from '../core/astro.ts';
 import { targetByKey } from '../core/targets.ts';
@@ -74,27 +75,27 @@ export interface Starter {
 /** The starters, in the order they are offered. Words from the reference screenshots. */
 export const STARTERS: Readonly<Record<Exclude<StarterId, 'too-faint'>, Starter>> = Object.freeze({
   runaway: {
-    title: 'Runaway star',
-    line: 'One dot jumps. Tap it.',
+    title: tr('ec.1'),
+    line: tr('ec.2'),
     target: 'barnard',
     simulated: false,
   },
   'made-of': {
-    title: 'What is it made of?',
-    line: 'Watch the dips appear. Those are water and methane.',
+    title: tr('ec.5'),
+    line: tr('gm.dips'),
     target: 'eps-indi-b',
     simulated: false,
   },
   ghost: {
-    title: 'The ghost',
-    line: 'It is hard to pick out in a single picture. Add pictures along its path.',
+    title: tr('gm.ghost'),
+    line: tr('gm.ghostLine'),
     target: 'wise-0855',
     simulated: false,
   },
-  'warm-up': { title: 'Warm-up', line: '20-second practice', target: 'warm-up', simulated: true },
+  'warm-up': { title: tr('ec.21'), line: tr('gm.warmLine'), target: 'warm-up', simulated: true },
   'planet-x': {
-    title: 'The hidden planet',
-    line: 'Made up: it jumps',
+    title: tr('ec.25'),
+    line: tr('gm.pxLine'),
     target: 'planet-x',
     simulated: true,
   },
@@ -170,7 +171,7 @@ export function startGame(): void {
     pick: (p) => (getView() === 'discover' ? (discoverPick?.(p) ?? false) : tapped(p)),
     aim: ringNow,
     focus: renderTask,
-    name: () => S.field?.target?.name ?? task()?.title ?? '',
+    name: () => (S.field?.target ? targetName(S.field.target) : (task()?.title ?? '')),
     missed: MISSED,
   });
   watch(['target', 'field', 'source', 'groups', 'level'], renderTask);
@@ -396,7 +397,7 @@ function renderTask(): void {
   const hint = box.querySelector<HTMLElement>('[data-hint]');
   if (hint) {
     hint.querySelector('span')!.textContent = label ?? '';
-    hint.dataset.tip = label === 'Show me' ? 'Rings it; you tap it' : 'A little more help';
+    hint.dataset.tip = label === tr('ms.showMe') ? tr('gm.tipShow') : tr('gm.tipMore');
     hint.addEventListener('click', () => nextHint());
     if (focused) hint.focus();
   }
@@ -427,12 +428,12 @@ function showResult(box: HTMLElement, t: TaskCopy & { key: string; simulated: bo
   // Explore: Measure says it in full beside the frame, and there the frame is too narrow for it.
   const say = found && moved && S.level === 'explore';
   cap.innerHTML = `${say ? '<span class="task-moved"></span> ' : ''}<span class="term" tabindex="0"></span>${
-    t.key === 'planet-x' ? ' · contrast raised in the close-up only' : ''
+    t.key === 'planet-x' ? ` · ${tr('gm.contrast')}` : ''
   }`;
   const said = cap.querySelector<HTMLElement>('.task-moved');
   if (said) said.textContent = moved;
   const term = cap.querySelector<HTMLElement>('.term')!;
-  term.textContent = t.simulated ? 'Rings: where the simulation put it' : 'Rings: catalogue predictions';
+  term.textContent = t.simulated ? tr('gm.ringsSim') : tr('gm.ringsCat');
   term.dataset.tip = where;
 }
 
@@ -515,48 +516,34 @@ async function measureResult(
     `<span class="term" tabindex="0" data-tip="${esc(tip)}">${esc(text)}</span>`;
   const only = (html: string) => ({ html, moved: '' });
   if (t.simulated) {
-    const what = t.key === 'planet-x' ? 'the made-up planet' : 'the made-up moving dot';
     return only(
-      term(
-        `You found ${what}`,
-        'Practice pictures are made up. They are never measured or mixed with real results.',
-      ),
+      term(t.key === 'planet-x' ? tr('gm.foundPlanet') : tr('gm.foundDot'), tr('gm.practiceTip')),
     );
   }
   if (t.kind === 'variable') {
-    return only(
-      term(
-        'Its brightness changes between dates',
-        'Measure shows by how much, measured from the pixels of each exposure.',
-      ),
-    );
+    return only(term(tr('gm.varies'), tr('gm.variesTip')));
   }
   if (t.kind === 'faint') {
-    return only(
-      term(
-        'Stacked along its path',
-        'Measure says how clearly it shows in each detector once the dates are added up.',
-      ),
-    );
+    return only(term(tr('gm.stacked'), tr('gm.stackedTip')));
   }
   const pending = targetMeasurements();
-  if (!pending) return only(term('Not measured', 'This patch has no real exposures to measure.'));
+  if (!pending) return only(term(tr('honest.notMeasured'), tr('gm.noReal')));
   try {
     const ms = await pending;
     const fit = fitMotion(ms, S.field?.target ?? null);
-    if (!fit.ok) return only(term('Not measured', fit.reason ?? 'The motion could not be measured.'));
+    if (!fit.ok) return only(term(tr('honest.notMeasured'), fit.reason ?? tr('gm.noFit')));
     const pill =
       fit.matches === true
-        ? '<span class="pill good">matches catalogue</span>'
+        ? `<span class="pill good">${tr('hl.matches')}</span>`
         : fit.matches === false
-          ? '<span class="pill warn">differs from catalogue</span>'
-          : '<span class="pill">no catalogue value</span>';
+          ? `<span class="pill warn">${tr('hl.differs')}</span>`
+          : `<span class="pill">${tr('gm.noCat')}</span>`;
     const cat = fit.catalogue
-      ? ` ${fit.catalogue.source.startsWith('Gaia DR3') ? 'Gaia DR3' : 'The catalogue'} says ${fit.catalogue.total.toFixed(2)}″/yr.`
+      ? ` ${tr('gm.catSays', { src: fit.catalogue.source.startsWith('Gaia DR3') ? 'Gaia DR3' : tr('gm.theCat'), v: `${fit.catalogue.total.toFixed(2)}″/yr` })}`
       : '';
     const html = `<b>${term(
       `${fit.total.toFixed(2)}″/yr`,
-      `Moves ${fit.total.toFixed(2)} ± ${fit.totalErr.toFixed(2)} arcseconds a year, measured from the pixels of ${fit.used} of ${fit.of} real exposures.${cat}`,
+      `${tr('gm.moves', { v: `${fit.total.toFixed(2)} ± ${fit.totalErr.toFixed(2)}`, used: String(fit.used), of: String(fit.of) })}${cat}`,
     )}</b> ${pill}`;
     // How far that is between the first and last date on the date scale, the step the rings show.
     const field = S.field;
@@ -582,7 +569,7 @@ async function measureResult(
     };
   } catch (err) {
     console.warn('game: measuring the target failed', err);
-    return only(term('Not measured', 'The measurement could not run on this page.'));
+    return only(term(tr('honest.notMeasured'), tr('gm.noRun')));
   }
 }
 
