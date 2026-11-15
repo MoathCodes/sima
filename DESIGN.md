@@ -323,7 +323,9 @@ Stacking order, from the back: sky, marks on the sky, sky notes, frame and rail,
 
 **Measure panel.** Its width is `clamp(380px, 40vw, 760px)`. At 1600px and wider it splits in two: the chart on the left, numbers and lists in a 300px column on the right.
 
-**Narrower windows.** Below 1420px the wavelength's plain name is hidden. Below 1180px the date scale gets shorter. Below 900px the bar wraps onto several rows, button labels in the top row collapse to icons, and the pointer note is hidden. Phones are not designed yet.
+**Narrower windows.** Below 1420px the wavelength's plain name is hidden. Below 1180px the date scale gets shorter. Below 900px the bar wraps onto several rows, button labels in the top row collapse to icons, and the pointer note is hidden.
+
+**Phones (under 700px wide, lane M).** The globe comes first. With the frame closed, the globe fills the screen and a bottom sheet sits over its edge: peek (Find, "Star, galaxy or RA Dec", and the next mission with **Start**), half, or full; a tap on the grabber steps up, a drag moves it. The frame opens only for a mission, an object or a found place: then it is the screen under the top row (picture as wide as the screen, Play and the dates, the views) and the sheet under it holds that thing's card (the mission step and Hint, or the object's name, kind and what to try, with ✕ back to the globe). The field size is one small button on the frame ("6′"). The picture never goes under 240px: a taller card scrolls inside the sheet. Place cards from the sky open in the sheet. No page scroll except inside the sheet; a phone on its side with the frame open uses one scrolling column.
 
 **Embed mode.** With `embed=1` only the frame, the bar and Measure show, stacked in the page flow on a card background, with no shadows and no rounded outer corners.
 
@@ -439,6 +441,10 @@ One ruled scale for both the sky map and the frame, from 0.75 to 5.0 µm.
 - **Pins:** saved and starter places are 14px pale rings with a 12px name. The ring turns magenta on hover.
 - **Sky notes:** one-line notes on a see-through dark strip (`rgba(5,7,13,.82)`) in pale text. They say what the map is, in words.
 
+### Discover's left column (desktop)
+
+The mission list, a mission card or a success card sits at the left. A place card opened from the sky takes the same place while it is open (the column's card steps aside and returns when it closes), so it never covers it. Rows are one line under the name; no explanatory sentences by default (the keys sit behind a keyboard icon); Expert is only the switch in the top row.
+
 ### Welcome card and tip card
 The welcome card is a 372px card with the 25px heading, one sentence, and a short list of starting points. The first choice is the primary: ultramarine fill, white text. It settles 14px into place (see Motion). The tip card is a small ink-filled card with card-coloured text and a pointer under it. Neither moves under reduced motion.
 
@@ -454,6 +460,7 @@ Motion says where a thing came from and where it went. It is short and it never 
 - **The frame glides** (0.42s) when Measure opens beside it or the window changes size. The glide is a transform, so it still runs while the page builds the measurements. The controls that come with Measure (or with Explore) fade in just after. While the user drags or sizes the frame, it follows the pointer with no delay.
 - **The picture slides, never jumps,** when the lines above it change height (a name on two lines, a longer task, the loading line): 0.26s with the same curve. The frame is placed once, at its final height, before it glides.
 - **The sky changes wavelength by cross-fade** (0.26s): the new map comes up over the old one once its tiles are in. It never cuts to grey.
+- **Phones (lane M):** the sheet glides between heights in `--dur-3` and follows a drag on its grabber; the frame rises in (fade, 24px, 97%) when a mission or object opens it, and its picture and rows glide to their new places when the sheet's peek grows (a hint). A new mission step slides in from the right; a hint rises 8px. All by transform from the old place (FLIP), so the layout is set once.
 - **Pictures in the frame swap with hard cuts**, never a fade (see Data windows).
 - **Loading** shows only when it lasts: the sky's loading card after 0.3s, the frame's busy cover after 0.25s, so a quick load never flashes. The first sky map is the exception: its card is on screen from the first paint. A card keeps its words while it fades out, and its percentage never goes back. When the count is known (a live fetch: "5 of 12"), the bar fills to match, and a line says the wait can take a few minutes and the sky works meanwhile.
 - **Reduced motion:** everything that slides, grows or glides only fades; the loading bars stand still.
