@@ -97,17 +97,27 @@ const paintTimes: number[] = [];
 
 /** The view at the last move, so a redraw of only the patch is not taken for a move. */
 let lastView = '';
+/** When the view last moved (ms): labels are only added once it has stopped (layout.ts). */
+let lastMove = 0;
+/** The side each label took in the last paint, so it keeps it (layout.ts `prev`). */
+let sides = new Map<LayoutInput, number>();
+const REST_MS = 200;
 
 onZoom((c) => {
-  paint();
   // The sky also redraws when only the patch changes (each picture during playback): the view
   // has not moved, so "In this view" lists are not rebuilt (their buttons would keep changing
   // under the pointer).
   const view = `${c.ra} ${c.dec} ${c.fov} ${c.width} ${c.height}`;
-  if (view === lastView) return;
+  const moved = view !== lastView;
+  if (moved) lastMove = performance.now();
+  paint();
+  if (!moved) return;
   lastView = view;
   clearTimeout(restTimer);
-  restTimer = window.setTimeout(() => restFns.forEach((fn) => fn()), 200);
+  restTimer = window.setTimeout(() => {
+    paint(); // the view has stopped: labels may be added now
+    restFns.forEach((fn) => fn());
+  }, REST_MS);
 });
 
 registerDots({
@@ -468,14 +478,19 @@ function paint(): void {
         },
       ]
     : avoid;
+  const both = pins.length ? [...pinInputs, ...inputs] : inputs;
   const all = layout(
-    pins.length ? [...pinInputs, ...inputs] : inputs,
+    both,
     view,
     c.width,
     c.height,
     c.fov,
     boxes,
+    sides,
+    performance.now() - lastMove >= REST_MS - 20,
   );
+  sides = new Map();
+  for (const p of all) if (p.side >= 0) sides.set(both[p.index] as LayoutInput, p.side);
   pinPlaced = all.filter((p) => p.index < pins.length);
   placed = pins.length
     ? all.filter((p) => p.index >= pins.length).map((p) => ({ ...p, index: p.index - pins.length }))

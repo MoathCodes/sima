@@ -171,3 +171,21 @@ test(`laying out all ${places.length} places takes well under 4 ms (PLC-8)`, () 
   );
   assert.ok(median < 2, `median ${median} ms`);
 });
+
+test('labels stay calm while the view moves: kept sides, nothing new until it stops', () => {
+  const all = inputs(null);
+  const before = layout(all, viewOf(269.45, 4.69, 30), W, H, 30, []);
+  const sides = new Map(before.filter((p) => p.side >= 0).map((p) => [all[p.index]!, p.side]));
+  assert.ok(sides.size > 3);
+  // A small zoom in, as one wheel step: no label changes side and none is added.
+  const moving = layout(all, viewOf(269.45, 4.69, 26), W, H, 26, [], sides, false);
+  for (const p of moving) {
+    if (p.side < 0) continue;
+    assert.equal(sides.get(all[p.index]!), p.side, 'a label flipped side mid-zoom');
+  }
+  // Once the view stops, labels may be added; the kept ones still keep their side.
+  const kept = new Map(moving.filter((p) => p.side >= 0).map((p) => [all[p.index]!, p.side]));
+  const rest = layout(all, viewOf(269.45, 4.69, 26), W, H, 26, [], kept, true);
+  for (const [d, side] of kept) assert.equal(rest.find((p) => all[p.index] === d)?.side, side);
+  assert.ok(rest.filter((p) => p.side >= 0).length >= kept.size);
+});
