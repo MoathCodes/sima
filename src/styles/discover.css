@@ -1000,6 +1000,11 @@ html[data-layout^='phone'] .dsc-keys,
 #sheet [data-k='picture'] {
   display: none;
 }
+.dsc-to-missions {
+  margin-block-start: 8px;
+  margin-inline-start: -10px;
+  color: var(--v2-on-glass-2);
+}
 /* Planet X: while the sandbox card is open right under the step, its "show" button has no job. */
 #sheet .sheet-item:has(#sandbox:not([hidden])) [data-k='sandbox'] {
   display: none;

@@ -157,5 +157,5 @@ export function renderObject(el: HTMLElement): void {
       <button class="dsc-icon-btn" type="button" data-k="close-frame" data-close data-guide="object-close" aria-label="Close the pictures" data-tip="Close">${icon('close')}</button>
     </div>
     ${tip ? `<p class="dsc-tip">${icon('bulb')}<span>${esc(tip)}</span></p>` : ''}
-    <span data-peek-end></span>`;
+    <button class="dsc-btn quiet dsc-to-missions" type="button" data-k="close-frame" data-guide="object-missions" data-peek-end>${icon('arrow-right')}Missions</button>`;
 }

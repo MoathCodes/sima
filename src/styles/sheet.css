@@ -238,11 +238,13 @@ html[data-layout='phone-fit'] #frame {
 html[data-layout='phone-fit'] #frame::after {
   content: '';
   position: absolute;
-  top: 100%;
-  right: 0;
-  left: 0;
+  inset: 100% 0 auto;
   height: var(--frame-ext, 0px);
+  padding: 0;
+  border-radius: 0;
   background: var(--v2-st-bg);
+  /* frame.css draws the desktop rim with this pseudo-element and a mask: not here. */
+  mask: none;
   pointer-events: none;
 }
 /* The fit layout has no bar: the frame carries Play and the date chips (11.1). */
