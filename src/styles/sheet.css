@@ -216,8 +216,8 @@ html[data-layout^='phone'] .sheet-item:not([hidden]) {
 }
 
 /* ----- Phone fit, frame open: the frame is the screen under the top row ---------------------
-   The picture as wide as the screen allows; under it the dates (lane E's control, its own row),
-   then Play and the views. Previous and next: the dates control steps itself. */
+   The picture as wide as the screen allows; under it Play and the dates (lane E's row), then the
+   views. */
 
 html[data-layout='phone-fit'] #frame {
   position: fixed !important;
@@ -284,39 +284,12 @@ html[data-layout^='phone'][data-view='discover'] #frame-load:not(:has(.load-text
 html[data-layout^='phone'][data-view='discover'] #frame-pic {
   margin-top: 6px;
 }
-/* Dates, then Play and the views. */
+/* Play and the dates (lane E's row, chips.ts: styled there), then the views, each full width. */
 html[data-layout^='phone'][data-view='discover'] #frame-play.fp {
-  display: grid;
-  grid-template-columns: 48px 1fr;
-  grid-template-areas:
-    'chips chips'
-    'play views';
-  gap: 6px;
   margin-top: 6px;
 }
-html[data-layout^='phone'][data-view='discover'] .fp-controls {
-  grid-area: play;
-  display: block;
-}
-html[data-layout^='phone'][data-view='discover'] .fp-step {
-  display: none;
-}
-html[data-layout^='phone'][data-view='discover'] .fp-play {
-  width: 48px;
-  height: 48px;
-}
-/* The dates (lane E's sequence control, chips.ts): placed here, styled there. */
-html[data-layout^='phone'][data-view='discover'] .fp-chips {
-  grid-area: chips;
-  min-width: 0;
-}
-/* The views sit beside Play, in the row under the dates. */
 html[data-layout^='phone'][data-view='discover'] #frame-views {
-  position: absolute;
-  right: 12px;
-  bottom: 8px;
-  left: calc(12px + 48px + 6px);
-  margin: 0;
+  margin: 6px 0 0;
   flex-wrap: nowrap;
 }
 html[data-layout^='phone'][data-view='discover'] #frame-views > button {
