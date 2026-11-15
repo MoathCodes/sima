@@ -1031,7 +1031,8 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
 /* The data line under the name: in Discover and on phones (H2). Elsewhere the line under the
    views says it. */
 .frame-agency,
-.frame-prov {
+.frame-prov,
+.frame-rel {
   display: none;
 }
 :is(html[data-view='discover'], html[data-layout^='phone']) .frame-agency {
@@ -1128,13 +1129,12 @@ html[data-view='discover'] .frame-views > button {
 /* The date strip (chips.ts): thin to look at, 48 px tall to touch. The date on screen is written
    above its dot; the ring and the date slide there (transform only, redesign item 4). */
 .fp-seq {
-  --inset: 8px;
+  --inset: 12px;
   position: relative;
   flex: 1 1 auto;
   min-width: 96px;
   height: 48px;
   overflow: clip;
-  overflow-clip-margin: 4px;
   touch-action: none;
   cursor: pointer;
   border-radius: var(--r-window);
@@ -1252,7 +1252,7 @@ html[data-view='discover'] .frame-views > button {
    target is at least 48 px. Picture tools, Measure's
    button and hiding the frame are not offered on a phone (Measure is in the column, 11.5). */
 html[data-layout^='phone'] #bar,
-html[data-layout^='phone'] .frame-head :is([data-tools], [data-measure], [data-hide]) {
+html[data-layout^='phone'] .frame-head :is([data-tools], [data-measure], [data-hide], .frame-info) {
   display: none;
 }
 html[data-layout^='phone'] .frame-head {
@@ -1320,6 +1320,9 @@ html:not([data-view='discover']):not([data-layout^='phone']) {
   /* The source keeps its words; the release and coordinates give way first. */
   & .frame-source > .term {
     flex: none;
+  }
+  & .frame-rel {
+    display: inline;
   }
   & :is(.frame-rel, .frame-coords) {
     flex: 0 1 auto;

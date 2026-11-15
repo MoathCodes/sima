@@ -967,3 +967,23 @@ html[data-layout^='phone'] .tl-original {
   min-width: 48px;
   min-height: 48px;
 }
+
+/* Short windows (1366×650 with browser chrome): the stats rows close up and the aside gives the
+   found list what is left, so Measure still fits with no inner scroll (MSR-8). */
+@media (max-height: 760px) {
+  .ms-stats {
+    gap: 0 10px;
+  }
+  .ms-stats dt,
+  .ms-stats dd {
+    padding-bottom: 1px;
+    line-height: 1.3;
+  }
+  .ms-stats .ms-group {
+    padding-top: 3px;
+  }
+  .ms-aside {
+    gap: 8px;
+    overflow: hidden;
+  }
+}

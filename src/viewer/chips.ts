@@ -133,9 +133,9 @@ function startSeq(box: HTMLElement): void {
   let dragging = false;
   const pick = (x: number) => {
     const r = box.getBoundingClientRect();
-    const inner = r.width - 16; // 8 px inset each side, as the dots
+    const inner = r.width - 24; // 12 px inset each side, as the dots
     if (!S.groups.length || inner <= 0) return;
-    const f = (x - r.left - 8) / inner;
+    const f = (x - r.left - 12) / inner;
     const { at } = places();
     let best = 0;
     at.forEach((a, i) => {
