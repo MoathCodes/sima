@@ -233,6 +233,18 @@ html[data-layout='phone-fit'] #frame {
   background: var(--v2-st-bg) !important;
   --pic-max: var(--pic) !important;
 }
+/* The frame's surface reaches down to the sheet (phone.ts sets --frame-ext), drawn below the
+   frame so its measured height stays its own. */
+html[data-layout='phone-fit'] #frame::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: var(--frame-ext, 0px);
+  background: var(--v2-st-bg);
+  pointer-events: none;
+}
 /* The fit layout has no bar: the frame carries Play and the date chips (11.1). */
 html[data-layout='phone-fit'] #bar {
   display: none !important;
