@@ -599,7 +599,7 @@ const DIP_MS = 150;
 /**
  * The map's box: the whole window in Expert. In Discover, the free space beside Discover's
  * panels, so the globe is centred there: right of the left column on desktop, between the top
- * row and the sheet on phones.
+ * row and the sheet's resting room on phones.
  */
 function freeBox(): { x: number; y: number; w: number; h: number } {
   const W = innerWidth;
@@ -617,9 +617,10 @@ function freeBox(): { x: number; y: number; w: number; h: number } {
   const note = document.getElementById('sky-note');
   const noteBottom = note?.checkVisibility() ? note.getBoundingClientRect().bottom + 8 : 0;
   const y = Math.round(Math.max(PHONE_TOP, Math.min(noteBottom, H / 3)));
-  const sheet = document.getElementById('sheet');
-  const top = sheet?.checkVisibility() ? sheet.getBoundingClientRect().top : H;
-  const bottom = Math.max(y + 200, Math.min(H, top));
+  // Above a fixed room for the sheet at rest (a third of the screen, the welcome's peek), not
+  // the sheet's live edge: the intro lands the globe where it stays, and the sheet slides over
+  // it when pulled up, without moving it.
+  const bottom = Math.max(y + 200, H - Math.round(H / 3));
   return { x: 0, y, w: W, h: Math.round(bottom - y) };
 }
 
@@ -674,7 +675,7 @@ function swapBox(b: { x: number; y: number; w: number; h: number }): void {
 
 function watchBox(): void {
   addEventListener('resize', () => updateBox(false));
-  // Discover or Expert (shell/view.ts sets html[data-view]); the phone sheet's height.
+  // Discover or Expert (shell/view.ts sets html[data-view]).
   new MutationObserver(() => {
     updateBox(true);
     note();
@@ -690,14 +691,6 @@ function watchBox(): void {
       attributeFilter: ['hidden'],
     });
   addEventListener('resize', () => requestAnimationFrame(() => updateBox(false)));
-  const sheet = document.getElementById('sheet');
-  if (sheet) {
-    new MutationObserver(() => updateBox(true)).observe(sheet, {
-      attributes: true,
-      attributeFilter: ['hidden', 'data-height', 'style', 'class'],
-    });
-    new ResizeObserver(() => updateBox(true)).observe(sheet);
-  }
 }
 
 /** The map's box on screen (the globe is centred in it), CSS px from the window's top left. */
