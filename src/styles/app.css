@@ -1288,19 +1288,23 @@ samp {
   font: var(--text-group);
 }
 
-/* Panel motion: fade in 0.18s and settle into place in 0.32s, leave the same way, while the
-   hidden attribute (or a closed popover) still decides what is shown. Set --settle-x and
-   --settle-y on the element for the direction it comes from (default: 8px from below). */
+/* Panel motion: fade in (--dur-2) and settle into place (--dur-3); leave faster (--dur-out)
+   and take no clicks while leaving, while the hidden attribute (or a closed popover) still
+   decides what is shown. Set --settle-x and --settle-y on the element for the direction it
+   comes from (default: 8px from below). */
 .appear {
   transition-property: opacity, translate, display, overlay;
   transition-duration: var(--t-fade), var(--t-settle), var(--t-settle), var(--t-settle);
-  transition-timing-function: linear, var(--ease-out), linear, linear;
+  transition-timing-function: var(--ease-out), var(--ease-out), linear, linear;
   transition-behavior: allow-discrete;
 }
 .appear[hidden],
 .appear[popover]:not(:popover-open) {
   opacity: 0;
   translate: var(--settle-x, 0) var(--settle-y, var(--settle));
+  pointer-events: none;
+  transition-duration: var(--dur-out);
+  transition-timing-function: var(--ease-in), var(--ease-in), linear, linear;
 }
 @starting-style {
   .appear:not([hidden]),
@@ -1658,13 +1662,15 @@ html[data-view='discover'] #top-left {
    - Leaving is faster (--dur-out, ease-in), and a leaving card takes no clicks, so it never
      holds up the next press, Escape or focus.
    Measure has its own rule above (it waits for the frame's glide). */
-:is(.popover[popover], #tooltip) {
+.popover[popover],
+.tooltip[popover] {
   transition-property: opacity, translate, display, overlay;
   transition-duration: var(--dur-2);
   transition-timing-function: var(--ease-out), var(--ease-out), linear, linear;
   transition-behavior: allow-discrete;
 }
-:is(.popover[popover], #tooltip):not(:popover-open) {
+.popover[popover]:not(:popover-open),
+.tooltip[popover]:not(:popover-open) {
   opacity: 0;
   translate: var(--pop-x, 0) var(--pop-y, -6px);
   pointer-events: none;
@@ -1672,7 +1678,8 @@ html[data-view='discover'] #top-left {
   transition-timing-function: var(--ease-in), var(--ease-in), linear, linear;
 }
 @starting-style {
-  :is(.popover[popover], #tooltip):popover-open {
+  .popover[popover]:popover-open,
+  .tooltip[popover]:popover-open {
     opacity: 0;
     translate: var(--pop-x, 0) var(--pop-y, -6px);
   }
@@ -1681,7 +1688,7 @@ html[data-view='discover'] #top-left {
   --pop-x: -6px;
   --pop-y: 0px;
 }
-#tooltip {
+.tooltip {
   --pop-y: -3px;
 }
 :is(

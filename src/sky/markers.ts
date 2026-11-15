@@ -603,7 +603,7 @@ function chip(ctx: CanvasRenderingContext2D, b: Box, solid: boolean): void {
   const w = b.right - b.left + 7;
   const h = b.bottom - b.top + 2;
   ctx.save();
-  ctx.fillStyle = solid ? 'rgb(26 26 29 / 0.97)' : 'rgb(26 26 29 / 0.86)';
+  ctx.fillStyle = solid ? 'rgb(22 22 24 / 0.97)' : 'rgb(22 22 24 / 0.86)';
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, h / 2);
   ctx.fill();
