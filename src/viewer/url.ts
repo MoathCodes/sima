@@ -5,113 +5,23 @@
  * Parameters: `ra`, `dec` (degrees), `fov` (arcminutes), `det` (`D1` to `D6`, or `color`),
  * `view` (a Mode), `target` (a shipped target or practice key), `date` (the picture on screen,
  * YYYY-MM-DD in UTC), `pic` (picture settings, core/picture.ts `encodePic`) and `embed=1`.
+ * v2.0 adds `ui` (`discover` or `expert`) and `mission` (`runaway`, `ghost`, `planet-x`); see
+ * `viewFor` for which view a link opens. Progress is never in a link (B-10).
  * A parameter or value that is not understood is named in a note, never ignored silently.
  */
-import { S, VIEWS, type Mode } from './state.ts';
+import { S, VIEWS } from './state.ts';
 import { aimAt, loadTarget } from './load.ts';
 import { pause, setEpoch } from './playback.ts';
 import { showColour } from './strip.ts';
 import { decodePic, encodePic } from '../core/picture.ts';
-import { TARGETS } from '../core/targets.ts';
-import { SCENARIOS } from '../core/field.ts';
 import { emit, on } from '../shell/bus.ts';
 import { toast } from '../shell/toast.ts';
 import { setLevel } from '../explore/game.ts';
-import type { Det, Group } from '../core/types.ts';
+import type { Group } from '../core/types.ts';
+import { MJD_UNIX, dayToMjd, type Link } from './link.ts';
 
-/** A link, read. Null means the link does not say. */
-export interface Link {
-  /** Degrees. */
-  ra: number | null;
-  dec: number | null;
-  /** Arcminutes. */
-  fov: number | null;
-  det: Det | 'color' | null;
-  view: Mode | null;
-  target: string | null;
-  /** YYYY-MM-DD (UTC), as written. */
-  date: string | null;
-  /** Encoded picture settings, as written. */
-  pic: string | null;
-  /** `embed=1`: only the frame, the bar and Measure (GEN-3). */
-  embed: boolean;
-  /** Parameters or values that were not understood, as `name=value`, for the note. */
-  unknown: string[];
-}
-
-const MODES: readonly Mode[] = ['flip', 'swipe', 'two', 'diff', 'stack', 'trail'];
-// `intro` is read by index.html and src/intro/intro.ts (play or skip the opening intro).
-const KNOWN = new Set(['ra', 'dec', 'fov', 'det', 'view', 'target', 'date', 'pic', 'embed', 'intro']);
-const MJD_UNIX = 40587; // MJD of 1970-01-01
-
-/**
- * Reads a link's parameters and checks each value's range. Pure.
- * @param search `location.search`, with or without the leading `?`.
- */
-export function readLink(search: string): Link {
-  const q = new URLSearchParams(search);
-  const unknown: string[] = [];
-  const bad = (k: string, v: string, why = '') =>
-    unknown.push(`${k}=${v}${why ? ` (${why})` : ''}`);
-  for (const k of new Set(q.keys())) {
-    if (!KNOWN.has(k)) bad(k, q.get(k) ?? '');
-    else if (q.getAll(k).length > 1) unknown.push(`${k} (given more than once; the first is used)`);
-  }
-  const num = (k: string, lo: number, hi: number, why: string): number | null => {
-    const v = q.get(k);
-    if (v === null) return null;
-    const n = v.trim() === '' ? Number.NaN : Number(v);
-    if (Number.isFinite(n) && n >= lo && n <= hi) return n;
-    bad(k, v, why);
-    return null;
-  };
-
-  let ra = num('ra', 0, 360, 'degrees, 0 to 360');
-  let dec = num('dec', -90, 90, 'degrees, −90 to 90');
-  if ((ra === null) !== (dec === null)) {
-    unknown.push(ra === null ? 'dec (needs ra too)' : 'ra (needs dec too)');
-    ra = dec = null;
-  }
-  if (ra === 360) ra = 0;
-  const fov = num('fov', 1, 600, 'arcminutes, 3 to 48');
-
-  const detText = q.get('det');
-  let det: Det | 'color' | null = null;
-  if (detText !== null) {
-    const m = /^d?([1-6])$/i.exec(detText.trim());
-    det = /^colou?r$/i.test(detText.trim()) ? 'color' : m ? (Number(m[1]) as Det) : null;
-    if (det === null) bad('det', detText, 'D1 to D6, or color');
-  }
-
-  const viewText = q.get('view');
-  const view = MODES.find((m) => m === viewText) ?? null;
-  if (viewText !== null && view === null) bad('view', viewText, MODES.join(', '));
-
-  const targetText = q.get('target');
-  const known = (k: string) => TARGETS.some((t) => t.key === k) || Object.hasOwn(SCENARIOS, k);
-  const target = targetText !== null && known(targetText) ? targetText : null;
-  if (targetText !== null && target === null) bad('target', targetText, 'not one of the targets');
-
-  const dateText = q.get('date');
-  const date = dateText !== null && dayToMjd(dateText) !== null ? dateText : null;
-  if (dateText !== null && date === null) bad('date', dateText, 'YYYY-MM-DD');
-
-  const embedText = q.get('embed');
-  if (embedText !== null && embedText !== '1' && embedText !== '0') bad('embed', embedText, '1');
-
-  return {
-    ra,
-    dec,
-    fov,
-    det,
-    view,
-    target,
-    date,
-    pic: q.get('pic') || null,
-    embed: embedText === '1',
-    unknown,
-  };
-}
+// Reading a link is pure and lives in link.ts (so it is tested in Node); callers import it here.
+export { readLink, viewFor, type Link } from './link.ts';
 
 /**
  * Opens what a link asks for: the target, else the coordinates, else Barnard's Star, at the
@@ -230,12 +140,4 @@ export function groupOn(groups: readonly Group[], day: string): number | null {
     }
   });
   return best;
-}
-
-/** YYYY-MM-DD → MJD at 0h UTC, or null when it is not a real date. */
-function dayToMjd(day: string): number | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
-  const t = Date.parse(`${day}T00:00:00Z`);
-  if (!Number.isFinite(t) || new Date(t).toISOString().slice(0, 10) !== day) return null;
-  return t / 86400000 + MJD_UNIX;
 }

@@ -165,10 +165,12 @@ test('only the sandbox card, the page’s start and About import the sandbox', (
   }
 });
 
-test('the sandbox card keeps its planet to itself: it exports no way to read it', () => {
+test('the sandbox card exports only its card and the reading for Discover\'s Planet X mission', () => {
   const text = readFileSync(new URL('../src/shell/sandbox.ts', import.meta.url), 'utf8');
   const exported = [...text.matchAll(/export\s+(?:async\s+)?(?:function|const|let|class)\s+(\w+)/g)].map((m) => m[1]);
-  assert.deepEqual(exported.sort(), ['closeSandbox', 'openSandbox', 'sandboxOpen', 'startSandbox']);
+  // v2.0: `sandboxState`/`onSandbox` let the Planet X mission read the verdict (H3: it stays
+  // "Simulated"; the next test keeps it out of everything that measures, lists or exports).
+  assert.deepEqual(exported.sort(), ['closeSandbox', 'onSandbox', 'openSandbox', 'sandboxOpen', 'sandboxState', 'startSandbox']);
   // It never writes the frame's state, and it draws only through draw hooks.
   assert.doesNotMatch(text, /\bS\.\w+\s*=[^=]/);
   assert.doesNotMatch(text, /\.pix\[|\.values\[|\.frames\.push|\.neighbours\.push/);
