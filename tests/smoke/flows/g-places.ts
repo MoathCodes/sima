@@ -41,7 +41,7 @@ function searchStep(query: string, first: RegExp, card: RegExp = first): Step {
 }
 
 /** Clicks a chip, through "More" when the row has no room for it. */
-function chipStep(id: string, label: string): Step {
+function chipStep(id: string, label: string, text = label.replace(/^Open /, '')): Step {
   return {
     name: label,
     async run(page) {
@@ -51,7 +51,7 @@ function chipStep(id: string, label: string): Step {
       }
       await press(page, 'chip-more');
       await page
-        .locator('.pl-more-menu .menu-item', { hasText: label.replace(/^Open /, '') })
+        .locator('.pl-more-menu .menu-item', { hasText: text })
         .click();
     },
   };
@@ -74,8 +74,8 @@ export const flows: Flow[] = [
       pressStep('list-filter-4', 'Only shells of dying stars'),
       keyStep('Escape', 'Escape closes the list (O-I12)'),
       expectHidden('places-list', 'The list is closed'),
-      pressStep('chip-galaxies', 'Open Galaxies'),
-      pressStep('chip-galaxies', 'The same chip closes it'),
+      chipStep('galaxies', 'Open Galaxies'),
+      chipStep('galaxies', 'The same chip closes it', 'Galaxies'),
       expectHidden('places-list', 'The list is closed again'),
     ],
   },

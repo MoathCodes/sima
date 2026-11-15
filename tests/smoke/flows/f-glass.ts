@@ -440,12 +440,8 @@ export const flows: Flow[] = [
           await press(page, 'settings-button');
           await press(page, 'panels-glass');
           await until(async () => (await glassAttr(page)) === 'glass', 'Glass after choosing it');
-          // Expert's one-time tip (Escape 50) may have come up meanwhile: it closes first.
-          for (let i = 0; i < 3 && (await page.isVisible(guide('settings'))); i++) {
-            await page.keyboard.press('Escape');
-            await page.waitForTimeout(300);
-          }
-          expect(!(await page.isVisible(guide('settings'))), 'Escape to close Settings');
+          await page.keyboard.press('Escape');
+          await until(async () => !(await page.isVisible(guide('settings'))), 'Escape to close Settings');
         },
       },
       areaStep('first screen'),
