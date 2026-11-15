@@ -93,7 +93,7 @@ export const flows: Flow[] = [
           // frame can take longer than any fixed wait, so wait for frames, not time.
           await stillFor(page, 8);
           const before = await viewOf(page);
-          await page.mouse.click(size.width * 0.3, size.height * 0.62);
+          await page.mouse.click(size.width * 0.18, size.height * 0.62); // left of the frame
           await page.locator(guide('move-frame-here')).waitFor({ state: 'visible' });
           const after = await viewOf(page);
           if (!same(before, after))

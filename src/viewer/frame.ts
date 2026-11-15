@@ -253,8 +253,7 @@ function header(): void {
   const html = `
     <div class="frame-name">
       <h2 class="frame-title"></h2>
-      <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span>${src?.cls === 'real' ? '<span class="frame-agency"> · NASA SPHEREx</span>' : ''}<span class="frame-rel"></span>${named ? `<span class="frame-coords"> · ${formatCoords(S.ra, S.dec)}</span>` : ''}${measure && !discover ? `<button type="button" class="icon-btn xs frame-info" popovertarget="frame-more" aria-label="About this picture" data-tip="About this picture" data-guide="frame-info">${icon('info')}</button>` : ''}</p>
-      <p class="frame-prov" data-guide="data-line"></p>
+      <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span><span class="frame-prov term" tabindex="0" data-guide="data-line"></span><span class="frame-rel"></span>${named ? `<span class="frame-coords"> · ${formatCoords(S.ra, S.dec)}</span>` : ''}${measure && !discover ? `<button type="button" class="icon-btn xs frame-info" popovertarget="frame-more" aria-label="About this picture" data-tip="About this picture" data-guide="frame-info">${icon('info')}</button>` : ''}</p>
     </div>
     <div class="frame-actions">
       <button type="button" class="btn text frame-fov" popovertarget="frame-fovs" aria-label="Field size: ${S.fov} arcminutes" data-tip="Field size (the wheel over the picture changes it too)" data-guide="fov">${S.fov}′${icon('chevron-down')}</button>
@@ -320,8 +319,13 @@ function views(): void {
 
 function lines(): void {
   // Discover and phones: the full data line under the name (H2; BEGINNER-AND-MOBILE 5.3, 11.4).
+  // Discover and phones: one short line after the source dot (dataLine); its tooltip says the rest.
   const prov = document.querySelector<HTMLElement>('#frame-head .frame-prov');
-  if (prov) prov.textContent = dataLine();
+  if (prov) {
+    prov.textContent = dataLine();
+    const src = document.querySelector<HTMLElement>('#frame-head .frame-source > .term:not(.frame-prov)');
+    prov.dataset.tip = [src?.dataset.tip, exif()].filter(Boolean).join('. ');
+  }
   // Expert: the release after the source, "Real data · DR1"; the picture's badge gives its date and
   // wavelength, and "About this picture" the rest (H2 in one short line, redesign item 2).
   const rel = document.querySelector<HTMLElement>('#frame-head .frame-rel');

@@ -1026,22 +1026,32 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
 
 /* ----- v2.0: the Discover frame and phones (BEGINNER-AND-MOBILE 5.3, 7, 11.4, 11.5) ----------- */
 
-/* The data line under the name: in Discover and on phones (H2). Elsewhere the line under the
-   views says it. */
+/* The data line: in Discover and on phones, one short line after the source dot (H2, redesign
+   item 2): "● SPHEREx QR3 · 15–16 Sep 2026 · 1.93–2.16 µm". Real data needs no word (the dot and
+   the tooltip say it); "Simulated" and "Loading…" stay first. Expert on a desktop has the
+   release word and the ⓘ instead. */
 .frame-agency,
 .frame-prov,
 .frame-rel {
   display: none;
 }
-:is(html[data-view='discover'], html[data-layout^='phone']) .frame-agency {
-  display: inline;
-}
 :is(html[data-view='discover'], html[data-layout^='phone']) .frame-prov {
-  display: block;
-  margin: 2px 0 0;
+  display: inline;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--ink-2);
   font: var(--text-label);
-  overflow-wrap: anywhere;
+}
+:is(html[data-view='discover'], html[data-layout^='phone']) .frame-source.real > .term:not(.frame-prov) {
+  display: none;
+}
+html[data-view][data-layout] .frame-source > .frame-prov::before {
+  content: ' · ';
+}
+html[data-view][data-layout] .frame-source.real > .frame-prov::before {
+  content: none;
 }
 :is(html[data-view='discover'], html[data-layout^='phone']) .frame-head {
   align-items: flex-start;
@@ -1250,7 +1260,7 @@ html[data-view='discover'] .frame-views > button {
    target is at least 48 px. Picture tools, Measure's
    button and hiding the frame are not offered on a phone (Measure is in the column, 11.5). */
 html[data-layout^='phone'] #bar,
-html[data-layout^='phone'] .frame-head :is([data-tools], [data-measure], [data-hide], .frame-info) {
+html[data-layout^='phone'] .frame-head :is([data-tools], [data-measure], [data-hide]) {
   display: none;
 }
 html[data-layout^='phone'] .frame-head {
@@ -1296,10 +1306,10 @@ html[data-view='discover'] .frame-views > button > span {
    field size, tools, Measure and hide on the right. The picture's badge gives the date and
    wavelength; ⓘ opens "About this picture" (the full data line, what the view shows, the legend
    of the marks), so the caption and legend lines under the views are not shown here. */
+html:not([data-view='discover']) :is(#frame-exif, #frame-explain, #frame-legend) {
+  display: none;
+}
 html:not([data-view='discover']):not([data-layout^='phone']) {
-  & :is(#frame-exif, #frame-explain, #frame-legend) {
-    display: none;
-  }
   & #frame-head.frame-head {
     flex-wrap: nowrap;
     align-items: flex-start;
@@ -1443,4 +1453,10 @@ html:not([data-view='discover']):not([data-layout^='phone']) {
   justify-content: flex-start;
   padding-top: 8px;
   border-top: 1px solid var(--rule);
+}
+/* On a phone the ⓘ keeps a 40 px target without making the source line taller. */
+html[data-layout^='phone'] .frame-head .icon-btn.frame-info {
+  min-width: 40px;
+  min-height: 40px;
+  margin-block: -10px;
 }

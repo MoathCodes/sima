@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 const out = `${homedir()}/.cache/sima-rebuild/v2/lane-e-density`;
 const exe = `${homedir()}/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome`;
 const browser = await chromium.launch({ executablePath: exe, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-for (const [name, w, h, path, mobile] of [['discover', 1366, 650, '/?ui=discover&target=barnard', false], ['phone', 390, 844, '/?ui=expert&target=barnard', true]] as const) {
+for (const [name, w, h, path, mobile] of [['discover', 1366, 650, '/?ui=discover&target=barnard', false], ['phone', 390, 844, '/?ui=expert&target=rw-aur', true], ['phoned', 390, 844, '/?ui=discover&target=rw-aur', true]] as const) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, hasTouch: mobile, isMobile: mobile });
   await ctx.addInitScript(() => { localStorage.setItem('sima-intro', '1'); localStorage.setItem('sima-guide', JSON.stringify({ tips: ['measure-words'] })); });
   const page = await ctx.newPage();
