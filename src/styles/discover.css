@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------------------------------
-   Discover: welcome, mission list, mission card, success card, object card, coach. Lane K.
+   Discover: welcome, mission list, mission card, success card. Lane K.
    BEGINNER-AND-MOBILE.md sections 5, 7, 10 and 11; DESIGN-v2.md sections 4, 8.2, 9 and 10.
 
    Materials: each card says its material in `data-material` (raised, regular). Lane F's
@@ -44,8 +44,7 @@
 #discover-list,
 #mission,
 #mission-success,
-#dsc-welcome,
-#coach {
+#dsc-welcome {
   position: fixed;
   z-index: var(--z-card);
 }
@@ -92,16 +91,10 @@
   padding: 28px 28px 22px;
   border-radius: 26px;
 }
-#coach {
-  width: 340px;
-  padding: 18px;
-  z-index: var(--z-tip);
-}
 #discover-list[hidden],
 #mission[hidden],
 #mission-success[hidden],
-#dsc-welcome[hidden],
-#coach[hidden] {
+#dsc-welcome[hidden] {
   display: none;
 }
 
@@ -119,8 +112,7 @@
 }
 #discover-list > .dsc-card,
 #mission > .dsc-card,
-#mission-success > .dsc-card,
-#coach.dsc-card {
+#mission-success > .dsc-card {
   animation: dsc-rise var(--v2-settle) var(--v2-ease) both;
 }
 #dsc-welcome {
@@ -130,7 +122,6 @@
   #discover-list > .dsc-card,
   #mission > .dsc-card,
   #mission-success > .dsc-card,
-  #coach.dsc-card,
   #dsc-welcome {
     animation: dsc-fade 0.3s ease-out both;
   }
@@ -639,8 +630,7 @@
 /* ----- The mission card (5.3, mockup 03) ---------------------------------------------------- */
 
 .dsc-mission,
-.dsc-success,
-.dsc-object {
+.dsc-success {
   padding: 18px 18px 14px;
 }
 .dsc-steps {
@@ -857,25 +847,6 @@
   .dsc-success .dsc-actions {
     align-items: flex-start;
   }
-}
-
-/* ----- The object card (5.5) and the coach (7) ---------------------------------------------- */
-
-.dsc-object {
-  display: grid;
-  gap: 8px;
-  align-content: start;
-}
-.dsc-object .dsc-title {
-  margin-block: 0 !important;
-}
-.dsc-coach {
-  display: grid;
-  gap: 8px;
-}
-.dsc-coach .dsc-lead {
-  margin-block-start: 0 !important;
-  font: var(--v2-text-support-discover);
 }
 
 /* ----- Phones (section 11) --------------------------------------------------------------------

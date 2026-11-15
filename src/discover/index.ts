@@ -1,45 +1,45 @@
 /**
  * Discover, the beginner view (BEGINNER-AND-MOBILE.md sections 4, 5, 10 and 13). Owner: lane K.
  *
- * One screen at a time on top of the sky: the welcome card, the home list, a mission card, its
- * success card, or an object card. On desktop each is a panel in its own mount point
+ * One screen at a time on top of the sky: the welcome card, the home list, a mission card or its
+ * success card. "Try another object" opens the target in the frame through the game's own flow and
+ * leaves the list in place (no card of its own: SPEED cut). On desktop each is a panel in its own mount point
  * (`#discover-list`, `#mission`, `#mission-success`; the welcome card is made here); on phones
  * the same element goes in lane M's sheet (`shell/sheet.ts`). In Expert, all of them are closed and
  * a running mission waits where it was (leaving by the view switch keeps the step).
  *
- * Escape (section 13): coach 50; mission card, success, object and welcome 30. On the mission card
+ * No coach overlay in v2.0 (SPEED cut): the `#coach` mount stays empty.
+ *
+ * Escape (section 13): mission card, success and welcome 30. On the mission card
  * Escape asks "Leave the mission?" first. `H` asks for a hint only while focus is in the mission
  * card or the picture (A11Y-3).
  *
  * For lane C's mission beacons: `focusMission(id)` opens the home list and focuses that row.
  */
-import { MISSION_IDS, OBJECTS, isMissionId, type MissionId } from '../explore/missions.ts';
+import { MISSION_IDS, isMissionId, type MissionId } from '../explore/missions.ts';
+import { openTarget } from '../explore/game.ts';
 import { leaveMission, onProgress, progress } from '../explore/progress.ts';
 import { getView, onView, setView } from '../shell/view.ts';
 import { closable } from '../shell/escape.ts';
-import { emit } from '../shell/bus.ts';
 import { hideFrame, onFrameMove, openPlace } from '../shell/shell.ts';
 import { onLayout } from '../shell/sheet.ts';
-import { selectTab, detail } from '../viewer/detail.ts';
-import { S, watch } from '../viewer/state.ts';
+import { detail } from '../viewer/detail.ts';
+import { S } from '../viewer/state.ts';
 import type { Link } from '../viewer/link.ts';
 import { targetByKey } from '../core/targets.ts';
-import { renderList, renderObject, renderWelcome } from './home.ts';
+import { renderList, renderWelcome } from './home.ts';
 import { askLeave, hint, missionBody, openMission, running, startMissions } from './mission.ts';
 import { clearSuccess, showSuccess, successBody } from './success.ts';
-import { closeCoach, coachExpert } from './coach.ts';
 import { dismiss, phone, present } from './ui.ts';
 
-type Screen = 'welcome' | 'home' | 'mission' | 'success' | 'object';
+type Screen = 'welcome' | 'home' | 'mission' | 'success';
 
 let screen: Screen = 'home';
-let objectKey: string | null = null;
 /** Move focus to the screen's title on the next sync (the visitor opened it). */
 let focusNext = false;
 
 const welcome = document.createElement('section');
 const list = document.createElement('div');
-const objectCard = document.createElement('div');
 /** The welcome card has no mount point of its own: on phones it goes in the sheet through this. */
 const stub = document.createElement('div');
 
@@ -52,7 +52,6 @@ export function startDiscover(link: Link): void {
   const listMount = mount('discover-list');
   const missionMount = mount('mission');
   const successMount = mount('mission-success');
-  const coach = mount('coach');
   if (!listMount || !missionMount || !successMount) return;
 
   listMount.dataset.card = 'discover-list';
@@ -89,17 +88,12 @@ export function startDiscover(link: Link): void {
   closable(missionMount, 30, () => (screen === 'mission' ? askLeave() : go('home', true)));
   closable(successMount, 30, () => go('home', true));
   closable(welcome, 30, lookAround);
-  if (coach) closable(coach, 50, () => closeCoach(coach));
 
-  for (const el of [welcome, listMount, missionMount, successMount, list, objectCard, successBody()])
+  for (const el of [welcome, listMount, missionMount, successMount, list, successBody()])
     el.addEventListener('click', onClick);
   document.addEventListener('keydown', onKey);
 
-  onView((v) => {
-    if (v === 'expert' && coach && document.documentElement.dataset.intro === undefined) coachExpert(coach);
-    if (v === 'discover' && coach) closeCoach(coach);
-    sync();
-  });
+  onView(sync);
   onProgress(() => {
     if (screen === 'home') renderList(list, phone());
   });
@@ -109,9 +103,6 @@ export function startDiscover(link: Link): void {
   });
   onFrameMove(place);
   addEventListener('resize', place);
-  watch(['target', 'field', 'source', 'det'], () => {
-    if (screen === 'object' && objectKey) renderObject(objectCard, objectKey);
-  });
   // The intro covers the page: Discover's cards wait for it to land (html[data-intro]).
   new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['data-intro'] });
   // v1's welcome card (lane H) is Expert's; in Discover this view's own welcome replaces it.
@@ -144,7 +135,7 @@ export function focusMission(id: MissionId): void {
 
 function go(next: Screen, byVisitor = true): void {
   if (next !== 'success') clearSuccessIfLeaving(next);
-  if (next === 'home' && (screen === 'object' || screen === 'success')) hideFrame(true);
+  if (next === 'home' && screen === 'success') hideFrame(true);
   screen = next;
   focusNext = byVisitor;
   if (next === 'home') renderList(list, phone());
@@ -170,7 +161,6 @@ function sync(): void {
   }
   if (want !== 'home') dismiss(listMount, list);
   if (want !== 'mission') dismiss(missionMount, missionBody());
-  if (want !== 'object') dismiss(missionMount, objectCard);
   if (want !== 'success') dismiss(successMount, successBody());
   if (!want) return;
   let shown: HTMLElement;
@@ -189,9 +179,6 @@ function sync(): void {
   } else if (want === 'mission') {
     present(missionMount, missionBody(), { height: 'peek', label: `Mission: ${running() ?? ''}` });
     shown = missionBody();
-  } else if (want === 'object') {
-    present(missionMount, objectCard, { height: 'half', label: 'Try another object' });
-    shown = objectCard;
   } else {
     present(successMount, successBody(), { height: 'half', label: 'Mission complete' });
     shown = successBody();
@@ -234,26 +221,16 @@ function lookAround(): void {
   go('home');
 }
 
+/** "Try another object": the list stays; the game opens the target in the frame (ungraded). */
 function openObject(key: string): void {
-  const t = targetByKey(key);
-  if (!t) return;
-  objectKey = key;
-  if (S.target !== key || !S.field) openPlace({ name: t.name, ra: t.ra, dec: t.dec, target: key, fov: 6 });
-  else hideFrame(false);
-  if (S.mode !== 'flip') S.mode = 'flip';
-  // Each object opens at the detector lane H chose for it, named in words on the card (5.5).
-  const det = OBJECTS.find((o) => o.target === key)?.det;
-  if (det && S.det !== det) emit('band', { det });
-  renderObject(objectCard, key);
-  go('object');
+  go('home', false);
+  openTarget(key);
+  hideFrame(false);
 }
 
-function toExpert(tab: 'brightness' | 'path' | 'spectrum' | null): void {
+function toExpert(): void {
   setView('expert');
-  if (S.target) {
-    detail({ kind: 'target' });
-    if (tab) selectTab(tab);
-  }
+  if (S.target) detail({ kind: 'target' });
 }
 
 function onClick(e: MouseEvent): void {
@@ -285,12 +262,9 @@ function onClick(e: MouseEvent): void {
         if (t && S.target !== 'barnard') openPlace({ name: t.name, ra: t.ra, dec: t.dec, target: 'barnard' });
         screen = 'home';
       }
-      toExpert(null);
+      toExpert();
       return;
     }
-    case 'object-expert':
-      toExpert(OBJECTS.find((o) => o.target === objectKey)?.tab ?? null);
-      return;
     case 'next': {
       const id = el.dataset.next;
       if (id && isMissionId(id)) {

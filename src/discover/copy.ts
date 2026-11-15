@@ -59,20 +59,6 @@ export const MEASURING = 'Measuring…';
 export const LEAVE_ASK = 'Leave the mission? Your step is kept.';
 export const KEYS = 'Tab into the picture: the arrow keys move a crosshair, Enter answers. H: a hint.';
 
-export const COACH = {
-  title: "You're in Expert view",
-  body: 'Every number, picture tool, frame and workspace. Same star, date and wavelength as before.',
-  kept: 'Your missions are kept.',
-  back: 'Switch back to Discover here.',
-};
-
-/** A detector in words, with its number for the small type (section 8: "colour band"). */
-export function bandWords(det: number): string {
-  if (det <= 3) return 'near infrared';
-  if (det === 4) return 'infrared';
-  return 'deep infrared';
-}
-
 /** SIMBAD's type, in plain words, from the shipped `kind` field ("Red dwarf (M4V)"). */
 export function plainKind(kind: string): string {
   return kind.replace(/\s*\([^)]*\)\s*$/, '');

@@ -82,7 +82,7 @@ export const flows: Flow[] = [
     owner: 'K',
     path: '/?ui=discover',
     steps: [
-      pressStep('welcome-own', 'Look around first'),
+      pressStep('discover-look', 'Look around first'),
       expect('The list shows', `!!document.querySelector('${guide('discover-list')}')?.checkVisibility()`),
       expect(
         'Three missions and three objects, none locked (DSC-3)',

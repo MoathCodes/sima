@@ -10,11 +10,10 @@
  * - The object card for "Try another object": ungraded, with what to look for and the way to
  *   Expert. Its counts are taken from the pictures shown, never typed (H9).
  */
-import { MISSIONS, MISSION_IDS, OBJECTS, objectLine, type MissionId } from '../explore/missions.ts';
+import { MISSIONS, MISSION_IDS, OBJECTS, type MissionId } from '../explore/missions.ts';
 import { progress } from '../explore/progress.ts';
 import { targetByKey } from '../core/targets.ts';
-import { S } from '../viewer/state.ts';
-import { MISSION_COPY, WELCOME, bandWords, plainKind } from './copy.ts';
+import { MISSION_COPY, WELCOME, plainKind } from './copy.ts';
 import { esc, icon } from './ui.ts';
 import { nextMission } from './success.ts';
 
@@ -43,7 +42,7 @@ export function renderWelcome(el: HTMLElement): void {
       <span><span class="s1">${esc(WELCOME.start)}</span><span class="s2">${esc(WELCOME.startLine)}</span></span>${icon('arrow-right')}
     </button>
     <div class="dsc-row2">
-      <button class="dsc-btn" type="button" data-k="look" data-close data-guide="welcome-own">${esc(WELCOME.look)}</button>
+      <button class="dsc-btn" type="button" data-k="look" data-close data-guide="discover-look">${esc(WELCOME.look)}</button>
       <button class="dsc-btn" type="button" data-k="expert" data-guide="welcome-expert">${icon('chart')}${esc(WELCOME.expert)}</button>
     </div>
     <p class="dsc-fine">${esc(WELCOME.fine)}</p>`;
@@ -142,30 +141,4 @@ export function renderList(el: HTMLElement, phone: boolean): void {
       <ul class="dsc-olist">${objectRows()}</ul>
     </div>
     ${foot}`;
-}
-
-// ----- The object card -------------------------------------------------------------------------
-
-/** Fills the card for "Try another object". Counts come from the pictures on screen (lane H's line). */
-export function renderObject(el: HTMLElement, key: string): void {
-  const o = OBJECTS.find((x) => x.target === key);
-  const t = targetByKey(key);
-  if (!o || !t) return;
-  el.className = 'dsc-card dsc-object';
-  el.dataset.material = 'raised';
-  const field = S.target === key && S.source === 'real' ? S.field : null;
-  const line = field ? objectLine(key, field, `${plainKind(t.kind)} (SIMBAD)`) : `${plainKind(t.kind)} (SIMBAD).`;
-  const band = field ? `<p class="dsc-fine">Shown in ${bandWords(S.det)} light (D${S.det}).</p>` : '';
-  el.innerHTML = `
-    <div class="dsc-hd">
-      <p class="dsc-eyebrow">Try another object · no mission</p>
-      <button class="dsc-icon-btn" type="button" data-k="close" data-close aria-label="Back to the missions" data-tip="Back to the missions">${icon('close')}</button>
-    </div>
-    <h2 class="dsc-title" tabindex="-1" data-k="title">${esc(o.title)}</h2>
-    <p class="dsc-obj">${esc(line)}</p>
-    <p class="dsc-lead">${esc(o.look)}</p>
-    ${band}
-    <div class="dsc-actions">
-      <button class="dsc-btn" type="button" data-k="object-expert" data-guide="object-expert">${icon('chart')}See the numbers in Expert</button>
-    </div>`;
 }
