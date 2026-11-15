@@ -163,6 +163,8 @@ function paint(bar: HTMLElement): void {
   if (count) {
     count.hidden = !measure;
     count.textContent = ready ? `${S.epoch + 1} / ${S.groups.length}` : '– / –';
+    // As wide as its widest number ("12 / 12"), so the bar does not change width while it plays.
+    count.style.minWidth = `calc(${String(S.groups.length || 1).length * 2}ch + 1.1em)`;
   }
 
   const same = bar.querySelector<HTMLButtonElement>('[data-same]');

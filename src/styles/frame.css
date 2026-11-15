@@ -667,6 +667,8 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
   flex: none;
   color: var(--ink-2);
   font: var(--text-label);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
   white-space: nowrap;
 }
 .bar-count[hidden] {
