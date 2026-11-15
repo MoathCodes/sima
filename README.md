@@ -165,5 +165,5 @@ the guide, `src/workspace/` the extra frames and workspaces, `src/intro/` the op
 
 ## Licences
 
-Aladin Lite is GPL-3.0. The fonts Archivo and Amiri are under the SIL Open Font License 1.1
+Aladin Lite is GPL-3.0. The fonts Archivo, Aref Ruqaa and Noto Sans Arabic are under the SIL Open Font License 1.1
 (`src/styles/fonts/`). Data terms are listed per source in the About dialog.

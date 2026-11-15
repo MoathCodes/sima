@@ -446,7 +446,7 @@ Full definitions in `docs/tools.md`.
 | Messier, NGC and IC objects | https://github.com/mattiaverga/OpenNGC | Build time only |
 | Arabic labels, short texts | https://www.wikidata.org and Simple English Wikipedia | Build time only |
 | Sky library | Aladin Lite 3.8.2, https://aladin.cds.unistra.fr/AladinLite/ (npm package `aladin-lite`, bundled) | n/a |
-| Fonts | Archivo, Amiri (SIL OFL), in `src/styles/fonts/` | n/a |
+| Fonts | Archivo, Aref Ruqaa, Noto Sans Arabic (SIL OFL), in `src/styles/fonts/` | n/a |
 
 The exact addresses are in `scripts/prebake.py`, `scripts/build_places.py`, `src/core/catalog.ts` and
 `src/sky/sky.ts`. Check them there before relying on this table.
@@ -923,5 +923,5 @@ full flow, and reduced motion switched on for one flow.
 - NASA/IPAC Infrared Science Archive: SPHEREx data, SIA and TAP services, SPHEREx tutorial notebooks.
 - Gaia DR3 (ESA); CatWISE2020; AllWISE.
 - SIMBAD (CDS); IAU Catalog of Star Names; OpenNGC; Wikidata; Wikipedia.
-- Aladin Lite (CDS). Archivo and Amiri (SIL Open Font License).
+- Aladin Lite (CDS). Archivo, Aref Ruqaa and Noto Sans Arabic (SIL Open Font License).
 - The full reference list with links is in the About dialog of the app.

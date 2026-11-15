@@ -12,7 +12,8 @@
    ========================================================================================== */
 
 /* ------------------------------------------------------------------------------------------
-   Fonts. SIL Open Font License 1.1: see fonts/OFL-Archivo.txt and fonts/OFL-Amiri.txt.
+   Fonts. SIL Open Font License 1.1: see fonts/OFL-Archivo.txt, fonts/OFL-ArefRuqaa.txt
+   and fonts/OFL-NotoSansArabic.txt.
    Downloaded from Google Fonts (css2 API). No font host is contacted at run time.
    ------------------------------------------------------------------------------------------ */
 
@@ -39,26 +40,38 @@
     U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F,
     U+A720-A7FF;
 }
-/* Amiri 700: the wordmark (سيما, Sima), the name in the intro and About, and Arabic names. */
+/* Aref Ruqaa 700: the wordmark only (سيما, Sima), the name in the intro and About. */
 @font-face {
-  font-family: 'Amiri';
+  font-family: 'Aref Ruqaa';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('./fonts/amiri-arabic-700.woff2') format('woff2');
+  src: url('./fonts/aref-ruqaa-arabic-700.woff2') format('woff2');
   unicode-range:
     U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011,
     U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
 }
 @font-face {
-  font-family: 'Amiri';
+  font-family: 'Aref Ruqaa';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('./fonts/amiri-latin-700.woff2') format('woff2');
+  src: url('./fonts/aref-ruqaa-latin-700.woff2') format('woff2');
   unicode-range:
     U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
     U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* Noto Sans Arabic 500: every Arabic name in lists and cards (readable at small sizes).
+   One static weight; the range stops the browser from faking bold. */
+@font-face {
+  font-family: 'Noto Sans Arabic';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('./fonts/noto-sans-arabic-500.woff2') format('woff2');
+  unicode-range:
+    U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011,
+    U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
 }
 
 /* ------------------------------------------------------------------------------------------
@@ -115,8 +128,9 @@
 
   /* Type. Five interface sizes: 11, 12, 14, 17, 25px (The Five Sizes Rule). */
   --font: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
-  /* The Arabic face: the wordmark, and every Arabic name (lang="ar"). Swap it here. */
-  --font-wordmark: 'Amiri', 'Archivo', sans-serif;
+  /* The wordmark face (سيما, Sima) and the Arabic text face (every other lang="ar"). Swap them here. */
+  --font-wordmark: 'Aref Ruqaa', 'Archivo', sans-serif;
+  --font-arabic-text: 'Noto Sans Arabic', 'Archivo', sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; /* code only */
   --text-headline: 600 25px/1.15 var(--font); /* pair with --tracking-headline */
   --tracking-headline: -0.02em;
@@ -252,9 +266,10 @@ body {
   overscroll-behavior: none;
 }
 
-/* Arabic text anywhere (names in lists and cards) is set in the wordmark's Arabic face. */
-:root :lang(ar) {
-  font-family: var(--font-wordmark);
+/* Arabic text anywhere (names in lists and cards) is set in the Arabic text face.
+   The wordmark's own سيما keeps the wordmark face. */
+:root :lang(ar):not(.wordmark-ar, .about-ar, .intro-ar) {
+  font-family: var(--font-arabic-text);
 }
 
 html {

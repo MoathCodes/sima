@@ -751,20 +751,21 @@ function watchPointer(canvas: HTMLCanvasElement): void {
   canvas.addEventListener('pointercancel', end);
 
   // The wheel over the picture changes the field size, one step per notch; the sky stays still.
-  let last = 0;
+  // Small trackpad deltas add up to one notch (60 px) before a step, so a short swipe is one step.
+  let lastAt = 0;
   let pending = 0;
   canvas.parentElement?.addEventListener(
     'wheel',
     (e) => {
       e.preventDefault();
       e.stopPropagation();
-      pending += e.deltaY;
       const now = performance.now();
-      if (now - last < 180 || Math.abs(pending) < 4) return;
-      last = now;
-      const steps = pending > 0 ? 1 : -1;
+      if (now - lastAt > 300) pending = 0; // a new gesture
+      lastAt = now;
+      pending += e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+      if (Math.abs(pending) < 60) return;
+      wheelHandler?.(pending > 0 ? 1 : -1);
       pending = 0;
-      wheelHandler?.(steps);
     },
     { passive: false },
   );

@@ -202,7 +202,8 @@ function mainOf(o: unknown): MainState | null {
 function cameraOf(o: unknown): Workspace['camera'] {
   const at = position(o);
   const fov = isObj(o) ? num(o.fov) : null;
-  return at && fov !== null && fov > 0 ? { ...at, fov: clamp(fov, 0.05, 180) } : null;
+  // Past 180 the sky is a whole globe (src/sky/project.ts), so a saved globe view reopens as one.
+  return at && fov !== null && fov > 0 ? { ...at, fov: clamp(fov, 0.05, 360) } : null;
 }
 
 /** Checks a version-2 workspace field by field; what is wrong is dropped and named. */
