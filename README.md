@@ -53,7 +53,7 @@ The challenge names five objects. Each link opens straight on its pictures:
 | Use the 102 bands and six detectors | Choose any wavelength from 0.75 to 5.0 µm, or one detector. Measure shows a spectrum made on the spot from the pictures. |
 | Let users choose the field of view | 3′, 6′, 12′, 24′ or 48′ wide. Bigger fields catch faster movers but take longer to download. |
 | Overlay other telescopes | Gaia DR3 stars and CatWISE2020 (WISE) sources, marked on the picture. |
-| Show metadata such as contamination flags | Each picture's details name its date, survey pass, detector and wavelength, and the share of pixels NASA's pipeline flagged as bad. |
+| Show metadata such as contamination flags | Each picture names its date, survey pass, detector and wavelength. In Expert, the Info frame lists every exposure with the share of its pixels that NASA's pipeline flagged as bad. |
 | Coordinates in the URL, for embedding | The address bar always holds what's on screen. Share gives a link and an embed code. |
 | Easy to update with new data releases | Releases are read from NASA's archive by name (now DR1 and QR3). A new release is a one-line addition. |
 
