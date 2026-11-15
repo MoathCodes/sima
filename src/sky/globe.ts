@@ -92,15 +92,18 @@ export function startGlobe(): void {
     attributeFilter: ['data-view', 'data-intro'],
   });
   // The first view: Discover's home, unless the link names a place (the sky then opens on it).
+  // Under the intro it is the first-run home, where the intro hands over (it also puts the globe
+  // there itself once the map draws, and again after a skip).
   const linked = /[?&](target|ra|dec)=/.test(location.search);
   const html = document.documentElement;
-  if (html.dataset.view === 'discover' && !linked && html.dataset.intro === undefined) {
+  if (html.dataset.view === 'discover' && !linked) {
+    const first = html.dataset.intro !== undefined;
     let once = false;
     const off = onZoom(() => {
       if (once) return;
       once = true;
       queueMicrotask(off);
-      globeHome({ animate: false });
+      globeHome({ first, animate: false });
     });
   }
   // The Barnard's Star beacon pulses once as the intro hands over (BEGINNER-AND-MOBILE 5.1).

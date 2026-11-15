@@ -20,7 +20,9 @@
  * Owner: the intro (src/intro/, src/styles/intro.css). index.html carries a tiny script that
  * decides before the first paint whether the intro plays (wanted.ts, `html[data-intro]`).
  */
-import { camera, introZoom, toScreen } from '../sky/sky.ts';
+import { camera, globeCircle, introZoom, toScreen } from '../sky/sky.ts';
+import { globeHome } from '../sky/globe.ts';
+import { fovOf } from '../sky/project.ts';
 import { on } from '../shell/bus.ts';
 import { CHANNEL_LAM, DEFAULT_LAM, channelFor, detectorOf } from '../sky/hips.ts';
 import { targetByKey } from '../core/targets.ts';
@@ -41,6 +43,11 @@ import { hex, startPainter, type PainterEvent, type PainterInit, type Rgb } from
 const DEG = Math.PI / 180;
 const BASE = import.meta.env.BASE_URL;
 const nowAbs = () => performance.timeOrigin + performance.now();
+/**
+ * Discover lands on its whole globe instead of diving to the patch: the page's globe waits at its
+ * first-run place under the intro and cross-fades in (DESIGN-v2 11, BEGINNER-AND-MOBILE 5.1).
+ */
+const discover = () => document.documentElement.dataset.view === 'discover';
 
 function remember(): void {
   try {
@@ -257,6 +264,12 @@ function frame(run: Run): void {
   // The sky map waits at the landing's start, under the intro, from as soon as it exists: its
   // first wide view costs it a second or more of work, best done while the ring comes up. NASA's
   // sharp tiles for the landing's end are asked for meanwhile.
+  if (live && !run.moved && discover()) {
+    run.finalFov = camera().fov;
+    globeHome({ first: true, animate: false });
+    run.moved = true;
+    run.movedAt = t;
+  }
   if (live && !run.moved && !run.reduced) {
     run.finalFov = camera().fov;
     const land = landing(w, h, run.finalFov);
@@ -286,12 +299,17 @@ function frame(run: Run): void {
     finish(run, 'fade');
     return;
   }
-  // The hand-over: the sky map glides in from where the globe has grown to.
+  // The hand-over: the sky map glides in from where the globe has grown to. On Discover's globe
+  // there is no glide: the cross-fade is the whole hand-over, then the cards come in.
   const r = run.revealAt === null ? -Infinity : t - run.revealAt;
+  if (run.handAt !== null && discover() && t - run.handAt >= T.crossfade) {
+    finish(run, 'land');
+    return;
+  }
   if (run.handAt === null && r >= T.hand && run.land) {
     if (run.moved && (skyIsIn() || t - run.movedAt > 3)) {
       run.handAt = t;
-      introZoom(run.land.from, run.land.fov, T.land * 1000);
+      if (!discover()) introZoom(run.land.from, run.land.fov, T.land * 1000);
       document.documentElement.dataset.intro = 'land';
       run.el.animate([{ opacity: 1 }, { opacity: 0 }], {
         duration: T.crossfade * 1000,
@@ -335,7 +353,9 @@ function finish(run: Run, how: 'land' | 'fade' | 'skip'): void {
   cancelAnimationFrame(run.raf);
   for (const fn of run.off) fn();
   if (run.moved && run.finalFov !== null && how !== 'land') {
-    introZoom(run.finalFov, run.finalFov, 0);
+    // A skip lands on the same place as the hand-over: Discover's globe, or the map's own view.
+    if (discover()) globeHome({ first: true, animate: false });
+    else introZoom(run.finalFov, run.finalFov, 0);
   }
   const html = document.documentElement;
   const done = () => {
@@ -352,7 +372,8 @@ function finish(run: Run, how: 'land' | 'fade' | 'skip'): void {
   if (how === 'land') {
     // The cards waited while the map glided in (html[data-intro='land']).
     done();
-    cards(T.cardsMs);
+    // Discover: the welcome card, top row and sky note fade in over 0.18 s (5.1).
+    cards(discover() ? 180 : T.cardsMs);
     return;
   }
   // A skip during the landing: the cards are waiting, so they come in with the fade.
@@ -363,7 +384,8 @@ function finish(run: Run, how: 'land' | 'fade' | 'skip'): void {
   const from = getComputedStyle(run.el).opacity;
   for (const a of run.el.getAnimations()) a.cancel();
   const fade = run.el.animate([{ opacity: from }, { opacity: 0 }], {
-    duration: how === 'skip' ? T.skipMs : T.fadeMs,
+    // Reduced motion in Discover: the globe and the card appear with a 0.3 s fade (5.1).
+    duration: how === 'skip' ? T.skipMs : discover() ? 300 : T.fadeMs,
     easing: 'ease-in-out',
     fill: 'forwards',
   });
@@ -480,6 +502,12 @@ function setSource(run: Run, ch: number | undefined, o: number): void {
 function landing(w: number, h: number, ownFov: number): Landing {
   const c = camera();
   const p = toScreen(c.ra, c.dec);
+  const g = discover() ? globeCircle() : null;
+  if (g) {
+    // Discover: the intro's globe grows to the page's globe, where it sits, and stops there.
+    const from = fovOf(w / 2 / g.r);
+    return { q: lookAt(c.ra, c.dec), fov: from, x: g.x, y: g.y, from, fromScale: g.r };
+  }
   const from = handFov(w, h, ownFov);
   return {
     q: lookAt(c.ra, c.dec),
