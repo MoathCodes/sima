@@ -15,8 +15,10 @@
  *   - `phone-scroll`: one scrolling column (rotated phones, short windows, 400% zoom). No sheet:
  *     its content sits in the page's flow under the frame and the bar; `sheetH` is 0.
  * - `openSheet(el, { height, label, back })` shows `el` in the sheet (the `#sheet` mount point).
- *   - `height` is `peek` (one line and one button) or `half`. A tap on the grabber toggles them;
- *     the choice is kept with that content, so Back restores it. There is no drag in v2.0.
+ *   - `height` is `peek` (one line and one button), `half` or `full`. A tap on the grabber steps
+ *     up (and from the top back to peek); a drag on the grabber or the Back row moves one step
+ *     in its direction. The choice is kept with that content, so Back restores it. The content
+ *     marks where its peek part ends with a `[data-peek-end]` element (phone.ts measures it).
  *   - Without `back`, `el` replaces what the sheet showed and the Back history is cleared. With
  *     `back: true` (a place card from the sky, the hint box), the current content, its height
  *     and the control that opened the new content are kept for `back()`.
@@ -37,8 +39,13 @@
  */
 import { closable, RANK } from './escape.ts';
 
-/** The sheet's two heights (no drag and no full height in v2.0). */
-export type SheetHeight = 'peek' | 'half';
+/**
+ * The sheet's heights. `peek`: the content's first part only (down to its `[data-peek-end]`
+ * element: one line and one button); `half`: up to about half the screen; `full`: up to the top
+ * row. Full is offered only while the frame is closed (the globe behind); with the frame open,
+ * full is laid out as half.
+ */
+export type SheetHeight = 'peek' | 'half' | 'full';
 
 /** The page's layout, chosen by the visual viewport (11.1). */
 export type LayoutKind = 'desktop' | 'phone-fit' | 'phone-scroll';
@@ -121,12 +128,30 @@ export class SheetStack<T, O = unknown> {
     return this.items.pop();
   }
 
-  /** Switches the shown content between peek and half. @returns The new height. */
-  toggle(): SheetHeight | undefined {
+  /**
+   * Moves the shown content one height up or down among `levels` (lowest first). Up from the
+   * highest goes back to the lowest when `wrap` (a tap on the grabber), else stays (a drag);
+   * down from the lowest stays.
+   * @returns The new height.
+   */
+  step(
+    dir: 1 | -1,
+    levels: readonly SheetHeight[] = ['peek', 'half'],
+    wrap = true,
+  ): SheetHeight | undefined {
     const t = this.top();
     if (!t || t.height === 'page') return undefined;
-    t.height = t.height === 'peek' ? 'half' : 'peek';
+    // A height that is not offered now (full while the frame is open) counts as the highest.
+    let i = levels.indexOf(t.height);
+    if (i < 0) i = levels.length - 1;
+    const j = i + dir;
+    t.height = j >= levels.length ? levels[wrap ? 0 : levels.length - 1]! : levels[Math.max(0, j)]!;
     return t.height;
+  }
+
+  /** Switches the shown content between peek and half. @returns The new height. */
+  toggle(): SheetHeight | undefined {
+    return this.step(1);
   }
 
   /** Empties it. @returns Everything that was kept. */
@@ -170,9 +195,7 @@ function build(): Parts | null {
   grab.dataset.guide = 'sheet-grabber';
   grab.setAttribute('aria-controls', 'sheet-body');
   grab.append(Object.assign(document.createElement('span'), { className: 'sheet-grab-bar' }));
-  grab.addEventListener('click', () => {
-    if (stack.toggle()) show();
-  });
+  startDrag(grab);
   const head = document.createElement('div');
   head.className = 'sheet-head';
   const backBtn = document.createElement('button');
@@ -186,12 +209,104 @@ function build(): Parts | null {
   title.className = 'sheet-title';
   title.id = 'sheet-title';
   head.append(backBtn, title);
+  startDrag(head);
   const body = document.createElement('div');
   body.className = 'sheet-body';
   body.id = 'sheet-body';
   root.replaceChildren(grab, head, body);
   parts = { root, grab, head, backBtn, title, body };
   return parts;
+}
+
+/** The heights a tap or drag moves between now (phone.ts: full only while the frame is closed). */
+let levels: readonly SheetHeight[] = ['peek', 'half'];
+
+/** For lane M's phone.ts: which heights the grabber moves between now. */
+export function setSheetLevels(l: readonly SheetHeight[]): void {
+  levels = l;
+}
+
+/** Changes the height of what the sheet shows (a tap, a drag, or content asking for room). */
+export function setSheetHeight(h: SheetHeight): void {
+  const t = stack.top();
+  if (!t || t.height === 'page' || t.height === h) return;
+  t.height = h;
+  show();
+}
+
+/**
+ * A tap on the grabber steps up (from the top back to peek). A drag on the grabber or the Back
+ * row follows the finger and, once let go, moves one height in its direction; phone.ts animates
+ * the sheet from where the finger left it to its new place.
+ */
+function startDrag(handle: HTMLElement): void {
+  let start: { y: number; id: number; t: number } | null = null;
+  let dy = 0;
+  let dragged = false;
+  const root = () => parts?.root;
+  handle.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || layout().kind !== 'phone-fit' || stack.top()?.height === 'page') return;
+    if (handle !== parts?.grab && (e.target as Element).closest('button')) return;
+    start = { y: e.clientY, id: e.pointerId, t: performance.now() };
+    dy = 0;
+    dragged = false;
+  });
+  handle.addEventListener('pointermove', (e) => {
+    if (!start || e.pointerId !== start.id) return;
+    dy = e.clientY - start.y;
+    if (!dragged && Math.abs(dy) < 6) return;
+    if (!dragged) {
+      dragged = true;
+      handle.setPointerCapture(e.pointerId);
+      root()?.setAttribute('data-dragging', '');
+    }
+    // Past the top it resists (a third of the finger's travel).
+    const r = root();
+    if (r) r.style.transform = `translateY(${dy < 0 ? dy / 3 : dy}px)`;
+  });
+  const end = (e: PointerEvent) => {
+    if (!start || e.pointerId !== start.id) return;
+    const fast = Math.abs(dy) / Math.max(1, performance.now() - start.t) > 0.5;
+    start = null;
+    const r = root();
+    r?.removeAttribute('data-dragging');
+    if (!dragged) return;
+    // The finger's last place stays as the transform; phone.ts animates from it.
+    if (Math.abs(dy) > 36 || fast) {
+      // Up from the top does not wrap to peek on a drag.
+      const before = stack.top()?.height;
+      if (stack.step(dy < 0 ? 1 : -1, levels, false) !== before) show();
+    }
+    dropDrag(r ?? null);
+  };
+  handle.addEventListener('pointerup', end);
+  handle.addEventListener('pointercancel', end);
+  // A drag is not a tap: only a press without movement steps the height.
+  handle.addEventListener('click', (e) => {
+    if (dragged) {
+      dragged = false;
+      e.preventDefault();
+      return;
+    }
+    if (handle === parts?.grab && stack.step(1, levels)) show();
+  });
+}
+
+/** Lets go of a drag: the sheet glides from the finger back to its (maybe new) place. */
+function dropDrag(r: HTMLElement | null): void {
+  if (!r || !r.style.transform) return;
+  const from = r.style.transform;
+  r.style.transform = '';
+  for (const fn of [...dropFns]) fn(from);
+}
+const dropFns = new Set<(from: string) => void>();
+
+/** For lane M's phone.ts: a drag ended at `from` (a transform); animate the sheet from there. */
+export function onSheetDrop(fn: (from: string) => void): () => void {
+  dropFns.add(fn);
+  return () => {
+    dropFns.delete(fn);
+  };
 }
 
 /** Puts an element that left the sheet back where it came from (or just takes it out). */
@@ -251,10 +366,13 @@ function show(): void {
   p.title.textContent = page ? t.label : '';
   p.head.hidden = !stack.canGoBack();
   p.backBtn.setAttribute('aria-label', page ? `Back from ${t.label}` : 'Back');
-  const half = t?.height === 'half';
+  const open = !!t && t.height !== 'peek';
+  const top = !!t && levels.indexOf(t.height as SheetHeight) === levels.length - 1;
   p.grab.hidden = !t || page;
-  p.grab.setAttribute('aria-expanded', String(half));
-  p.grab.setAttribute('aria-label', half ? 'Show less' : 'Show more');
+  p.grab.setAttribute('aria-expanded', String(open));
+  p.grab.setAttribute('aria-label', top ? 'Show less' : 'Show more');
+  // At peek only the content's first part shows: never a scrolled middle.
+  if (t?.height === 'peek') p.body.scrollTop = 0;
   setInert(page);
   // Escape does one Back while there is one to do (order 30). Registered again each time it
   // becomes possible, so it counts as the newest card at its rank.

@@ -120,7 +120,7 @@ export const MISSIONS: Readonly<Record<MissionId, Mission>> = Object.freeze({
         'tap',
         'One star jumps. Tap it.',
         "Stars stay put. Look for the one that doesn't.",
-        ['Look near the middle.', 'Step from A to C with the arrow keys and watch closely.'],
+        ['Look near the middle.', 'Step from the first date to the last with the arrow keys and watch closely.'],
         'picture',
         "It's inside the ring. Tap it.",
       ),
