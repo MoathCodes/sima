@@ -16,6 +16,7 @@ import './styles/intro.css';
 import './styles/extras.css';
 import './styles/workspace.css';
 import './styles/discover.css';
+import './styles/sheet.css';
 
 import { startShell } from './shell/shell.ts';
 import { startPlaces } from './shell/places.ts';
@@ -36,6 +37,7 @@ import { startWorkspace } from './workspace/index.ts';
 import { startView } from './shell/view.ts';
 import { startGlass } from './shell/glass.ts';
 import { startDiscover } from './discover/index.ts';
+import { startPhone } from './shell/phone.ts';
 import { S } from './viewer/state.ts';
 import * as bus from './shell/bus.ts';
 
@@ -64,6 +66,8 @@ function start(name: string, fn: () => unknown): void {
 
 // v2.0: Glass or Solid is decided once, before anything is drawn (DESIGN-v2 section 6).
 start('glass', startGlass);
+// v2.0: the phone layout (desktop, phone-fit or phone-scroll) before the parts that read it.
+start('phone', startPhone);
 // The intro first: it covers the page while every part starts under it as usual.
 if (!link.embed) start('intro', startIntro);
 start('shell', startShell);
