@@ -332,6 +332,14 @@ html[data-layout^='phone'] #wordmark {
   padding: 0 8px;
 }
 
+/* The phone menu opens inside the screen under the top row (right-aligned to its button it would
+   start left of the screen). */
+html[data-layout^='phone'] #phone-menu {
+  right: auto !important;
+  left: calc(env(safe-area-inset-left, 0px) + var(--v2-gutter-phone, 12px)) !important;
+  width: min(240px, calc(100vw - 24px));
+}
+
 /* ----- Phone scroll: one column that scrolls (rotation, short screens, 400% zoom, Expert) -------- */
 
 html[data-layout='phone-scroll'] body {
