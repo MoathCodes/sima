@@ -2,9 +2,17 @@
  * Sky position to screen position, fast, for drawing thousands of dots each frame (PLC-8).
  * Pure: no page. Owner: lane C.
  *
- * The map uses the stereographic projection (Aladin Lite "STG"): it fills the window at every
- * zoom up to 180° wide, with no black sphere around it (SKY-1). sky.ts measures the scale from
- * Aladin itself after each change of view (`calibrate`), so this and the map always agree.
+ * The map is a globe: Aladin Lite's orthographic projection ("SIN"). Zoomed in, it fills the
+ * window; zoomed out past that, the whole sphere shows as a disc of sky with dark space around it,
+ * with no change of projection on the way (SKY-1). Only the half facing the viewer is drawn.
+ * sky.ts measures the scale from Aladin itself after each change of view (`calibrate`), so this
+ * and the map always agree.
+ *
+ * Aladin's zoom: its "zoom factor" z is the window's half-width over the globe's radius. Up to
+ * 180° wide, z = sin(fov / 2) (the window's edge is fov / 2 from the centre); past 180°, Aladin
+ * shrinks the globe linearly, z = fov / 180, up to z = 2 (the globe half the window's width).
+ * Sima's `fov` is that same number: degrees across the window, and beyond 180 a measure of how
+ * far the globe has shrunk.
  */
 
 const RAD = Math.PI / 180;
@@ -14,7 +22,7 @@ export interface View {
   /** Centre, degrees. */
   ra: number;
   dec: number;
-  /** Screen pixels per unit of the projection plane (2·tan(θ/2) is 1 unit at θ from centre). */
+  /** Screen pixels per unit of the projection plane: the globe's radius (sin θ is θ from centre). */
   scale: number;
   /** Screen point of the centre, CSS pixels. */
   cx: number;
@@ -46,7 +54,7 @@ export function makeView(
   };
 }
 
-/** Stereographic plane coordinates of a sky position, or null for the point opposite. */
+/** Orthographic plane coordinates of a sky position, or null on the far side of the globe. */
 export function plane(v: View, ra: number, dec: number): { x: number; y: number } | null {
   const d = dec * RAD;
   const h = (ra - v.ra) * RAD;
@@ -54,13 +62,12 @@ export function plane(v: View, ra: number, dec: number): { x: number; y: number 
   const cd = Math.cos(d);
   const ch = Math.cos(h);
   const cosc = v.sinDec * sd + v.cosDec * cd * ch;
-  if (cosc < -0.98) return null;
-  const k = 2 / (1 + cosc);
-  return { x: k * cd * Math.sin(h), y: k * (v.cosDec * sd - v.sinDec * cd * ch) };
+  if (cosc < 0) return null;
+  return { x: cd * Math.sin(h), y: v.cosDec * sd - v.sinDec * cd * ch };
 }
 
 /**
- * Screen point of a sky position (CSS pixels), or null when it is behind the viewer.
+ * Screen point of a sky position (CSS pixels); false when it is on the far side of the globe.
  * Allocation-free variant: writes into `out` and returns true.
  */
 export function projectInto(
@@ -75,14 +82,14 @@ export function projectInto(
   const cd = Math.cos(d);
   const ch = Math.cos(h);
   const cosc = v.sinDec * sd + v.cosDec * cd * ch;
-  if (cosc < -0.98) return false;
-  const k = (2 / (1 + cosc)) * v.scale;
+  if (cosc < 0) return false;
+  const k = v.scale;
   out.x = v.cx + v.flip * k * cd * Math.sin(h);
   out.y = v.cy - k * (v.cosDec * sd - v.sinDec * cd * ch);
   return true;
 }
 
-/** Screen point of a sky position, or null behind the viewer. */
+/** Screen point of a sky position, or null on the far side of the globe. */
 export function project(v: View, ra: number, dec: number): { x: number; y: number } | null {
   const out = { x: 0, y: 0 };
   return projectInto(v, ra, dec, out) ? out : null;
@@ -108,6 +115,36 @@ export function calibrate(
   if (lenPlane < 1e-12 || lenScreen < 1) return null;
   const flip: 1 | -1 = Math.abs(p.x) > 1e-9 && Math.sign(dx) !== Math.sign(p.x) ? -1 : 1;
   return { scale: lenScreen / lenPlane, flip };
+}
+
+/** The largest zoom factor Aladin allows: the globe half the window's width. */
+export const ZOOM_MAX = 2;
+
+/**
+ * Aladin's zoom factor for a view `fov` degrees wide (see the top of this file): the window's
+ * half-width over the globe's radius.
+ */
+export function zoomOf(fov: number): number {
+  return fov <= 180 ? Math.sin((fov * RAD) / 2) : fov / 180;
+}
+
+/** The view's width, degrees, at a zoom factor (the inverse of `zoomOf`). */
+export function fovOf(zoom: number): number {
+  return zoom <= 1 ? (2 * Math.asin(Math.max(0, zoom))) / RAD : zoom * 180;
+}
+
+/** The globe's radius on screen, CSS px, in a window `width` wide showing `fov` degrees. */
+export function globeScale(width: number, fov: number): number {
+  return width / 2 / zoomOf(fov);
+}
+
+/**
+ * The widest view: the whole globe with dark space round it, its diameter 88% of the window's
+ * shorter side, as far as Aladin allows (`ZOOM_MAX`). Degrees, as `fov`.
+ */
+export function widestFov(width: number, height: number): number {
+  const side = Math.min(width, height) * 0.88;
+  return fovOf(Math.min(ZOOM_MAX, Math.max(1, width / Math.max(side, 1))));
 }
 
 /** Angle between two sky positions, degrees. */

@@ -100,6 +100,9 @@ export function startShell(): void {
   startPopovers();
   document.addEventListener('click', onClick);
   document.addEventListener('keydown', onKey);
+  // A trackpad pinch arrives as a wheel with Ctrl held. Over the sky it zooms the sky (sky.ts);
+  // over a card it would zoom the whole page, so there it does nothing (the page never moves).
+  document.addEventListener('wheel', (e) => e.ctrlKey && e.preventDefault(), { passive: false });
   startTooltips();
 }
 

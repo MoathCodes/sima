@@ -8,8 +8,9 @@
  *
  * - The map (SKY-1 to 9): each SPHEREx channel is a 2D HiPS served by public/sky-tiles-sw.js,
  *   which shows the shipped low-resolution sky first. A new channel fades in over the old one
- *   once its tiles are in (0.26 s), never a cut to grey. The stereographic projection fills the
- *   window from 180° wide to a few arcminutes.
+ *   once its tiles are in (0.26 s), never a cut to grey. The map is a globe (Aladin's "SIN"
+ *   projection): from a few arcminutes it fills the window, and zoomed out further it becomes the
+ *   whole sky seen from outside, a disc with dark space round it, with no switch on the way.
  * - The patch (FRM-1 to 4): drawn from the frame's `patch` messages; grabbed anywhere inside;
  *   dropped, it sends `aim`. A click on empty sky only offers "Move the frame here". The sky
  *   moves only when the user moves it: never because pictures arrived.
@@ -19,14 +20,28 @@ import { frameRect, onFrameMove, skyReady, type SkyLoad } from '../shell/shell.t
 import { icon } from '../shell/icons.ts';
 import { formatCoords } from '../core/astro.ts';
 import { CHANNEL_LAM, DEFAULT_LAM, WISE_HIPS, channelFor, detectorOf } from './hips.ts';
-import { calibrate, makeView, project, separation, wrapRa, type View } from './project.ts';
+import {
+  calibrate,
+  fovOf,
+  makeView,
+  project,
+  separation,
+  widestFov,
+  wrapRa,
+  zoomOf,
+  type View,
+} from './project.ts';
 
 /** What the sky shows: its centre and zoom. */
 export interface Camera {
   /** Centre of the view, degrees. */
   ra: number;
   dec: number;
-  /** Width of the view in DEGREES (not arcminutes, unlike the frame's field size). 180 at most. */
+  /**
+   * Width of the view in DEGREES (not arcminutes, unlike the frame's field size). Past 180 the
+   * whole globe shows and the number keeps growing as it shrinks (project.ts `zoomOf`), up to
+   * `widestFov` (360 at most).
+   */
   fov: number;
   /** Size of the map on screen, CSS pixels. */
   width: number;
@@ -45,7 +60,8 @@ export interface SkyPoint {
 }
 
 const FOV_MIN = 0.05; // 3 arcminutes
-const FOV_MAX = 180;
+/** The smallest a patch square is drawn, CSS px. */
+const MIN_SIDE = 16;
 /** The first view: Barnard's Star, as wide as the reference pictures (a 6′ patch is ~78 px). */
 const START = { ra: 269.452, dec: 4.693, fov: 1.9 };
 const CROSSFADE_MS = 260; // DESIGN.md Motion, --t-crossfade
@@ -66,7 +82,8 @@ interface HiPSLayer {
 }
 interface Aladin {
   getRaDec(): [number, number];
-  getFov(): [number, number];
+  /** The window's half-width over the globe's radius (project.ts `zoomOf`). */
+  getZoomFactor(): number;
   gotoRaDec(ra: number, dec: number): void;
   setFoV(fov: number): void;
   pix2world(x: number, y: number): [number, number] | undefined;
@@ -217,7 +234,7 @@ export async function startSky(el: HTMLElement): Promise<void> {
   al = lib.aladin(host, {
     survey: base,
     hipsList: [],
-    projection: 'STG',
+    projection: 'SIN',
     cooFrame: 'ICRS',
     target: `${cam.ra} ${cam.dec}`,
     fov: cam.fov,
@@ -360,7 +377,8 @@ export function setLayer(next: SkyLayer): void {
  * Moves the sky. Missing fields keep their value. This is a user-chosen move: callers are
  * search, place cards, the rail and the keys, never a timer or arriving data (FRM-4).
  *
- * @param to Centre in degrees, `fov` in degrees across the window (clamped to 0.05 to 180).
+ * @param to Centre in degrees, `fov` in degrees across the window (clamped to 0.05 up to the
+ *   whole globe, `widestFov`).
  * @param opts `animate` (default true): glide there; false jumps. Reduced motion always jumps.
  */
 export function flyTo(
@@ -410,9 +428,19 @@ export function toScreen(ra: number, dec: number): { x: number; y: number } | nu
  * @returns Degrees, or null off the sky.
  */
 export function toWorld(x: number, y: number): { ra: number; dec: number } | null {
-  const w = al?.pix2world(x, y);
-  if (!w || !Number.isFinite(w[0]) || !Number.isFinite(w[1])) return null;
-  return { ra: wrapRa(w[0]), dec: w[1] };
+  const w = skyAt(x, y);
+  return w && { ra: wrapRa(w[0]), dec: w[1] };
+}
+
+/** Aladin's sky position under a point, or null off the globe (where Aladin throws). */
+function skyAt(x: number, y: number): [number, number] | null {
+  let w: [number, number] | undefined;
+  try {
+    w = al?.pix2world(x, y);
+  } catch {
+    return null;
+  }
+  return w && Number.isFinite(w[0]) && Number.isFinite(w[1]) ? w : null;
 }
 
 /** The patch square's box on screen; null when there is no patch or it is out of view. */
@@ -446,7 +474,8 @@ function boxAt(at: { ra: number; dec: number; fov: number } | null): DOMRect | n
   const half = at.fov / 120; // arcminutes → half the side in degrees
   const top = project(view, at.ra, Math.min(90, at.dec + half));
   const bottom = project(view, at.ra, Math.max(-90, at.dec - half));
-  const side = Math.max(12, top && bottom ? Math.abs(bottom.y - top.y) : 12);
+  // Never smaller than 16 px, so the line style (FRM-1) reads at every zoom.
+  const side = Math.max(MIN_SIDE, top && bottom ? Math.abs(bottom.y - top.y) : MIN_SIDE);
   const box = new DOMRect(c.x - side / 2, c.y - side / 2, side, side);
   if (box.right < 0 || box.bottom < 0 || box.left > cam.width || box.top > cam.height) return null;
   return box;
@@ -852,6 +881,7 @@ function note(): void {
       `SPHEREx DR1 all-sky map from NASA IRSA: channel ${channel} of 102, ${l} µm, detector D${detectorOf(channel)}. ` +
       'Bright star centres, which the map leaves empty, are filled in from their rim. ' +
       'Shown larger than its pixels, the map is softened by about half a pixel (display only). ' +
+      'Zoomed out, the map is the whole sky as a globe seen from outside: only the half facing you shows; drag to turn it. ' +
       'Until NASA’s tiles arrive, a smoothed low-resolution sky shipped with Sima stands in' +
       (failed ? '; some tiles did not load, so their place still shows it.' : '.');
   } else {
@@ -899,7 +929,7 @@ function loop(): void {
     if (readCamera() || drawQueued) {
       drawQueued = false;
       draw();
-    }
+    } else if (patchLoading() && !reducedMotion()) drawPatch(); // the creeping dashes
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
@@ -913,35 +943,51 @@ function animate(now: number): void {
     const e = 1 - (1 - t) ** 3;
     const { from, to } = glide;
     const dRa = ((to.ra - from.ra + 540) % 360) - 180;
-    al.setFoV(Math.exp(Math.log(from.fov) + (Math.log(to.fov) - Math.log(from.fov)) * e));
+    // In the globe's size on screen (its zoom factor), so the speed looks the same at every zoom.
+    const z0 = Math.log(zoomOf(from.fov));
+    al.setFoV(fovOf(Math.exp(z0 + (Math.log(zoomOf(to.fov)) - z0) * e)));
     al.gotoRaDec(wrapRa(from.ra + dRa * e), from.dec + (to.dec - from.dec) * e);
     if (t >= 1) glide = null;
   }
   if (zoomTo) {
-    const fov = cam.fov * (zoomTo.fov / cam.fov) ** 0.28;
-    const close = Math.abs(Math.log(zoomTo.fov / cam.fov)) < 0.004;
-    al.setFoV(close ? zoomTo.fov : fov);
+    const z = zoomOf(cam.fov);
+    const goal = zoomOf(zoomTo.fov);
+    const close = Math.abs(Math.log(goal / z)) < 0.004;
+    al.setFoV(close ? zoomTo.fov : fovOf(z * (goal / z) ** 0.28));
     keepUnder(zoomTo.ra, zoomTo.dec, zoomTo.x, zoomTo.y);
     if (close) zoomTo = null;
   }
 }
 
-/** Shifts the centre so the sky position (ra, dec) sits on screen point (x, y). */
+/**
+ * Turns the globe so the sky position (ra, dec) sits on screen point (x, y). Once the globe is
+ * smaller than that point's distance from the centre, the point is pulled in toward the centre
+ * (it cannot sit off the globe), so zooming out ends on a centred globe without a jump.
+ */
 function keepUnder(ra: number, dec: number, x: number, y: number): void {
   if (!al) return;
   readCamera(true);
   if (!view) return;
   const p = project(view, ra, dec);
   if (!p) return;
-  const c = al.pix2world(cam.width / 2 + (p.x - x), cam.height / 2 + (p.y - y));
-  if (c && Number.isFinite(c[0]) && Number.isFinite(c[1])) al.gotoRaDec(wrapRa(c[0]), c[1]);
+  let dx = x - cam.width / 2;
+  let dy = y - cam.height / 2;
+  const reach = view.scale * 0.85;
+  const far = Math.hypot(dx, dy);
+  if (far > reach) {
+    dx *= reach / far;
+    dy *= reach / far;
+  }
+  const c = skyAt(p.x - dx, p.y - dy);
+  if (c) al.gotoRaDec(wrapRa(c[0]), c[1]);
 }
 
 /** Reads Aladin's camera; true when it changed. Recalibrates the fast projection. */
 function readCamera(force = false): boolean {
   if (!al || !skyEl) return false;
   const [ra, dec] = al.getRaDec();
-  const [fov] = al.getFov();
+  // Aladin's own `getFov` stops at 180; the zoom factor goes on to the whole globe.
+  const fov = fovOf(al.getZoomFactor());
   const width = skyEl.clientWidth;
   const height = skyEl.clientHeight;
   if (
@@ -956,10 +1002,11 @@ function readCamera(force = false): boolean {
     return false;
   }
   Object.assign(cam, { ra: wrapRa(ra), dec, fov, width, height });
-  if (fov > FOV_MAX + 0.01 || fov < FOV_MIN - 1e-4) al.setFoV(clampFov(fov));
+  if (fov > widestFov(width, height) * 1.0001 || fov < FOV_MIN - 1e-4) al.setFoV(clampFov(fov));
   const v = makeView(cam.ra, cam.dec, 1, width / 2, height / 2);
-  const dx = Math.min(width / 4, 200);
-  const w = al.pix2world(width / 2 + dx, height / 2 + dx / 2);
+  // A point well inside the globe at every zoom (its radius is at least a quarter of the width).
+  const dx = Math.min(width / 6, 200);
+  const w = skyAt(width / 2 + dx, height / 2 + dx / 2);
   const cal = w ? calibrate(v, w[0], w[1], width / 2 + dx, height / 2 + dx / 2) : null;
   view = cal ? makeView(cam.ra, cam.dec, cal.scale, width / 2, height / 2, cal.flip) : view;
   return true;
@@ -972,6 +1019,12 @@ function draw(): void {
   // The view and the patch box, readable by the guide and the smoke test without the sky's code.
   if (skyEl) {
     skyEl.dataset.view = `${cam.ra.toFixed(5)} ${cam.dec.toFixed(5)} ${cam.fov.toFixed(5)}`;
+    // Round the whole globe, Aladin paints a fixed grey; it is masked away so space is the
+    // page's own blue-black (sky.css), like the darkest sky.
+    const r = view ? view.scale : 0;
+    const globe = r > 0 && r < Math.hypot(cam.width, cam.height) / 2;
+    if (globe) skyEl.style.setProperty('--globe-r', `${r.toFixed(1)}px`);
+    if ((skyEl.dataset.globe === '1') !== globe) skyEl.dataset.globe = globe ? '1' : '';
     const box = outline();
     skyEl.dataset.patch = box
       ? `${Math.round(box.x)} ${Math.round(box.y)} ${Math.round(box.width)}`
@@ -999,6 +1052,11 @@ function patchAt(): { ra: number; dec: number; fov: number } | null {
   return patch;
 }
 
+/** The patch shows the loading style now (FRM-1). */
+function patchLoading(): boolean {
+  return !!patch && (!!(dragging && !dragging.ring) || !!dropped || patch.source === 'loading');
+}
+
 /** FRM-1: line style says what the patch holds. */
 function patchStyle(
   source: PatchSource = (dragging && !dragging.ring) || dropped ? 'loading' : (patch?.source ?? 'none'),
@@ -1009,7 +1067,7 @@ function patchStyle(
     case 'none':
       return { stroke: colours.ink3 ?? '', dash: [0.1, 5], cap: 'round' };
     case 'loading':
-      return { stroke: colours.ink2 ?? '', dash: [6, 4], cap: 'butt' };
+      return { stroke: colours.ink ?? '', dash: [5, 3], cap: 'butt' };
     default:
       return { stroke: colours.mark ?? '', dash: [], cap: 'butt' };
   }
@@ -1037,19 +1095,25 @@ function drawPatch(): void {
   const f = frameRect();
   // The tether: a dotted line from the patch to the nearest point of the frame (DESIGN.md).
   if (f && !(dragging && !dragging.ring)) tether(ctx, box, f);
+  const moving = !!((dragging && !dragging.ring) || dropped);
+  const loading = moving || patch.source === 'loading';
   ctx.save();
-  ctx.strokeStyle = style.stroke;
-  ctx.lineWidth = 2;
   ctx.lineCap = style.cap;
   ctx.setLineDash(style.dash);
+  // While loading, the dashes creep round the square, so the wait shows at any zoom.
+  ctx.lineDashOffset = loading && !reducedMotion() ? -((performance.now() / 60) % 8) : 0;
+  // A dark edge under the line keeps it readable on the bright Milky Way.
+  ctx.strokeStyle = 'rgba(5, 7, 13, 0.6)';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(box.x, box.y, box.width, box.height);
+  ctx.strokeStyle = style.stroke;
+  ctx.lineWidth = 2;
   ctx.strokeRect(box.x, box.y, box.width, box.height);
   ctx.restore();
   // The patch label: only when nothing else names the patch (DESIGN.md Marks on the sky).
-  const moving = !!((dragging && !dragging.ring) || dropped);
-  const loading = moving || patch.source === 'loading';
   if (loading || !f) {
     const text = loading ? `${moving ? 'Moving here' : patch.label} · loading` : patch.label;
-    tag(ctx, box, text, style.stroke);
+    tag(ctx, box, text, style.stroke, true);
   }
 }
 
@@ -1073,17 +1137,64 @@ function drawRings(ctx: CanvasRenderingContext2D): void {
   }
 }
 
-/** A small tag on a square's top left corner (or under it near the top of the window). */
-function tag(ctx: CanvasRenderingContext2D, box: DOMRect, text: string, fill: string): void {
+/**
+ * A small tag on a square's top left corner (or under it near the top of the window). With
+ * `clear`, it moves to another side of the square when a card would cover it.
+ */
+function tag(
+  ctx: CanvasRenderingContext2D,
+  box: DOMRect,
+  text: string,
+  fill: string,
+  clear = false,
+): void {
   ctx.font = colours.font ?? '';
   const w = ctx.measureText(text).width + 10;
-  const y = tagTop(box);
+  const at = clear ? tagSpot(box, w) : { x: box.left - 1, y: tagTop(box) };
   ctx.fillStyle = fill;
-  roundRect(ctx, box.left - 1, y, w, 17, 4);
+  roundRect(ctx, at.x, at.y, w, 17, 4);
   ctx.fill();
   ctx.fillStyle = colours.sky ?? '';
   ctx.textBaseline = 'middle';
-  ctx.fillText(text, box.left + 4, y + 9);
+  ctx.fillText(text, at.x + 5, at.y + 9);
+}
+
+let cardCache: { at: number; boxes: DOMRect[] } | null = null;
+/** The cards on screen (re-read at most every 300 ms). */
+function cardBoxes(): DOMRect[] {
+  const now = performance.now();
+  if (!cardCache || now - cardCache.at > 300) {
+    cardCache = {
+      at: now,
+      boxes: [...document.querySelectorAll('[data-card]')]
+        .filter((el) => el.checkVisibility())
+        .map((el) => el.getBoundingClientRect()),
+    };
+  }
+  return cardCache.boxes;
+}
+
+/** Where a tag `w` wide goes by a square: above, below, right or left, wherever no card is. */
+function tagSpot(box: DOMRect, w: number): { x: number; y: number } {
+  const h = 17;
+  const tries = [
+    { x: box.left - 1, y: box.top - 19 },
+    { x: box.left - 1, y: box.bottom + 3 },
+    { x: box.right - w + 1, y: box.top - 19 },
+    { x: box.right - w + 1, y: box.bottom + 3 },
+    { x: box.right + 6, y: box.top + box.height / 2 - h / 2 },
+    { x: box.left - 6 - w, y: box.top + box.height / 2 - h / 2 },
+  ];
+  const cards = cardBoxes();
+  const free = tries.find(
+    (t) =>
+      t.x >= 4 &&
+      t.y >= 4 &&
+      t.x + w <= cam.width - 4 &&
+      t.y + h <= cam.height - 4 &&
+      !cards.some((c) => t.x < c.right && t.x + w > c.left && t.y < c.bottom && t.y + h > c.top),
+  );
+  return free ?? { x: box.left - 1, y: tagTop(box) };
 }
 
 /** Where a square's tag starts: above its top left corner, or under it near the window's top. */
@@ -1294,7 +1405,7 @@ function watchPointer(el: HTMLElement): void {
     (e) => {
       stop(e);
       clearTimeout(clickTimer);
-      zoomAround(e.clientX, e.clientY, cam.fov / 2);
+      zoomAround(e.clientX, e.clientY, fovOf(zoomOf(cam.fov) / 2));
     },
     true,
   );
@@ -1306,8 +1417,8 @@ function watchPointer(el: HTMLElement): void {
       stop(e);
       const lines = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1;
       const delta = Math.max(-300, Math.min(300, e.deltaY * lines));
-      const base = zoomTo?.fov ?? cam.fov;
-      zoomAround(e.clientX, e.clientY, base * Math.exp(delta * 0.0022));
+      const base = zoomOf(zoomTo?.fov ?? cam.fov);
+      zoomAround(e.clientX, e.clientY, fovOf(base * Math.exp(delta * 0.0022)));
     },
     { capture: true, passive: false },
   );
@@ -1323,14 +1434,21 @@ function watchPointer(el: HTMLElement): void {
   el.addEventListener('contextmenu', (e) => e.stopPropagation(), true);
 }
 
-/** Zooms so the sky under (x, y) stays under it (SKY-3). */
+/**
+ * Zooms so the sky under (x, y) stays under it (SKY-3). Off the globe (in the dark space round
+ * it), the zoom keeps the globe's centre where it is.
+ */
 function zoomAround(x: number, y: number, fov: number): void {
   flags.moved = true;
   glide = null;
   const target = clampFov(fov);
-  const anchor = zoomTo && Math.hypot(zoomTo.x - x, zoomTo.y - y) < 2 ? zoomTo : toWorld(x, y);
-  if (!anchor) return;
-  zoomTo = { fov: target, x, y, ra: anchor.ra, dec: anchor.dec };
+  let at = { x, y };
+  let anchor = zoomTo && Math.hypot(zoomTo.x - x, zoomTo.y - y) < 2 ? zoomTo : toWorld(x, y);
+  if (!anchor) {
+    at = { x: cam.width / 2, y: cam.height / 2 };
+    anchor = { ra: cam.ra, dec: cam.dec };
+  }
+  zoomTo = { fov: target, ...at, ra: anchor.ra, dec: anchor.dec };
 }
 
 function onClick(x: number, y: number): void {
@@ -1353,7 +1471,7 @@ function keepPatchClear(): void {
   if (!f || !box || !al) return;
   if (box.right < f.left || box.left > f.right || box.bottom < f.top || box.top > f.bottom) return;
   const shift = box.x + box.width / 2 - Math.max(80, f.left / 2);
-  const c = al.pix2world(cam.width / 2 + shift, cam.height / 2);
+  const c = skyAt(cam.width / 2 + shift, cam.height / 2);
   if (c) flyTo({ ra: c[0], dec: c[1] });
 }
 
@@ -1445,7 +1563,9 @@ function placeClickCard(): void {
 // ----- Helpers ----------------------------------------------------------------------------------
 
 function clampFov(fov: number): number {
-  return Math.max(FOV_MIN, Math.min(FOV_MAX, fov));
+  const width = cam.width || innerWidth;
+  const height = cam.height || innerHeight;
+  return Math.max(FOV_MIN, Math.min(widestFov(width, height), fov));
 }
 
 function reducedMotion(): boolean {

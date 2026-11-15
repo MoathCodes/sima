@@ -4,6 +4,7 @@
  * Owner: the intro (src/intro/).
  */
 import { axisAngle, matrix, multiply, type Quat, type Vec3 } from './sphere.ts';
+import { fovOf, globeScale, zoomOf } from '../sky/project.ts';
 
 const DEG = Math.PI / 180;
 
@@ -59,7 +60,7 @@ export interface Landing {
   fov: number;
   x: number;
   y: number;
-  /** The width the map starts its glide from, and its scale there (CSS px per radian). */
+  /** The width the map starts its glide from, and the globe's radius there (CSS px). */
   from: number;
   fromScale: number;
 }
@@ -74,15 +75,18 @@ export interface Plan {
   land: Landing;
 }
 
-/** CSS px per radian at the centre of the sky map, `fov` degrees wide (stereographic). */
-export function stgScale(w: number, fov: number): number {
-  return w / 2 / (2 * Math.tan((fov * DEG) / 4));
+/**
+ * The globe's radius, CSS px, when the sky map is `fov` degrees wide. The map is the same globe
+ * (orthographic, src/sky/project.ts), so the intro's globe and the map match at every size.
+ */
+export function mapScale(w: number, fov: number): number {
+  return globeScale(w, fov);
 }
 
 /** The width (degrees) the map glides in from: 55° or less, once the globe fills the window. */
 export function handFov(w: number, h: number, fov: number): number {
-  const scale = Math.max(stgScale(w, HAND_FOV), Math.hypot(w, h) * 0.8);
-  return Math.max(fov, Math.min(HAND_FOV, (4 * Math.atan(w / 4 / scale)) / DEG));
+  const scale = Math.max(mapScale(w, HAND_FOV), Math.hypot(w, h) * 0.8);
+  return Math.max(fov, Math.min(HAND_FOV, fovOf(w / 2 / scale)));
 }
 
 /** The globe's radius while it is in shadow, CSS pixels. */
@@ -111,10 +115,8 @@ export function view(end: Quat, flare: [number, number], theta: number): Quat {
 export interface Scene {
   cx: number;
   cy: number;
-  /** The globe's radius (the map's scale, CSS px per radian, once it is the map). */
+  /** The globe's radius, CSS px (the sky map's own scale once it takes over). */
   radius: number;
-  /** 0: a globe (orthographic); 1: the sky map's stereographic projection. */
-  proj: number;
   rot: Float32Array;
   /** The globe's channel, or null while it is in shadow. */
   globe: number | null;
@@ -157,20 +159,22 @@ export function sceneAt(
   const r0 = globeRadius(w, h);
   let radius = r0;
   if (plan.handAt !== null) {
-    const fov = Math.exp(Math.log(land.from) + Math.log(land.fov / land.from) * (1 - (1 - u) ** 3));
-    radius = stgScale(w, fov);
+    // The sky map's glide (sky.ts `introZoom`): eased out, in the globe's size on screen.
+    const z0 = Math.log(zoomOf(land.from));
+    const z = Math.exp(z0 + (Math.log(zoomOf(land.fov)) - z0) * (1 - (1 - u) ** 3));
+    radius = w / 2 / z;
   } else if (R !== null) {
     const d1 = Math.log(land.fromScale / r0);
-    const d2 = Math.log(land.from / land.fov);
+    const d2 = Math.log(zoomOf(land.from) / zoomOf(land.fov));
     const grow = Math.max(0.3, Math.min(T.hand - 0.4, (T.land * d1) / Math.max(d2, 0.1)));
     const x = Math.max(0, Math.min(1, (r - (T.hand - grow)) / grow));
     radius = r0 * Math.exp(d1 * x * x * x);
   }
-  // From the globe (orthographic) to the sky map's projection (stereographic) once the globe's
+  // The globe's centre moves to the sky map's centre on screen once the globe's
   // edge has left the window.
-  const proj = smooth(Math.hypot(w, h) / 2, land.fromScale * 0.98, radius);
-  const cx = w / 2 + (land.x - w / 2) * proj;
-  const cy = h / 2 + (land.y - h / 2) * proj;
+  const fill = smooth(Math.hypot(w, h) / 2, land.fromScale * 0.98, radius);
+  const cx = w / 2 + (land.x - w / 2) * fill;
+  const cy = h / 2 + (land.y - h / 2) * fill;
 
   // The turn: one rotation, about the axis that brings the flare's point to the centre.
   const flare = flareDir(w);
@@ -213,7 +217,6 @@ export function sceneAt(
     cx,
     cy,
     radius,
-    proj,
     rot: matrix(q),
     globe: R === null || !has(plan.skyChannel) ? null : plan.skyChannel,
     ringA: Math.max(0, ringA),

@@ -321,7 +321,7 @@ Each line is one requirement with a check. IDs are used in sections 9 and 10.
 
 | ID | Requirement | Check |
 |---|---|---|
-| SKY-1 | The SPHEREx all-sky map fills the window at any zoom from 180° to a few arcminutes. | No black sphere at 180°. |
+| SKY-1 | The SPHEREx all-sky map is a globe (orthographic, like Aladin Lite's SIN view). From a few arcminutes to a wide view it fills the window; zooming out further shows the whole globe as a disc of sky with dark space round it, about 88% of the window's shorter side at most. The zoom is one smooth motion, with no jump and no change of projection; dragging turns the globe. The globe is always real sky (shipped tiles first), never black or empty. | Wheel from 3′ out to the globe and back in one motion; the globe is filled at every step; no dot or label on its far side. |
 | SKY-2 | The wavelength scale sets the map's channel (102 channels; 50 and 51 do not exist and are skipped). The change is a 0.26 s cross-fade, never a cut to grey. | Slide from 0.75 to 5.0 µm. |
 | SKY-3 | Drag pans. The wheel zooms toward the pointer. Double-click zooms in 2×. + and − zoom. | The point under the pointer stays put. |
 | SKY-4 | The sky map chooser offers SPHEREx, AllWISE 3.4 µm and AllWISE 4.6 µm. | Each loads. |
@@ -446,7 +446,7 @@ Full definitions in `docs/tools.md`.
 | Messier, NGC and IC objects | https://github.com/mattiaverga/OpenNGC | Build time only |
 | Arabic labels, short texts | https://www.wikidata.org and Simple English Wikipedia | Build time only |
 | Sky library | Aladin Lite 3.8.2, https://aladin.cds.unistra.fr/AladinLite/ (npm package `aladin-lite`, bundled) | n/a |
-| Fonts | Archivo, Reem Kufi (SIL OFL), in `src/styles/fonts/` | n/a |
+| Fonts | Archivo, Amiri (SIL OFL), in `src/styles/fonts/` | n/a |
 
 The exact addresses are in `scripts/prebake.py`, `scripts/build_places.py`, `src/core/catalog.ts` and
 `src/sky/sky.ts`. Check them there before relying on this table.
@@ -923,5 +923,5 @@ full flow, and reduced motion switched on for one flow.
 - NASA/IPAC Infrared Science Archive: SPHEREx data, SIA and TAP services, SPHEREx tutorial notebooks.
 - Gaia DR3 (ESA); CatWISE2020; AllWISE.
 - SIMBAD (CDS); IAU Catalog of Star Names; OpenNGC; Wikidata; Wikipedia.
-- Aladin Lite (CDS). Archivo and Reem Kufi (SIL Open Font License).
+- Aladin Lite (CDS). Archivo and Amiri (SIL Open Font License).
 - The full reference list with links is in the About dialog of the app.

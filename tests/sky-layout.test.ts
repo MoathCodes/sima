@@ -3,16 +3,25 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { calibrate, makeView, plane, project, separation } from '../src/sky/project.ts';
+import {
+  calibrate,
+  fovOf,
+  globeScale,
+  makeView,
+  plane,
+  project,
+  separation,
+  widestFov,
+  zoomOf,
+} from '../src/sky/project.ts';
 import { layout, maxTier, type Box, type LayoutInput } from '../src/sky/layout.ts';
 
 const W = 1900;
 const H = 1030;
 
-/** The view Aladin shows `fov` degrees wide: STG puts fov/2 from the centre at the edge. */
+/** The view Aladin shows `fov` degrees wide: SIN puts fov/2 from the centre at the edge. */
 function viewOf(ra: number, dec: number, fov: number) {
-  const scale = W / 2 / (2 * Math.tan(((fov / 2) * (Math.PI / 180)) / 2));
-  return makeView(ra, dec, scale, W / 2, H / 2, -1);
+  return makeView(ra, dec, globeScale(W, fov), W / 2, H / 2, -1);
 }
 
 test('the centre projects to the middle; east is left, north is up', () => {
@@ -25,12 +34,25 @@ test('the centre projects to the middle; east is left, north is up', () => {
   assert.ok(north && north.y < H / 2);
 });
 
-test('at 180° the half-width point sits on the window edge (SKY-1: no black sphere)', () => {
+test('a globe: at 180° the half-width point sits on the window edge, the far side is hidden (SKY-1)', () => {
   const v = viewOf(0, 0, 180);
   const edge = project(v, 90, 0); // 90° east of the centre: the left edge
   assert.ok(edge && Math.abs(edge.x) < 1e-6);
-  // The corners are still sky: points 100° away project inside a finite plane.
-  assert.ok(plane(v, 100, 40));
+  assert.equal(plane(v, 100, 40), null);
+  assert.equal(project(v, 180, 0), null);
+});
+
+test('zoom factor and width agree with Aladin, continuous through 180° (SKY-1)', () => {
+  assert.ok(Math.abs(zoomOf(60) - 0.5) < 1e-12);
+  assert.equal(zoomOf(180), 1);
+  assert.equal(zoomOf(360), 2);
+  for (const f of [0.05, 2, 60, 179, 180, 181, 300, 360]) assert.ok(Math.abs(fovOf(zoomOf(f)) - f) < 1e-9);
+  // The widest view: the whole globe fits the window's shorter side, with room round it.
+  const wide = widestFov(W, H);
+  assert.equal(wide, 360);
+  assert.ok(2 * globeScale(W, wide) < H);
+  const phone = widestFov(390, 844);
+  assert.ok(phone > 180 && 2 * globeScale(390, phone) < 390);
 });
 
 test('calibrate recovers the scale and the east-left flip', () => {
@@ -148,4 +170,22 @@ test(`laying out all ${places.length} places takes well under 4 ms (PLC-8)`, () 
     `# layout of ${all.length} dots: median ${median.toFixed(3)} ms, 95th percentile ${p95.toFixed(3)} ms`,
   );
   assert.ok(median < 2, `median ${median} ms`);
+});
+
+test('labels stay calm while the view moves: kept sides, nothing new until it stops', () => {
+  const all = inputs(null);
+  const before = layout(all, viewOf(269.45, 4.69, 30), W, H, 30, []);
+  const sides = new Map(before.filter((p) => p.side >= 0).map((p) => [all[p.index]!, p.side]));
+  assert.ok(sides.size > 3);
+  // A small zoom in, as one wheel step: no label changes side and none is added.
+  const moving = layout(all, viewOf(269.45, 4.69, 26), W, H, 26, [], sides, false);
+  for (const p of moving) {
+    if (p.side < 0) continue;
+    assert.equal(sides.get(all[p.index]!), p.side, 'a label flipped side mid-zoom');
+  }
+  // Once the view stops, labels may be added; the kept ones still keep their side.
+  const kept = new Map(moving.filter((p) => p.side >= 0).map((p) => [all[p.index]!, p.side]));
+  const rest = layout(all, viewOf(269.45, 4.69, 26), W, H, 26, [], kept, true);
+  for (const [d, side] of kept) assert.equal(rest.find((p) => all[p.index] === d)?.side, side);
+  assert.ok(rest.filter((p) => p.side >= 0).length >= kept.size);
 });

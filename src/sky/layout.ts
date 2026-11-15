@@ -7,6 +7,9 @@
  * - Labels never overlap each other, any box to keep clear (cards), or the window's edge. A
  *   label tries the right of its dot, then the left, above and below; with no room, the dot
  *   shows without a label. More important places choose first.
+ * - Labels stay calm while the view moves: a label shown last time keeps its side and goes before
+ *   any new one, and new labels are added only once the view has stopped (`grow`). So a wheel
+ *   zoom never reshuffles them; it only drops those that collide or leave the window.
  */
 import { projectInto, type View } from './project.ts';
 
@@ -37,7 +40,12 @@ export interface Placed {
   x: number;
   y: number;
   label: Box | null;
+  /** Which side the label took (0 right, 1 left, 2 above, 3 below), −1 for none. */
+  side: number;
 }
+
+/** The labels of the last layout, by input: the side each took. */
+export type Sides = ReadonlyMap<LayoutInput, number>;
 
 /** The faintest tier shown at a view this wide (degrees). */
 export function maxTier(fov: number): number {
@@ -61,6 +69,8 @@ function hits(a: Box, b: Box): boolean {
  * @param height Window height.
  * @param fov Width of the view, degrees.
  * @param avoid Boxes labels must stay off (visible cards, the patch).
+ * @param prev The sides of the last layout's labels: they keep them, and choose first.
+ * @param grow False while the view moves: no label is added that `prev` did not have.
  */
 export function layout(
   dots: readonly LayoutInput[],
@@ -69,6 +79,8 @@ export function layout(
   height: number,
   fov: number,
   avoid: readonly Box[],
+  prev: Sides = new Map(),
+  grow = true,
 ): Placed[] {
   const tier = maxTier(fov);
   const out: Placed[] = [];
@@ -80,29 +92,45 @@ export function layout(
     if (d.tier > tier && !d.always) continue;
     if (!projectInto(view, d.ra, d.dec, p)) continue;
     if (p.x < -4 || p.y < -4 || p.x > width + 4 || p.y > height + 4) continue;
-    let label: Box | null = null;
-    if (labels < MAX_LABELS) {
-      const w = d.width;
-      const h = LABEL_HEIGHT;
-      const GAP = d.gap ?? DOT_GAP;
-      const tries: Box[] = [
-        { left: p.x + GAP, top: p.y - h / 2, right: p.x + GAP + w, bottom: p.y + h / 2 },
-        { left: p.x - GAP - w, top: p.y - h / 2, right: p.x - GAP, bottom: p.y + h / 2 },
-        { left: p.x - w / 2, top: p.y - GAP - h, right: p.x + w / 2, bottom: p.y - GAP },
-        { left: p.x - w / 2, top: p.y + GAP, right: p.x + w / 2, bottom: p.y + GAP + h },
-      ];
-      for (const t of tries) {
-        if (t.left < 2 || t.top < 2 || t.right > width - 2 || t.bottom > height - 2) continue;
-        if (avoid.some((r) => hits(t, r)) || taken.some((r) => hits(t, r))) continue;
-        label = t;
-        break;
-      }
-    }
-    if (label) {
-      taken.push(label);
+    out.push({ index: i, x: p.x, y: p.y, label: null, side: -1 });
+  }
+  // Labels: last time's first, on their old side if it is still free (while the view moves, only
+  // there: a label never flips side mid-zoom); then, once it has stopped, new ones.
+  const label = (placed: Placed, first: number, only = false): void => {
+    const d = dots[placed.index] as LayoutInput;
+    const w = d.width;
+    const h = LABEL_HEIGHT;
+    const GAP = d.gap ?? DOT_GAP;
+    const { x, y } = placed;
+    const tries: Box[] = [
+      { left: x + GAP, top: y - h / 2, right: x + GAP + w, bottom: y + h / 2 },
+      { left: x - GAP - w, top: y - h / 2, right: x - GAP, bottom: y + h / 2 },
+      { left: x - w / 2, top: y - GAP - h, right: x + w / 2, bottom: y - GAP },
+      { left: x - w / 2, top: y + GAP, right: x + w / 2, bottom: y + GAP + h },
+    ];
+    for (let k = -1; k < (only ? 0 : tries.length); k++) {
+      const side = k < 0 ? first : k;
+      if (side < 0 || (k >= 0 && k === first)) continue;
+      const t = tries[side] as Box;
+      if (t.left < 2 || t.top < 2 || t.right > width - 2 || t.bottom > height - 2) continue;
+      if (avoid.some((r) => hits(t, r)) || taken.some((r) => hits(t, r))) continue;
+      placed.label = t;
+      placed.side = side;
+      taken.push(t);
       labels++;
+      return;
     }
-    out.push({ index: i, x: p.x, y: p.y, label });
+  };
+  for (const placed of out) {
+    if (labels >= MAX_LABELS) break;
+    const side = prev.get(dots[placed.index] as LayoutInput);
+    if (side !== undefined && side >= 0) label(placed, side, !grow);
+  }
+  if (grow) {
+    for (const placed of out) {
+      if (labels >= MAX_LABELS) break;
+      if (placed.side < 0 && !prev.has(dots[placed.index] as LayoutInput)) label(placed, -1);
+    }
   }
   return out;
 }
