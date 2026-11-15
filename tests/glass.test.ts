@@ -64,8 +64,10 @@ test('GLS-1: backdrop-filter is written only in app.css, and no blur is over 32 
   walk('src');
   // glass.ts only asks whether the browser supports it (CSS.supports); it styles nothing.
   const allowed = [join('styles', 'app.css'), join('shell', 'glass.ts')];
+  // Comments may name the property; only code may use it.
+  const code = (f: string) => readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const offenders = files.filter(
-    (f) => !allowed.some((a) => f.endsWith(a)) && /backdrop-filter|backdropFilter/.test(readFileSync(f, 'utf8')),
+    (f) => !allowed.some((a) => f.endsWith(a)) && /backdrop-filter|backdropFilter/.test(code(f)),
   );
   assert.deepEqual(offenders, []);
   const app = readFileSync('src/styles/app.css', 'utf8');

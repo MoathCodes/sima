@@ -91,6 +91,8 @@ export interface SandboxReading {
   verdict: Verdict;
   /** The patch the verdict is for: a check rejects a reading for another patch. */
   patchKey: string;
+  /** The patch's measured noise per detector, for lane H's `planetEdges()` (Planet X's result). */
+  noises: DetectorNoise[];
 }
 
 const sandboxFns = new Set<(r: SandboxReading | null) => void>();
@@ -105,9 +107,11 @@ export function sandboxState(): SandboxReading | null {
   const m = widths.get(field);
   const pending = ([1, 2, 3, 4, 5, 6] as Det[]).some((d) => !m?.has(d) && field.frames.some((f) => f.det === d));
   if (pending) return null;
+  const measured = noises(field);
   return {
     planet: { ...planet },
-    verdict: verdict(answer(planet, noises(field))),
+    verdict: verdict(answer(planet, measured)),
+    noises: measured,
     patchKey: `${S.set?.key ?? 'field'}|${field.ra}|${field.dec}|${field.n}`,
   };
 }
