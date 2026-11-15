@@ -515,9 +515,17 @@ hard cuts, the 2.5 per second cap.
 ### The date scale and the wavelength scale (signatures)
 Carried exactly, drawn on the Regular bar: ticks `on-glass-3` (major) and white 22% (minor);
 passes white 55%; visit dots `on-glass`; the playhead and handle in `mark` with a 2 px tint-coloured
-border; detector strip in `d1`–`d6`; band-edge ticks `on-glass`. Discover replaces the date scale
-with **date chips** (one per group of dates: letter in its pass tint, month and year, the current
-one ringed in `mark`).
+border; detector strip in `d1`–`d6`; band-edge ticks `on-glass`. Discover and phones replace the date scale
+with the **date strip** beside Play: a thin line, one dot per picture placed by date, the current one
+ringed in `mark` with only its date written above; tap, drag or arrow keys step; 48 px tall to
+touch. No letters (redesign pass).
+
+**Expert frame, redesign pass:** one header row (name over "● Real data · SPHEREx DR1 ⓘ", then
+field size "6′ ▾", tools, Measure, hide); the picture badge gives date, pass, detector and
+wavelength in two lines; ⓘ opens "About this picture" (the full data line, what the view shows, the
+legend). The six views are one segmented control with a sliding pill: words when the row is 440 px
+or wider, icons alone (named in the tooltip) below. Measure: name and kind on one line, number and
+pill, one short line, the chart with an ⓘ "How to read this"; CSV is an icon in the header.
 
 ### Marks on the sky
 Carried, plus:

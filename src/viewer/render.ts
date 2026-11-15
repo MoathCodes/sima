@@ -253,7 +253,7 @@ export function hud(): Hud | null {
       // Measure names the detector and wavelengths, as the badge does for one date (H2).
       lines: measure
         ? [`D${S.det} ${lamRange(framesOf(field, [a, b].filter((x): x is Group => !!x)).map((x) => x.lam))}`]
-        : ['White did not change'],
+        : [],
       warn: sim,
     };
   }
@@ -288,21 +288,8 @@ export function hud(): Hud | null {
     };
   }
   const frames = framesOf(field, [g]);
-  if (!measure) {
-    const n = frames.length;
-    const mixed = frames.some((f) => !colourMatch(f, frames[0] ?? f));
-    const lines =
-      S.mode === 'diff'
-        ? ['This date minus the typical sky']
-        : S.mode === 'trail'
-          ? ['Earlier dates fade behind it']
-          : [
-              n > 1
-                ? `Blends ${n} shots${mixed ? ' in slightly different colours' : ''}`
-                : 'One shot',
-            ];
-    return { letter: g.letter, title: formatDate(g.mjd, 'month'), lines, warn: sim };
-  }
+  // Discover and phones: the date alone; how many shots are blended is in the data line's tooltip.
+  if (!measure) return { letter: g.letter, title: formatDate(g.mjd, 'month'), lines: [], warn: sim };
   // One line under the date: pass, detector and wavelength, "· reference" on the reference date.
   // A different colour from the reference is the only other line (redesign item 2: few words; what
   // each view shows is in the frame's "About this picture").
@@ -375,11 +362,11 @@ export function exif(): string {
 }
 
 /**
- * The data line under the frame's name in Discover and on phones (v2.0, H2, BEGINNER-AND-MOBILE
- * 5.3 and 11.4): release, the date or dates on screen, detector and wavelength range, e.g.
- * "DR1 · 23 Mar 2026 to 25 Mar 2026 · D3 1.67–1.79 µm". Two dates says "Two dates combined:
- * {date A} (red) · {date B} (cyan)"; Stack says how many pictures. Source ("Real data · NASA
- * SPHEREx", "Simulated") is said just before it, by the header's source line.
+ * The data line in Discover and on phones (v2.0, H2, BEGINNER-AND-MOBILE 5.3 and 11.4), one short
+ * line after the source dot: source and release, the dates on screen and the wavelength, e.g.
+ * "SPHEREx QR3 · 15–16 Sep 2026 · 1.93–2.16 µm" (redesign item 2). Two dates names its red and
+ * cyan dates; Stack says how many pictures; simulated pictures say so first. The rest (detector,
+ * exposure count, coverage) is in the line's tooltip, `exif()`.
  */
 export function dataLine(): string {
   const f = S.field;
@@ -388,30 +375,30 @@ export function dataLine(): string {
   const frames = framesOf(f, groups);
   const parts: string[] = [];
   const releases = [...new Set(frames.map((x) => release(x.release)))].join(' + ');
-  if (f.simulated) parts.push('made-up pictures for practice, not real data');
-  else if (releases) parts.push(releases);
+  parts.push(f.simulated ? 'made-up pictures for practice' : releases ? `SPHEREx ${releases}` : 'SPHEREx');
   const mjds = frames.map((x) => x.mjd).filter(Number.isFinite);
   if (S.mode === 'two' && groups.length === 2) {
-    const [a, b] = groups.map((g) => {
-      const m = framesOf(f, [g]).map((x) => x.mjd).filter(Number.isFinite);
-      return m.length ? dayRange(Math.min(...m), Math.max(...m)) : formatDate(g.mjd, 'month');
-    });
-    parts.push(`Two dates combined: ${a} (red) · ${b} (cyan)`);
+    const [a, b] = groups.map((g) => formatDate(g.mjd, 'month'));
+    parts.push(`red ${a} · cyan ${b}`);
   } else if (S.mode === 'stack') {
     const n = stackShown()?.frames ?? frames.length;
-    parts.push(
-      mjds.length
-        ? `Stack of ${n} picture${n === 1 ? '' : 's'}, ${dayRange(Math.min(...mjds), Math.max(...mjds))}`
-        : `Stack of ${n} pictures`,
-    );
-  } else if (mjds.length) parts.push(dayRange(Math.min(...mjds), Math.max(...mjds)));
+    parts.push(`stack of ${n}${mjds.length ? `, ${shortRange(Math.min(...mjds), Math.max(...mjds))}` : ''}`);
+  } else if (mjds.length) parts.push(shortRange(Math.min(...mjds), Math.max(...mjds)));
   else parts.push(`no D${S.det} exposure on this date`);
   const lams = lamRange(frames.map((x) => x.lam));
-  parts.push(S.color ? 'D1–D6' : lams ? `D${S.det} ${lams}` : `D${S.det}`);
-  // Where the real exposures end, as the data line under the views says (H1).
-  const covered = (f.n * f.scale) / 60;
-  if (covered < S.fov - 0.05) parts.push(`real pictures cover the middle ${covered.toFixed(1)}′`);
+  parts.push(S.color ? 'D1–D6' : lams || `D${S.det}`);
   return parts.join(' · ');
+}
+
+/** "15–16 Sep 2026", "30 Sep – 2 Oct 2026", or one day. */
+function shortRange(a: number, b: number): string {
+  const [d1, m1, y1] = formatDate(a, 'day').split(' ');
+  const full = formatDate(b, 'day');
+  const [d2, m2, y2] = full.split(' ');
+  if (`${d1} ${m1} ${y1}` === full) return full;
+  if (m1 === m2 && y1 === y2) return `${d1}–${d2} ${m2} ${y2}`;
+  if (y1 === y2) return `${d1} ${m1} – ${full}`;
+  return `${formatDate(a, 'day')} – ${full}`;
 }
 
 // ----- Painting ---------------------------------------------------------------------------------

@@ -83,7 +83,7 @@ const SOLAR_SYSTEM = /^(the )?(sun|moon|mercury|venus|earth|mars|jupiter|saturn|
 
 const SEARCH_WORDS: Record<View, string> = {
   expert: 'Star, galaxy or RA Dec',
-  discover: 'Find a star, galaxy or nebula',
+  discover: 'Star, galaxy or RA Dec',
 };
 
 /** Fills the search card. Called once by main.ts. */

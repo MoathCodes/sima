@@ -987,3 +987,18 @@ html[data-layout^='phone'] .tl-original {
     overflow: hidden;
   }
 }
+
+/* Measure's content rises a little as the panel fades in (redesign item 4); transform only. */
+#measure .ms-wrap {
+  transition: transform var(--dur-3, 320ms) var(--ease-out);
+}
+@starting-style {
+  #measure:not([hidden]) .ms-wrap {
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #measure .ms-wrap {
+    transition: none;
+  }
+}
