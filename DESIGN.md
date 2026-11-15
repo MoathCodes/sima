@@ -446,7 +446,7 @@ One ruled scale for both the sky map and the frame, from 0.75 to 5.0 µm.
 - **Ruling:** seven 1px ticks in full Ink at the band edges, crossing the strip, with 11px numbers. The last one carries the unit.
 
 ### Marks on the sky
-- **Patch outline:** a square on the map where the frame is looking, never drawn smaller than 16px, with a faint dark edge under its line. Solid magenta for real data, dashed amber for simulated, dotted grey for no pictures, dashed pale for loading; while loading the dashes creep slowly round the square (still under reduced motion).
+- **Patch outline:** a square on the map where the frame is looking, never drawn smaller than 16px, with a faint dark edge under its line. Solid magenta for real data, dashed amber for simulated, dotted grey for no pictures, dashed pale for loading; while loading the dashes creep slowly round the square (they stand still under reduced motion).
 - **Patch label:** a small tag, in the outline's colour, with dark text on the outline's corner. It appears only when nothing else names the patch, and always while it loads ("… · loading"). If a card would cover it, it moves to another side of the square.
 - **Tether:** a 1.5px dotted magenta line from the patch to the frame, so the frame's title names the patch.
 - **Pins:** saved and starter places are 14px pale rings with a 12px name. The ring turns magenta on hover.
