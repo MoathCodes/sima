@@ -165,8 +165,13 @@ function place(opts: { glide?: boolean; closing?: boolean } = {}): void {
     const vw = innerWidth;
     const bottom = barTop() - ABOVE_BAR;
 
-    // Width: the user's, but never past the rail and never under the bar.
-    let width = clamp(box.width, MIN_WIDTH, vw - box.right - RAIL_RIGHT);
+    // Width: the user's, but never past the rail and never under the bar. With Measure and the
+    // picture tools both open, narrow enough that the tools fit at the frame's left.
+    const besideTools =
+      measureOpen && isShown(byId('tools'))
+        ? vw - GUTTER - measureWidth() - GAP - RAIL_RIGHT - TOOLS_MIN - GAP
+        : Infinity;
+    let width = clamp(Math.min(box.width, besideTools), MIN_WIDTH, vw - box.right - RAIL_RIGHT);
     set(frame, 'width', `${width}px`);
     set(frame, '--pic-max', '');
     let height = frame.offsetHeight;

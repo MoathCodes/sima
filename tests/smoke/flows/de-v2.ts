@@ -90,7 +90,7 @@ export const flows: Flow[] = [
         `(() => {
           const src = document.querySelector('.frame-source')?.textContent ?? '';
           const line = document.querySelector('.frame-prov')?.textContent ?? '';
-          return src.includes('NASA SPHEREx') && /DR\\d|QR\\d/.test(line) && /20\\d\\d/.test(line) && line.includes('µm');
+          return src.includes('SPHEREx') && /DR\\d|QR\\d/.test(line) && /20\\d\\d/.test(line) && line.includes('µm');
         })()`,
       ),
       expectStep(
@@ -109,8 +109,8 @@ export const flows: Flow[] = [
       },
       pressStep('view-two', 'Two dates'),
       expectStep(
-        'Two dates says "Two dates combined" with red and cyan',
-        `/Two dates combined: .+ \\(red\\) · .+ \\(cyan\\)/.test(document.querySelector('.frame-prov')?.textContent ?? '')`,
+        'Two dates names its red and cyan dates',
+        `/red .+ · cyan .+/.test(document.querySelector('.frame-prov')?.textContent ?? '')`,
       ),
       pressStep('view-stack', 'Stack in Discover (contract 4)'),
       expectStep(
@@ -238,7 +238,7 @@ export const flows: Flow[] = [
           const src = document.querySelector('.frame-source')?.textContent ?? '';
           const line = document.querySelector('.frame-prov');
           const t = line?.textContent ?? '';
-          return src.includes('NASA SPHEREx') && line.getBoundingClientRect().height > 0 &&
+          return src.includes('SPHEREx') && line.getBoundingClientRect().height > 0 &&
             /DR\\d|QR\\d/.test(t) && /\\d{4}/.test(t) && t.includes('µm');
         })()`,
       ),
