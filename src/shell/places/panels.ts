@@ -482,7 +482,7 @@ function pauseTour(): void {
 
 function lookWithFrame(p: Place): void {
   const target = TARGETS.find((t) => t.key === p.id)?.key ?? null;
-  openPlace({ name: nameOf(p), ra: p.ra, dec: p.dec, fov: frameFov(p), target });
+  openPlace({ name: nameOf(p), ra: p.ra, dec: p.dec, fov: frameFov(p), target, skyFov: zoomFov(p) });
 }
 
 /**

@@ -32,6 +32,8 @@ export interface PlaceRef {
   fov?: number;
   /** A shipped target or practice key (`barnard`, `warm-up`, …), when the place is one. */
   target?: string | null;
+  /** The sky's width to fly to, degrees ("Zoom to it"'s), so a big place does not open as fog. */
+  skyFov?: number;
 }
 
 /** The sky map's loading, as lane C reports it to `skyReady`. */
@@ -148,7 +150,7 @@ export function frameRect(): DOMRect | null {
 export function openPlace(place: PlaceRef, opts: { fly?: boolean } = {}): void {
   hideFrame(false);
   emit('aim', { ra: place.ra, dec: place.dec, fov: place.fov, target: place.target ?? null, name: place.name });
-  if (opts.fly !== false) flyTo({ ra: place.ra, dec: place.dec });
+  if (opts.fly !== false) flyTo({ ra: place.ra, dec: place.dec, fov: place.skyFov });
 }
 
 /**

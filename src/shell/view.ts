@@ -28,7 +28,7 @@ export const VIEW_KEY = 'sima-view';
 const OLD_LEVEL_KEY = 'b102-level';
 
 /** False until Discover is built: then a first visit opens Discover. */
-export const DISCOVER_FIRST = false;
+export const DISCOVER_FIRST = true;
 
 let view: View = 'expert';
 const fns = new Set<(v: View) => void>();

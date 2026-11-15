@@ -23,6 +23,7 @@ import { getView, onView, setView } from '../shell/view.ts';
 import { closable } from '../shell/escape.ts';
 import { hideFrame, onFrameMove, openPlace } from '../shell/shell.ts';
 import { onLayout } from '../shell/sheet.ts';
+import { globeHome, onBeaconPress } from '../sky/globe.ts';
 import { detail } from '../viewer/detail.ts';
 import { S } from '../viewer/state.ts';
 import type { Link } from '../viewer/link.ts';
@@ -53,6 +54,21 @@ export function startDiscover(link: Link): void {
   const missionMount = mount('mission');
   const successMount = mount('mission-success');
   if (!listMount || !missionMount || !successMount) return;
+  // Lane C's beacons on the globe start the same mission or object as the list's rows.
+  onBeaconPress((b) => {
+    if (getView() !== 'discover') return false;
+    if (b.kind === 'mission' && isMissionId(b.id)) {
+      if (screen === 'success') clearSuccess();
+      openMission(b.id);
+      go('mission');
+      return true;
+    }
+    if (b.kind === 'object') {
+      openObject(b.target);
+      return true;
+    }
+    return false;
+  });
 
   listMount.dataset.card = 'discover-list';
   listMount.dataset.guide = 'discover-list';
@@ -135,7 +151,10 @@ export function focusMission(id: MissionId): void {
 
 function go(next: Screen, byVisitor = true): void {
   if (next !== 'success') clearSuccessIfLeaving(next);
-  if (next === 'home' && screen === 'success') hideFrame(true);
+  if (next === 'home' && screen === 'success') {
+    hideFrame(true);
+    globeHome({ animate: true });
+  }
   screen = next;
   focusNext = byVisitor;
   if (next === 'home') renderList(list, phone());
