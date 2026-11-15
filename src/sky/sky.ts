@@ -18,6 +18,7 @@
 import { emit, on, type BusEvents, type PatchSource } from '../shell/bus.ts';
 import { frameRect, onFrameMove, skyReady, type SkyLoad } from '../shell/shell.ts';
 import { icon } from '../shell/icons.ts';
+import { onLayout } from '../shell/sheet.ts';
 import { formatCoords } from '../core/astro.ts';
 import { CHANNEL_LAM, DEFAULT_LAM, WISE_HIPS, channelFor, detectorOf } from './hips.ts';
 import {
@@ -597,10 +598,14 @@ function freeBox(): { x: number; y: number; w: number; h: number } {
     const left = W - DISCOVER_LEFT >= 560 ? DISCOVER_LEFT : 0;
     return { x: left, y: 0, w: W - left, h: H };
   }
+  // Under the top row and the sky note (which sits under the top row on phones, sky.css).
+  const note = document.getElementById('sky-note');
+  const noteBottom = note?.checkVisibility() ? note.getBoundingClientRect().bottom + 8 : 0;
+  const y = Math.round(Math.max(PHONE_TOP, Math.min(noteBottom, H / 3)));
   const sheet = document.getElementById('sheet');
   const top = sheet?.checkVisibility() ? sheet.getBoundingClientRect().top : H;
-  const bottom = Math.max(PHONE_TOP + 200, Math.min(H, top));
-  return { x: 0, y: PHONE_TOP, w: W, h: bottom - PHONE_TOP };
+  const bottom = Math.max(y + 200, Math.min(H, top));
+  return { x: 0, y, w: W, h: Math.round(bottom - y) };
 }
 
 /** Puts Aladin's element in a box (it follows its element's size by itself). */
@@ -659,6 +664,8 @@ function watchBox(): void {
     updateBox(true);
     note();
   }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-view'] });
+  // The phone layout and the sheet's height (lane M, shell/sheet.ts).
+  onLayout(() => updateBox(true));
   const sheet = document.getElementById('sheet');
   if (sheet) {
     new MutationObserver(() => updateBox(true)).observe(sheet, {

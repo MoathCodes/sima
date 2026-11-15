@@ -338,3 +338,24 @@
 html[data-glass='solid'] :is(.sky-beacon-tag.glass-thin, .sky-drag-tag) {
   background: var(--v2-solid-tint);
 }
+
+/* Phones: the sky note sits under the top row, centred, on a Thin chip (mockup 02 at 390), not
+   under the sheet (lane M's request). A frame opened under the top row covers it. */
+html[data-layout^='phone'] #sky-note {
+  top: calc(env(safe-area-inset-top, 0px) + 56px + 8px);
+  right: calc(env(safe-area-inset-right, 0px) + var(--v2-gutter-phone, 12px));
+  bottom: auto;
+  left: calc(env(safe-area-inset-left, 0px) + var(--v2-gutter-phone, 12px));
+  max-width: none;
+  padding: 4px 10px;
+  border-radius: var(--v2-r-control);
+  background: rgb(var(--v2-tint) / 0.82);
+  color: var(--v2-on-glass);
+  line-height: 16px;
+  text-align: center;
+  white-space: normal;
+  text-wrap: balance;
+}
+html[data-layout^='phone'][data-glass='solid'] #sky-note {
+  background: var(--v2-solid-tint);
+}
