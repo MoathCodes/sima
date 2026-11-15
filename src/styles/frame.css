@@ -230,6 +230,15 @@
 .pic-around > span:not(.pic-around-bar) {
   color: var(--st-ink-2);
 }
+.pic-around .pic-around-retry {
+  margin-top: 2px;
+  color: var(--st-ink);
+  font: var(--text-label);
+  font-weight: 600;
+  text-decoration: underline;
+  pointer-events: auto;
+  cursor: pointer;
+}
 .pic-around-bar {
   position: relative;
   width: 104px;

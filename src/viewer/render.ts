@@ -722,7 +722,7 @@ function outlineOf(field: Field, mask: Uint8Array): [number, number, number, num
  */
 function aroundLabel(el: HTMLElement, bare: boolean, map: boolean): void {
   const w = widening;
-  const show = bare && (map || (!!w && w.state === 'busy'));
+  const show = bare && (map || (!!w && w.state !== 'off'));
   el.hidden = !show;
   if (!show) return;
   const known = !!w && w.state === 'busy' && w.total !== null && w.done !== null && w.total > 0;
@@ -734,7 +734,12 @@ function aroundLabel(el: HTMLElement, bare: boolean, map: boolean): void {
     w && w.state === 'busy'
       ? `<span class="pic-around-bar${known ? ' known' : ''}" style="--done:${pct}%"><span></span></span>`
       : '';
-  const html = head + bar;
+  // The wider fetch failed (the reason is on the line above the picture): it can be asked again.
+  const again =
+    w && w.state === 'failed'
+      ? '<button type="button" class="link pic-around-retry" data-widen-retry>Ask again for real exposures</button>'
+      : '';
+  const html = head + bar + again;
   if (el.dataset.html !== html) {
     el.dataset.html = html;
     el.innerHTML = html;

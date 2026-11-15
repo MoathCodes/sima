@@ -492,6 +492,13 @@ async function place(
   await show(set, h.target, centre, fov, source, keepMjd);
 }
 
+/** Asks again for real exposures of the field on screen, after a wider fetch failed. */
+export function retryWider(): void {
+  if (!home || !S.set) return;
+  stopWidening();
+  askWider({ ra: S.ra, dec: S.dec }, S.fov);
+}
+
 function stopWidening(): void {
   if (widen) {
     clearTimeout(widen.timer);

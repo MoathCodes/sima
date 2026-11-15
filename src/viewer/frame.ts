@@ -18,6 +18,7 @@ import {
   panTo,
   previewPatch,
   regroup,
+  retryWider,
   setFov,
   showDetector,
   stepNote,
@@ -141,6 +142,11 @@ export function startFrame(): void {
     lines();
     draw();
   });
+  document
+    .getElementById('frame-pic')
+    ?.addEventListener('click', (e) => {
+      if ((e.target as Element | null)?.closest('[data-widen-retry]')) retryWider();
+    });
   header();
   views();
   lines();
