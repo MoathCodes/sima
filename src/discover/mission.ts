@@ -184,7 +184,7 @@ export function hint(): void {
   run.help += 1;
   // Look closer: the game's dashed circle and close-up (closeup.ts).
   if (run.id === 'runaway' && step() === 'tap' && run.help > (instruction()?.hints.length ?? 0)) {
-    while (nextHintLabel() && nextHintLabel() !== 'Show me') nextHint();
+    while (nextHintLabel() && nextHintLabel() !== tr('ms.showMe')) nextHint();
     setMarks('circle');
     draw();
   }

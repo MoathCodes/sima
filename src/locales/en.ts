@@ -687,6 +687,81 @@ export const en = {
 
   // Discover field size (discover/field.ts).
   'df.arcmin': '{n} arcminutes',
+
+  // Explore tasks and help (explore/copy.ts).
+  'ec.1': 'Runaway star',
+  'ec.2': 'One dot jumps. Tap it.',
+  'ec.3':
+    'Watch the middle while the pictures play. Most dots stay put; one is in a different place on each date.',
+  'ec.4': 'Press Difference. A star that moved shows as a white dot beside a dark one.',
+  'ec.5': 'What is it made of?',
+  'ec.6': 'A faint pair of failed stars creeps across this patch. Tap it to see its colours.',
+  'ec.7': 'It is near the middle, and moves only about one pixel between the first and last date.',
+  'ec.8': 'Press Two dates. Something that moved shows red on one side and cyan on the other.',
+  'ec.9': 'Too faint to see',
+  'ec.10': 'Nothing in any single picture. Add them along its path: press Measure, then Stack.',
+  'ec.11':
+    'One picture is too short to show it. Adding many pictures makes faint things build up while the noise evens out.',
+  'ec.12': 'Stack is one of the six views in Measure.',
+  'ec.13': 'The flickering newborn',
+  'ec.14': 'One star brightens and fades between dates. Tap it.',
+  'ec.15':
+    'Watch the brightest dots while the pictures play. One grows and shrinks; the others stay the same.',
+  'ec.16': 'Press Two dates. A star that changed brightness looks red or cyan instead of white.',
+  'ec.17': 'The breathing giant',
+  'ec.18': 'One star brightens and fades from month to month. Tap it.',
+  'ec.19':
+    'Watch the brightest dot while the pictures play. It grows and shrinks; the others stay the same.',
+  'ec.20': 'Its change is largest at long wavelengths: drag the wavelength handle to the right.',
+  'ec.21': 'Warm-up',
+  'ec.22': 'Made-up pictures for practice. One dot jumps. Tap it.',
+  'ec.23': 'Watch while the pictures play. Most dots stay put; one jumps.',
+  'ec.24': 'Press Difference. The dot that moved shows as a white dot beside a dark one.',
+  'ec.25': 'The hidden planet',
+  'ec.26': 'A made-up faint, cold planet jumps between dates. Tap it.',
+  'ec.27':
+    'It is cold, so it shines most at long wavelengths: drag the wavelength handle to the right end.',
+  'ec.28': 'Press Difference. It shows as a faint white dot beside a dark one.',
+  'ec.29':
+    'Real pictures of this spot, fetched just now. Play them and look for anything that moves or changes.',
+  'ec.30': 'It is inside the dashed circle.',
+  'ec.31': 'Stack is under Measure. It is ringed.',
+  'ec.32': 'It is ringed. Now tap it yourself.',
+  'ec.33': 'The ring is where the catalogue says it is. Now press Measure, then Stack.',
+  'ec.34': 'Arrow keys move the crosshair (Shift: 5 pixels). Enter picks.',
+  'ec.35': 'Not that one: that dot stays put. Try again, or ask for a hint.',
+  'ec.36': 'Measuring it from the pixels…',
+  'ec.moved': 'Measured: from {from} to {to} it moved {v}, about {px} pixels.',
+  'ec.moved1': 'Measured: from {from} to {to} it moved {v}, about {px} pixel.',
+
+  // The Explore game (explore/game.ts).
+  'gm.dips': 'Watch the dips appear. Those are water and methane.',
+  'gm.ghost': 'The ghost',
+  'gm.ghostLine': 'It is hard to pick out in a single picture. Add pictures along its path.',
+  'gm.warmLine': '20-second practice',
+  'gm.pxLine': 'Made up: it jumps',
+  'gm.tipShow': 'Rings it; you tap it',
+  'gm.tipMore': 'A little more help',
+  'gm.contrast': 'contrast raised in the close-up only',
+  'gm.ringsSim': 'Rings: where the simulation put it',
+  'gm.ringsCat': 'Rings: catalogue predictions',
+  'gm.foundPlanet': 'You found the made-up planet',
+  'gm.foundDot': 'You found the made-up moving dot',
+  'gm.practiceTip':
+    'Practice pictures are made up. They are never measured or mixed with real results.',
+  'gm.varies': 'Its brightness changes between dates',
+  'gm.variesTip': 'Measure shows by how much, measured from the pixels of each exposure.',
+  'gm.stacked': 'Stacked along its path',
+  'gm.stackedTip':
+    'Measure says how clearly it shows in each detector once the dates are added up.',
+  'gm.noReal': 'This patch has no real exposures to measure.',
+  'gm.noFit': 'The motion could not be measured.',
+  'gm.noRun': 'The measurement could not run on this page.',
+  'gm.noCat': 'no catalogue value',
+  'gm.theCat': 'The catalogue',
+  'gm.catSays': '{src} says {v}.',
+  'gm.moves':
+    'Moves {v} arcseconds a year, measured from the pixels of {used} of {of} real exposures.',
 } as const satisfies Record<string, string | EnPlural>;
 
 /** A message key. */

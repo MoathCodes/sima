@@ -5,6 +5,7 @@
  * somewhere in src/. Words follow SPEC 4.1, 4.2 and the reference screenshots. Nothing here
  * claims a discovery (H7), and practice words say "Simulated" first (H3).
  */
+import { t } from '../shell/i18n.ts';
 
 /** What a task asks for, by the kind of change its target shows. */
 export type TaskKind = 'mover' | 'spectrum' | 'variable' | 'faint';
@@ -23,85 +24,63 @@ export interface TaskCopy {
 /** Tasks for the five test targets and the two practice patches, by key. */
 export const TASKS: Readonly<Record<string, TaskCopy>> = {
   barnard: {
-    title: 'Runaway star',
-    line: 'One dot jumps. Tap it.',
+    title: t('ec.1'),
+    line: t('ec.2'),
     kind: 'mover',
-    hints: [
-      'Watch the middle while the pictures play. Most dots stay put; one is in a different place on each date.',
-      'Press Difference. A star that moved shows as a white dot beside a dark one.',
-    ],
+    hints: [t('ec.3'), t('ec.4')],
   },
   'eps-indi-b': {
-    title: 'What is it made of?',
-    line: 'A faint pair of failed stars creeps across this patch. Tap it to see its colours.',
+    title: t('ec.5'),
+    line: t('ec.6'),
     kind: 'spectrum',
-    hints: [
-      'It is near the middle, and moves only about one pixel between the first and last date.',
-      'Press Two dates. Something that moved shows red on one side and cyan on the other.',
-    ],
+    hints: [t('ec.7'), t('ec.8')],
   },
   'wise-0855': {
-    title: 'Too faint to see',
-    line: 'Nothing in any single picture. Add them along its path: press Measure, then Stack.',
+    title: t('ec.9'),
+    line: t('ec.10'),
     kind: 'faint',
-    hints: [
-      'One picture is too short to show it. Adding many pictures makes faint things build up while the noise evens out.',
-      'Stack is one of the six views in Measure.',
-    ],
+    hints: [t('ec.11'), t('ec.12')],
   },
   'rw-aur': {
-    title: 'The flickering newborn',
-    line: 'One star brightens and fades between dates. Tap it.',
+    title: t('ec.13'),
+    line: t('ec.14'),
     kind: 'variable',
-    hints: [
-      'Watch the brightest dots while the pictures play. One grows and shrinks; the others stay the same.',
-      'Press Two dates. A star that changed brightness looks red or cyan instead of white.',
-    ],
+    hints: [t('ec.15'), t('ec.16')],
   },
   'r-dra': {
-    title: 'The breathing giant',
-    line: 'One star brightens and fades from month to month. Tap it.',
+    title: t('ec.17'),
+    line: t('ec.18'),
     kind: 'variable',
-    hints: [
-      'Watch the brightest dot while the pictures play. It grows and shrinks; the others stay the same.',
-      'Its change is largest at long wavelengths: drag the wavelength handle to the right.',
-    ],
+    hints: [t('ec.19'), t('ec.20')],
   },
   'warm-up': {
-    title: 'Warm-up',
-    line: 'Made-up pictures for practice. One dot jumps. Tap it.',
+    title: t('ec.21'),
+    line: t('ec.22'),
     kind: 'mover',
-    hints: [
-      'Watch while the pictures play. Most dots stay put; one jumps.',
-      'Press Difference. The dot that moved shows as a white dot beside a dark one.',
-    ],
+    hints: [t('ec.23'), t('ec.24')],
   },
   'planet-x': {
-    title: 'The hidden planet',
-    line: 'A made-up faint, cold planet jumps between dates. Tap it.',
+    title: t('ec.25'),
+    line: t('ec.26'),
     kind: 'mover',
-    hints: [
-      'It is cold, so it shines most at long wavelengths: drag the wavelength handle to the right end.',
-      'Press Difference. It shows as a faint white dot beside a dark one.',
-    ],
+    hints: [t('ec.27'), t('ec.28')],
   },
 };
 
 /** The line for a spot fetched live: no task, only what is true of it. */
-export const LIVE_LINE =
-  'Real pictures of this spot, fetched just now. Play them and look for anything that moves or changes.';
+export const LIVE_LINE = t('ec.29');
 
 /** The four steps of help, in order (GDE-5). */
-export const HINT_LABELS = ['Hint', 'Another hint', 'Look closer', 'Show me'] as const;
+export const HINT_LABELS = [t('dm.hint'), t('dm.another'), t('dm.closer'), t('ms.showMe')] as const;
 
 /** What Look closer and Show me say while they draw on the picture. */
-export const LOOK_CLOSER = 'It is inside the dashed circle.';
-export const LOOK_CLOSER_FAINT = 'Stack is under Measure. It is ringed.';
-export const SHOW_ME = 'It is ringed. Now tap it yourself.';
-export const SHOW_ME_FAINT = 'The ring is where the catalogue says it is. Now press Measure, then Stack.';
+export const LOOK_CLOSER = t('ec.30');
+export const LOOK_CLOSER_FAINT = t('ec.31');
+export const SHOW_ME = t('ec.32');
+export const SHOW_ME_FAINT = t('ec.33');
 
 /** The task line while the picture has keyboard focus (keypick.ts). */
-export const KEYS_LINE = 'Arrow keys move the crosshair (Shift: 5 pixels). Enter picks.';
+export const KEYS_LINE = t('ec.34');
 
 /**
  * The one measured sentence under a found mover: how far it moved between the first and last
@@ -115,10 +94,15 @@ export function movedLine(
   scale: number,
 ): string {
   const px = (arcsec / scale).toFixed(1);
-  return `Measured: from ${from} to ${to} it moved ${arcsec.toFixed(1)} ± ${err.toFixed(1)}″, about ${px} pixel${px === '1.0' ? '' : 's'}.`;
+  return t(px === '1.0' ? 'ec.moved1' : 'ec.moved', {
+    from,
+    to,
+    v: `${arcsec.toFixed(1)} ± ${err.toFixed(1)}″`,
+    px,
+  });
 }
 
 /** A tap that missed. */
-export const MISSED = 'Not that one: that dot stays put. Try again, or ask for a hint.';
+export const MISSED = t('ec.35');
 /** A tap while the found star is shown. */
-export const MEASURING = 'Measuring it from the pixels…';
+export const MEASURING = t('ec.36');
