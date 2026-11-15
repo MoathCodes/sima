@@ -203,6 +203,98 @@ class TestServer(unittest.TestCase):
         self.assertEqual(cm.exception.code, 405)
 
 
+class TestFieldSizes(unittest.TestCase):
+    def test_wide_fields(self):
+        self.assertEqual(live.parse_patch_query("ra=10&dec=10&fov=24")[2], 24)
+        self.assertEqual(live.parse_patch_query("ra=10&dec=10&fov=48")[2], 48)
+        with self.assertRaises(live.BadRequest):
+            live.parse_patch_query("ra=10&dec=10&fov=96")
+        self.assertEqual(live.cutout_size(24), 0.41)
+        self.assertEqual(live.cutout_size(48), 0.81)
+        self.assertEqual(live.per_det(12), 2)
+        self.assertEqual(live.per_det(24), 2)
+        self.assertEqual(live.per_det(48), 1)
+
+
+class TestSearchBudget(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.svc = live.Service(Path(self.tmp.name), max_running=0)
+        self.svc.cat_queue = __import__("queue").Queue()  # no catalogue queries reach the network
+        self._search = live.pb.search
+
+    def tearDown(self):
+        live.pb.search = self._search
+        self.tmp.cleanup()
+
+    def test_limits_and_words(self):
+        lim = live.search_limits(1000.0)
+        self.assertEqual(lim["deadline"], 1000.0 + live.pb.SEARCH_BUDGET)
+        self.assertEqual(lim["timeout"], live.pb.SEARCH_TIMEOUT)
+        self.assertEqual(live.minutes(40), "40 s")
+        self.assertEqual(live.minutes(100), "1 min 40 s")
+
+    def test_status_carries_try_and_elapsed_while_searching(self):
+        go = threading.Event()
+        seen = {}
+
+        def slow(ra, dec, rels, **kw):
+            seen.update(kw)
+            kw["on_try"](1, 4)
+            kw["on_try"](3, 4)
+            go.wait(5)
+            return [], {r: 0 for r in rels}, []
+
+        live.pb.search = slow
+        p = live.Patch(self.svc, "0123456789abcdef", 10.0, 10.0, 12, ["spherex_dr1"])
+        th = threading.Thread(target=p.run, daemon=True)
+        th.start()
+        for _ in range(100):
+            st = p.snapshot()
+            if st["searchTry"] == 3:
+                break
+            time.sleep(0.01)
+        self.assertEqual(st["state"], "searching")
+        self.assertEqual(st["searchTry"], 3)
+        self.assertEqual(st["searchTries"], len(live.pb.SEARCH_WAITS) + 1)
+        self.assertGreaterEqual(st["searchElapsed"], 0)
+        self.assertIn("deadline", seen)
+        go.set()
+        th.join(5)
+        self.assertEqual(p.snapshot()["state"], "empty")
+        self.assertEqual(p.snapshot()["searchElapsed"], 0)
+
+    def test_silent_search_fails_honestly_and_can_be_retried_at_once(self):
+        def silent(ra, dec, rels, **kw):
+            kw["on_try"](4, 4)
+            raise live.pb.FetchError("no answer within the time allowed (ReadTimeout): search spherex_dr1")
+
+        live.pb.search = silent
+        st = self.svc.request(10.0, 10.0, 12)
+        p = self.svc.patches[st["id"]]
+        p.run()
+        st = p.snapshot()
+        self.assertEqual(st["state"], "failed")
+        self.assertTrue(st["searchTimedOut"])
+        self.assertIn("NASA's search did not answer within", st["error"])
+        self.assertIn("(4 tries)", st["error"])
+        # Retry: asked again a few seconds later, the patch starts over (not 30 s later).
+        self.assertEqual(self.svc.request(10.0, 10.0, 12)["state"], "failed")
+        p.finished -= live.RETRY_SEARCH_AFTER + 0.1
+        self.assertEqual(self.svc.request(10.0, 10.0, 12)["state"], "queued")
+
+    def test_other_search_errors_say_what_failed(self):
+        def broken(ra, dec, rels, **kw):
+            raise live.pb.FetchError("TAP error from IRSA: b'<VOTABLE ERROR'")
+
+        live.pb.search = broken
+        p = live.Patch(self.svc, "0123456789abcdef", 10.0, 10.0, 12, ["spherex_dr1"])
+        p.run()
+        st = p.snapshot()
+        self.assertFalse(st["searchTimedOut"])
+        self.assertTrue(st["error"].startswith("NASA's search failed: TAP error"))
+
+
 class TestBusy(unittest.TestCase):
     def test_queue_limit(self):
         with tempfile.TemporaryDirectory() as tmp:
