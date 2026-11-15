@@ -746,8 +746,10 @@ function brightGrid(): { w: number; h: number; lin: Float32Array } | null {
   const now = performance.now();
   if (bright && (bright.key === key || now - bright.at < 250)) return bright;
   // Reading the map back from the GPU is slow on a software renderer: only once the view has
-  // stopped (labels are only added then), and never under the intro.
-  if (now - movedAt < 200 || document.documentElement.dataset.intro !== undefined) return bright;
+  // stopped (labels are only added then), and never under the intro. "Stopped" counts drawn
+  // frames too: on a slow machine one frame of a zoom can itself take over 200 ms.
+  const still = !zoomTo && !glide && settle <= 0 && now - movedAt >= 200;
+  if (!still || document.documentElement.dataset.intro !== undefined) return bright;
   const w = Math.max(1, Math.ceil(hostBox.w / SAMPLE_PX));
   const h = Math.max(1, Math.ceil(hostBox.h / SAMPLE_PX));
   if (!sampler) {
@@ -1189,7 +1191,17 @@ let glide: {
   arc?: number;
 } | null = null;
 /** Zooming toward a screen point: the wheel, double-click (SKY-3). */
-let zoomTo: { fov: number; x: number; y: number; ra: number; dec: number } | null = null;
+let zoomTo: {
+  fov: number;
+  x: number;
+  y: number;
+  ra: number;
+  dec: number;
+  /** How far from the globe's centre the held point may sit, in globe radii (`keepUnder`). */
+  reach: number;
+} | null = null;
+/** When `animate` last ran (performance.now ms): the zoom eases by time, not by frame. */
+let animatedAt = 0;
 
 function requestDraw(): void {
   drawQueued = true;
@@ -1236,11 +1248,14 @@ function animate(now: number): void {
   if (zoomTo) {
     const z = zoomOf(cam.fov);
     const goal = zoomOf(zoomTo.fov);
-    const close = Math.abs(Math.log(goal / z)) < 0.004;
-    al.setFoV(close ? zoomTo.fov : fovOf(z * (goal / z) ** 0.28));
-    keepUnder(zoomTo.ra, zoomTo.dec, zoomTo.x, zoomTo.y);
+    // 28% of the way left per 60 Hz frame, whatever the frame rate; reduced motion has no tail.
+    const part = reducedMotion() ? 1 : 1 - 0.72 ** (Math.min(100, now - animatedAt) / 16.7);
+    const close = part === 1 || Math.abs(Math.log(goal / z)) < 0.004;
+    al.setFoV(close ? zoomTo.fov : fovOf(z * (goal / z) ** part));
+    keepUnder(zoomTo.ra, zoomTo.dec, zoomTo.x, zoomTo.y, zoomTo.reach);
     if (close) zoomTo = null;
   }
+  animatedAt = now;
 }
 
 /** The point a fraction `f` of the way from `a` to `b` along the great circle. */
@@ -1272,8 +1287,9 @@ function along(
  * Turns the globe so the sky position (ra, dec) sits on screen point (x, y). Once the globe is
  * smaller than that point's distance from the centre, the point is pulled in toward the centre
  * (it cannot sit off the globe), so zooming out ends on a centred globe without a jump.
+ * `reach` is how far out the point may sit, in globe radii.
  */
-function keepUnder(ra: number, dec: number, x: number, y: number): void {
+function keepUnder(ra: number, dec: number, x: number, y: number, reach0 = REACH): void {
   if (!al) return;
   readCamera(true);
   if (!view) return;
@@ -1281,7 +1297,7 @@ function keepUnder(ra: number, dec: number, x: number, y: number): void {
   if (!p) return;
   let dx = x - view.cx;
   let dy = y - view.cy;
-  const reach = view.scale * 0.85;
+  const reach = view.scale * reach0;
   const far = Math.hypot(dx, dy);
   if (far > reach) {
     dx *= reach / far;
@@ -1815,7 +1831,9 @@ function watchPointer(el: HTMLElement): void {
       const lines = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1;
       const delta = Math.max(-300, Math.min(300, e.deltaY * lines));
       const base = zoomOf(zoomTo?.fov ?? cam.fov);
-      zoomAround(e.clientX, e.clientY, fovOf(base * Math.exp(delta * 0.0022)));
+      // A trackpad pinch (a wheel with Ctrl) sends far smaller numbers than a wheel notch.
+      const gain = e.ctrlKey ? 0.01 : 0.0022;
+      zoomAround(e.clientX, e.clientY, fovOf(base * Math.exp(delta * gain)));
     },
     { capture: true, passive: false },
   );
@@ -1832,20 +1850,51 @@ function watchPointer(el: HTMLElement): void {
 }
 
 /**
- * Zooms so the sky under (x, y) stays under it (SKY-3). Off the globe (in the dark space round
- * it), the zoom keeps the globe's centre where it is.
+ * Zooms so the sky under (x, y) stays under it (SKY-3), eased, between the whole globe and
+ * `sharpFov`.
  */
 function zoomAround(x: number, y: number, fov: number): void {
+  const now = zoomTo?.fov ?? cam.fov;
+  // By hand, no closer than the map has detail for (a view already closer stays as it is).
+  const target = Math.max(Math.min(now, sharpFov()), clampFov(fov));
+  // At either end of the zoom nothing moves: the view is not aimed again at each wheel tick.
+  if (Math.abs(Math.log(zoomOf(target) / zoomOf(now))) < 1e-4) return;
   flags.moved = true;
   glide = null;
-  const target = clampFov(fov);
-  let at = { x, y };
-  let anchor = zoomTo && Math.hypot(zoomTo.x - x, zoomTo.y - y) < 2 ? zoomTo : toWorld(x, y);
-  if (!anchor) {
-    at = { x: view?.cx ?? cam.width / 2, y: view?.cy ?? cam.height / 2 };
-    anchor = { ra: cam.ra, dec: cam.dec };
+  if (zoomTo && Math.hypot(zoomTo.x - x, zoomTo.y - y) < 2) {
+    zoomTo.fov = target; // the same gesture: the same point stays held
+    return;
   }
-  zoomTo = { fov: target, ...at, ra: anchor.ra, dec: anchor.dec };
+  // The point under the pointer is held where it is, even near the globe's edge. At the very
+  // edge or off the globe (in the dark space round it), the zoom keeps the globe's centre.
+  const world = toWorld(x, y);
+  const far = view ? Math.hypot(x - view.cx, y - view.cy) / view.scale : 0;
+  zoomTo =
+    world && far <= REACH_MAX
+      ? { fov: target, x, y, ...world, reach: Math.max(REACH, far) }
+      : {
+          fov: target,
+          x: view?.cx ?? cam.width / 2,
+          y: view?.cy ?? cam.height / 2,
+          ra: cam.ra,
+          dec: cam.dec,
+          reach: REACH,
+        };
+}
+
+/** How far from the globe's centre a held point may sit while zooming, in globe radii. */
+const REACH = 0.85;
+/** Past this the globe's edge is too steep to hold a point: the zoom keeps the centre. */
+const REACH_MAX = 0.97;
+/** The wheel zooms in until one map pixel spans this many screen pixels. */
+const ZOOM_PX = 6;
+/** AllWISE's map pixel, arcseconds (HiPS order 8 with 512-pixel tiles). */
+const WISE_PIXEL = 1.6;
+
+/** The narrowest view the wheel and double-click zoom to, degrees: where the map runs out of detail. */
+function sharpFov(): number {
+  const pixel = layer === 'spherex' ? MAP_PIXEL : WISE_PIXEL;
+  return Math.max(FOV_MIN, ((hostBox.w || innerWidth) * pixel) / ZOOM_PX / 3600);
 }
 
 function onClick(x: number, y: number): void {
