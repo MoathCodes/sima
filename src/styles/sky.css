@@ -341,8 +341,6 @@ html[data-layout^='phone'] #sky-note {
   /* Quiet: small text straight on the sky, no chip (lane M, redesign). */
   background: none;
   box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
   color: var(--v2-on-glass-3);
   font-size: 11px;
   line-height: 15px;
