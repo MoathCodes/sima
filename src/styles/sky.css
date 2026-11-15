@@ -342,3 +342,8 @@ html[data-layout^='phone'] #sky-note {
 html[data-layout^='phone'][data-glass='solid'] #sky-note {
   background: var(--v2-solid-tint);
 }
+/* On a phone the open frame sits right under the top row and carries its own data line: the sky
+   note would show through its header, so it waits until the frame is closed. */
+html[data-layout^='phone']:has(#frame:not([hidden])) #sky-note {
+  display: none;
+}

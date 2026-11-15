@@ -1066,6 +1066,16 @@ html[data-view='discover'] .frame-title {
 .fp-chips[hidden] {
   display: none;
 }
+/* Phones: three dates fit across 390 px without a cut-off chip; more dates still scroll. */
+html[data-layout^='phone'] .fp-chips {
+  gap: 6px;
+}
+html[data-layout^='phone'] .fp-chip {
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 6px;
+  padding: 0 8px;
+}
 .fp-chip {
   display: inline-flex;
   flex: 1 0 auto;
