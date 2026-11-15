@@ -69,7 +69,9 @@ function applyDocument(): void {
   html.dir = dir();
   if (current !== 'en') {
     document.title = t('app.title');
-    document.querySelector('meta[name="description"]')?.setAttribute('content', t('app.description'));
+    document
+      .querySelector('meta[name="description"]')
+      ?.setAttribute('content', t('app.description'));
   }
 }
 
@@ -121,7 +123,8 @@ function pluralOf(n: number): Intl.LDMLPluralRule {
  * A plural key takes `vars.n`. Falls back to English for anything Arabic lacks.
  */
 export function t(key: Key, vars?: Vars): string {
-  const table = current === 'ar' ? (ar as Record<string, unknown>) : (en as Record<string, unknown>);
+  const table =
+    current === 'ar' ? (ar as Record<string, unknown>) : (en as Record<string, unknown>);
   let entry = table[key] ?? en[key];
   if (typeof entry === 'object' && entry !== null) {
     const forms = entry as Record<string, string>;
@@ -150,7 +153,8 @@ const numbers = new Map<string, Intl.NumberFormat>();
 export function fmtNum(n: number, opts: Intl.NumberFormatOptions = {}): string {
   const k = `${current}|${JSON.stringify(opts)}`;
   let f = numbers.get(k);
-  if (!f) numbers.set(k, (f = new Intl.NumberFormat(intlTag(), { maximumFractionDigits: 3, ...opts })));
+  if (!f)
+    numbers.set(k, (f = new Intl.NumberFormat(intlTag(), { maximumFractionDigits: 3, ...opts })));
   return f.format(n);
 }
 
@@ -163,14 +167,23 @@ export function fmtDate(d: Date | number, opts: Intl.DateTimeFormatOptions = {})
   const k = `${current}|${JSON.stringify(opts)}`;
   let f = dates.get(k);
   if (!f) {
-    f = new Intl.DateTimeFormat(intlTag(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC', ...opts });
+    f = new Intl.DateTimeFormat(intlTag(), {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'UTC',
+      ...opts,
+    });
     dates.set(k, f);
   }
   return f.format(d);
 }
 
 /** A list joined the current language's way: `a, b and c` / `أ وب وج`. */
-export function fmtList(items: readonly string[], type: Intl.ListFormatType = 'conjunction'): string {
+export function fmtList(
+  items: readonly string[],
+  type: Intl.ListFormatType = 'conjunction',
+): string {
   return new Intl.ListFormat(current, { type }).format(items);
 }
 

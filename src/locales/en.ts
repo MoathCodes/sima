@@ -31,7 +31,8 @@ export const en = {
   'ws.unreadLink': 'The workspace link could not be read.',
   'ws.usualView': '{note} The usual view opened instead.',
   'ws.saved': 'Saved “{name}” in this browser.',
-  'ws.notSaved': 'This browser does not allow saving here, so it was not saved. Export it as a file instead.',
+  'ws.notSaved':
+    'This browser does not allow saving here, so it was not saved. Export it as a file instead.',
   'ws.unread': '“{name}” could not be read.',
   'ws.notJson': '“{name}” is not a workspace file (it is not JSON).',
   'ws.opened': 'Opened “{name}”.',
