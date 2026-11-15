@@ -48,6 +48,13 @@ const FIT_MIN = 340;
 const PIC_MIN = 120;
 const TOOLS_WIDTH = 320;
 const TOOLS_MIN = 280;
+/**
+ * Cards in the column left of the frame. With Measure open the frame narrows so they fit at its
+ * left at their narrowest: the places list and card from 74 px, 280 px wide at least (app.css,
+ * places/room.ts); the picture tools from the rail, TOOLS_MIN wide.
+ */
+const COLUMN = ['tools', 'places-list', 'place-card', 'finds', 'sandbox'];
+const COLUMN_END = 74 + 280;
 /** The column at the left that holds one card at a time. */
 /** Left-column cards that lane G's places/room.ts does not already keep apart. */
 const LEFT_COLUMN = ['welcome', 'tools'];
@@ -165,13 +172,13 @@ function place(opts: { glide?: boolean; closing?: boolean } = {}): void {
     const vw = innerWidth;
     const bottom = barTop() - ABOVE_BAR;
 
-    // Width: the user's, but never past the rail and never under the bar. With Measure and the
-    // picture tools both open, narrow enough that the tools fit at the frame's left.
-    const besideTools =
-      measureOpen && isShown(byId('tools'))
-        ? vw - GUTTER - measureWidth() - GAP - RAIL_RIGHT - TOOLS_MIN - GAP
+    // Width: the user's, but never past the rail and never under the bar. With Measure and a
+    // card of the left column both open, narrow enough that the card fits at the frame's left.
+    const besideColumn =
+      measureOpen && COLUMN.some((id) => isShown(byId(id)))
+        ? vw - GUTTER - measureWidth() - GAP - COLUMN_END - GAP
         : Infinity;
-    let width = clamp(Math.min(box.width, besideTools), MIN_WIDTH, vw - box.right - RAIL_RIGHT);
+    let width = clamp(Math.min(box.width, besideColumn), MIN_WIDTH, vw - box.right - RAIL_RIGHT);
     set(frame, 'width', `${width}px`);
     set(frame, '--pic-max', '');
     let height = frame.offsetHeight;
