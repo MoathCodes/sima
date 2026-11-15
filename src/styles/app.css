@@ -1329,11 +1329,11 @@ html[data-view='discover'] :is(#chips, #rail, #actions [data-expert-only]) {
 html[data-view='discover'] #top-left {
   grid-template-columns: auto 340px;
 }
+/* shell.ts sets left and width to the top row's free gap when it shows (placeLoading). */
 #sky-loading {
   position: fixed;
   top: var(--top);
-  left: 50%;
-  translate: -50% 0;
+  left: calc(50% - 160px);
   z-index: var(--z-top);
 }
 /* Search suggestions hang under the search field. viewer/omnibox.ts lines `left` up with the

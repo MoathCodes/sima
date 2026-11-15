@@ -78,6 +78,9 @@ function bdiText(text: string): HTMLElement {
   return b;
 }
 
+/** The Solar System's bodies by name: not on a map of the sky beyond it. */
+const SOLAR_SYSTEM = /^(the )?(sun|moon|mercury|venus|earth|mars|jupiter|saturn|uranus|neptune|pluto|planets?)$/i;
+
 const SEARCH_WORDS: Record<View, string> = {
   expert: 'Search a star or galaxy, or paste coordinates',
   discover: 'Find a star, galaxy or nebula',
@@ -179,12 +182,21 @@ const targets: SearchSource = {
   },
 };
 
+/**
+ * Astropy's `to_string('hmsdms')` and SIMBAD write declination with a `d` for degrees
+ * (`17h57m48s +04d41m36s`). `parseCoords` reads only `°`, so a `d` right after a number becomes
+ * one (UX audit #8).
+ */
+function degreeD(text: string): string {
+  return text.replace(/(\d)\s*d(?=\s*[\d.]|\s*$)/gi, '$1°');
+}
+
 /** Coordinates in any format `parseCoords` reads. */
 const coordinates: SearchSource = {
   name: 'coordinates',
   label: 'Coordinates',
   search(query) {
-    const at = parseCoords(query);
+    const at = parseCoords(degreeD(query));
     if (!at) return [];
     const name = formatCoords(at.ra, at.dec);
     return [
@@ -264,7 +276,8 @@ async function ask(
 
 function render(list: HTMLElement, input: HTMLInputElement, groups: Group[], query: string): void {
   list.replaceChildren();
-  if (!rows.length) {
+  const solar = SOLAR_SYSTEM.test(query.trim());
+  if (!rows.length && !solar) {
     const none = document.createElement('p');
     none.className = 'search-none';
     if (getView() === 'discover') {
@@ -275,6 +288,14 @@ function render(list: HTMLElement, input: HTMLInputElement, groups: Group[], que
       none.append(`Nothing found for “`, bdiText(query), `”. Try a name (Vega, `, arabicBdi('سهيل'), `), a catalogue number (M104, NGC 6572) or coordinates (17 57 48.5 +04 41 36).`);
     }
     list.append(none);
+  }
+  if (solar) {
+    // Search finds other things named after them ("Jupiter's Ghost"); say why the body is not
+    // there first (UX audit #12).
+    const note = document.createElement('p');
+    note.className = 'search-none';
+    note.textContent = 'The Sun, Moon and planets are not on this map: it shows the sky beyond the Solar System.';
+    list.append(note);
   }
   let i = 0;
   for (const g of groups) {

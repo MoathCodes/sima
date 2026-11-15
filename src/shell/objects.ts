@@ -77,9 +77,29 @@ export function hasCommonName(p: Place): boolean {
 
 const TARGET_KEYS = new Set(['barnard', 'eps-indi-b', 'wise-0855', 'rw-aur', 'r-dra']);
 
+/** SIMBAD's three-letter Bayer abbreviations and the Greek letters people write. */
+const GREEK: Record<string, string> = {
+  alf: 'α', bet: 'β', gam: 'γ', del: 'δ', eps: 'ε', zet: 'ζ', eta: 'η', tet: 'θ',
+  iot: 'ι', kap: 'κ', lam: 'λ', mu: 'μ', nu: 'ν', ksi: 'ξ', omi: 'ο', pi: 'π',
+  rho: 'ρ', sig: 'σ', tau: 'τ', ups: 'υ', phi: 'φ', chi: 'χ', psi: 'ψ', ome: 'ω',
+};
+const SUPER = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+
+/**
+ * A name as it is shown: SIMBAD's Bayer short form ("alf Mon", "alf02 Lib") in its Greek letter
+ * ("α Mon", "α² Lib"), as star charts write it (UX audit #12). Search still reads both.
+ */
+export function shownName(name: string): string {
+  return cleanName(name).replace(
+    /^(alf|bet|gam|del|eps|zet|eta|tet|iot|kap|lam|mu\.?|nu\.?|ksi|omi|pi\.?|rho|sig|tau|ups|phi|chi|psi|ome)(0?\d)?(?= )/,
+    (_, g: string, n?: string) =>
+      GREEK[g.replace('.', '')]! + (n ? [...String(Number(n))].map((d) => SUPER[Number(d)]).join('') : ''),
+  );
+}
+
 /** The name a place goes by: its common name, else its first catalogue name, tidied. */
 export function nameOf(p: Place): string {
-  return cleanName(p.names.common ?? p.names.catalogue[0] ?? p.simbad);
+  return shownName(p.names.common ?? p.names.catalogue[0] ?? p.simbad);
 }
 
 /** Other names worth showing ("Also called"): catalogue names, tidied, without repeats. */
@@ -88,7 +108,7 @@ export function otherNames(p: Place, max = 6): string[] {
   const seen = new Set([own]);
   const out: string[] = [];
   for (const raw of p.names.catalogue) {
-    const n = cleanName(raw);
+    const n = shownName(raw);
     const key = squash(n);
     if (seen.has(key)) continue;
     seen.add(key);

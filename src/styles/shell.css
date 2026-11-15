@@ -142,23 +142,19 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 8px;
-  max-width: min(320px, calc(100vw - 2 * 560px));
+  width: 320px;
   padding: 7px 14px 9px;
   overflow: hidden;
 }
+/* The words wrap rather than being cut when the gap is narrow (UX audit #9). */
 .sky-loading-head {
   font: var(--text-label);
   font-weight: 600;
-  white-space: nowrap;
 }
 .sky-loading-line {
   grid-column: 1;
   color: var(--ink-2);
   font: var(--text-label);
-  white-space: nowrap;
-}
-#sky-loading:has([data-retry]) :is(.sky-loading-head, .sky-loading-line) {
-  white-space: normal;
 }
 #sky-loading [data-retry] {
   grid-column: 2;

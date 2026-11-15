@@ -11,6 +11,7 @@ import { emit } from './bus.ts';
 import { icon } from './icons.ts';
 import { closeTop, nativeOpen, startEscape } from './escape.ts';
 import { phonePage } from './pages.ts';
+import { onView } from './view.ts';
 import { startLayout } from './layout.ts';
 import { camera, flyTo, grid, retry, setLayer, type SkyLayer } from '../sky/sky.ts';
 import { openShare, startShare } from '../viewer/share.ts';
@@ -119,6 +120,12 @@ export function startShell(): void {
   // over a card it would zoom the whole page, so there it does nothing (the page never moves).
   document.addEventListener('wheel', (e) => e.ctrlKey && e.preventDefault(), { passive: false });
   startTooltips();
+  const loading = document.getElementById('sky-loading');
+  if (loading) {
+    placeLoading(loading);
+    addEventListener('resize', () => placeLoading(loading));
+    onView(() => placeLoading(loading)); // Discover's top-right card is shorter
+  }
 }
 
 /**
@@ -204,6 +211,7 @@ export function skyReady(load: SkyLoad): void {
     load.total > 0 ? Math.floor((100 * Math.min(load.loaded, load.total)) / load.total) : 0;
   sky.pct = Math.max(sky.pct, pct);
   setCard(card, load, sky.pct);
+  placeLoading(card);
   if (!card.hidden || sky.timer) return;
   if (load.first && !sky.firstDone) card.hidden = false;
   else {
@@ -211,6 +219,32 @@ export function skyReady(load: SkyLoad): void {
       sky.timer = 0;
       card.hidden = false;
     }, 300);
+  }
+}
+
+/**
+ * The loading card sits in the top row's free gap, between the search field and the actions,
+ * as wide as that gap allows (UX audit #9: at 1280 px a fixed width cut its words, at 1024 it
+ * sat on the search field). With under 200 px free it hangs under the search field instead; the
+ * chips row gives way to it (layout.ts).
+ */
+function placeLoading(card: HTMLElement): void {
+  const search = document.getElementById('search')?.getBoundingClientRect();
+  const actions = document.getElementById('actions')?.getBoundingClientRect();
+  if (!search || !actions || !search.width || !actions.width) return;
+  const left = search.right + 10;
+  const right = actions.left - 10;
+  const room = right - left;
+  if (room >= 200) {
+    const w = Math.min(320, room);
+    card.style.left = `${Math.round(left + (room - w) / 2)}px`;
+    card.style.top = '';
+    card.style.width = `${Math.round(w)}px`;
+  } else {
+    const w = Math.min(320, search.width);
+    card.style.left = `${Math.round(search.right - w)}px`;
+    card.style.top = `${Math.round(search.bottom + 8)}px`;
+    card.style.width = `${Math.round(w)}px`;
   }
 }
 
