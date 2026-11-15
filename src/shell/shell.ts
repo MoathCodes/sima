@@ -295,7 +295,7 @@ function startFind(): void {
     const search = document.getElementById('search');
     if (!search) return;
     document.getElementById('phone-menu')?.hidePopover();
-    phonePage(search, 'Find a star, galaxy or nebula', () => {
+    phonePage(search, 'Find a star or RA Dec', () => {
       document.getElementById('search-results')?.hidePopover();
     });
     search.querySelector<HTMLInputElement>('input')?.focus();

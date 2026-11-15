@@ -352,6 +352,17 @@ html[data-layout^='phone'] #phone-menu {
   width: min(240px, calc(100vw - 24px));
 }
 
+/* Find as a phone page: the field's card shows focus; the input draws no second ring inside it
+   (it showed as two white bars), and the "/" key hint has no keyboard to serve. */
+html[data-layout^='phone'] .sheet-body #search .search-input,
+html[data-layout^='phone'] .sheet-body #search .search-input:focus-visible {
+  box-shadow: none;
+  outline: none;
+}
+html[data-layout^='phone'] .sheet-body #search .kbd {
+  display: none;
+}
+
 /* ----- Phone scroll: one column that scrolls (rotation, short screens, 400% zoom, Expert) -------- */
 
 html[data-layout='phone-scroll'] body {
