@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:#05070d}#a{position:fixed;left:0;top:0;width:1200px;height:1200px} .aladin-location,.aladin-fov,.aladin-logo-container,.aladin-logo,.aladin-stack-control,.aladin-status-bar,.aladin-location-text{display:none!important}</style></head>
+<body><!-- Renders img/sky-globe-barnard.jpg: open through the dev server (it needs the sky service worker), after visiting the app once. --><div id="a"></div>
+<script type="module">
+import A from 'aladin-lite';
+import { DEFAULT_CHANNEL } from '/src/sky/hips.ts';
+await A.init;
+const p = new URLSearchParams(location.search);
+const al = A.aladin('#a', { projection: 'SIN', fov: 180, target: '269.4485 4.7394', showReticle:false, showZoomControl:false, showFullscreenControl:false, showLayersControl:false, showGotoControl:false, showFrame:false, showCooGrid:false, showProjectionControl:false, showStatusBar:false, showCooGridControl:false, showSimbadPointerControl:false, showContextMenu:false, backgroundColor:'rgb(5,7,13)' });
+const h = A.HiPS(`${location.origin}/sky-hips/spherex-soft/${DEFAULT_CHANNEL}/0`, { name: 'soft', imgFormat: 'png' });
+al.setImageLayer(h);
+window.__ready = true; window.__ch = DEFAULT_CHANNEL;
+</script></body></html>

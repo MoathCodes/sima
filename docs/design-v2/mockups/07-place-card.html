@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en" data-theme="night">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sima v2: a place card over Betelgeuse's glare</title>
+<link rel="stylesheet" href="glass.css"><link rel="stylesheet" href="discover.css">
+<style>
+  .chosen { width: 0; height: 0; }
+  .chosen i { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--mark); box-shadow: 0 0 0 1px rgb(0 0 0 / .5); }
+  .chosen span { position: absolute; left: 16px; top: -14px; height: 26px; padding: 0 10px; border-radius: 999px; display: flex; align-items: center; font: 600 12px/1 var(--font); color: var(--on-glass); white-space: nowrap; box-shadow: none; }
+  @media (max-width: 699px) {
+    body { --dy: -190px; }
+    .place { max-height: 60vh; overflow: hidden; }
+    .place .about { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .place .actions .btn { flex: 1; height: 48px; }
+  }
+</style>
+</head>
+<body>
+<!-- Background: the real app's sky map centred on Betelgeuse, the brightest glare a card can sit over (captured 15 Nov 2026). -->
+<div class="sky" style="background-image:url(img/sky-betelgeuse-1900.jpg)"></div>
+<div class="at chosen" style="--x:950;--y:515"><i></i><span class="glass-thin">Betelgeuse</span></div>
+
+<header class="top">
+  <div class="glass brand"><span class="wordmark"><span class="ar">سيما</span><span class="la">Sima</span></span></div>
+  <div class="glass-thin find d-only"><svg class="icon"><use href="icons.svg#search"/></svg><span style="color:var(--on-glass)">Betelgeuse</span><span class="kbd">/</span></div>
+  <div class="spacer"></div>
+  <nav class="glass cluster d-only">
+    <span class="btn"><svg class="icon"><use href="icons.svg#book"/></svg>Field guide</span>
+    <span class="btn icon-only"><svg class="icon"><use href="icons.svg#gear"/></svg></span>
+    <span class="btn icon-only"><svg class="icon"><use href="icons.svg#info"/></svg></span>
+  </nav>
+  <nav class="glass cluster m-only"><span class="btn icon-only"><svg class="icon"><use href="icons.svg#search"/></svg></span></nav>
+  <div class="glass switch2"><span class="on"><svg class="icon d-only"><use href="icons.svg#sun"/></svg>Discover</span><span><svg class="icon d-only"><use href="icons.svg#chart"/></svg>Expert</span></div>
+</header>
+
+<section class="place glass-raised" aria-labelledby="p-h">
+  <div class="grabber m-only"></div>
+  <div style="display:flex;align-items:flex-start"><div><h1 id="p-h">Betelgeuse</h1><div class="kindl">Star</div></div><span class="icon-btn" style="margin-left:auto;margin-right:-8px"><svg class="icon"><use href="icons.svg#close"/></svg></span></div>
+  <div class="arname"><span class="ar" lang="ar">يد الجوزاء</span><span>Yad al-Jawzāʼ, “hand of the Central One”</span></div>
+  <div class="actions" style="margin-top:14px"><button class="btn primary lg"><svg class="icon"><use href="icons.svg#blink"/></svg>Look at its pictures</button><button class="btn lg">Zoom to it</button></div>
+  <p class="about">Betelgeuse is a large red supergiant star in the Orion constellation. It is usually the ninth-brightest star in the night sky, and the second-brightest in Orion.</p>
+  <div class="from">From Simple English Wikipedia (CC BY-SA 4.0)</div>
+  <div class="facts d-only">
+    <div class="fact"><span>Brightness</span><span>Easy to see by eye<small>Magnitude 0.4 in visible light, from SIMBAD. Smaller numbers are brighter.</small></span></div>
+  </div>
+  <div class="try"><span class="eyebrow">In SPHEREx: what to try</span>It barely moves: under a third of a pixel a year (SIMBAD: 0.030″). Slide the colour and see how bright it looks.</div>
+  <div class="from" style="margin-top:10px">Facts: SIMBAD · IAU WGSN · Wikipedia: Arabic star names · Simple English Wikipedia</div>
+</section>
+
+<div class="sky-note glass-thin d-only"><b>Average of all dates:</b> moving things blur here · SPHEREx 2.00 µm</div>
+</body>
+</html>

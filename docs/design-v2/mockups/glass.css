@@ -1,0 +1,205 @@
+/*
+ * Sima v2 "Night Glass": reference tokens and materials for the mockups.
+ * This file is the executable form of DESIGN-v2.md. The build copies these values into
+ * src/styles/app.css (lane F); the mockups import it directly.
+ */
+/* The Arabic display font (wordmark, Arabic names). Mockups use Aref Ruqaa Bold (SIL OFL, from
+   github.com/google/fonts ofl/arefruqaa); the app swaps it behind the same token. */
+@font-face { font-family: 'Arabic Display'; src: url('fonts/ArefRuqaa-Bold.ttf') format('truetype'); font-weight: 700; unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF; }
+@font-face { font-family: 'Archivo'; src: url('../../../src/styles/fonts/archivo-latin.woff2') format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Archivo'; src: url('../../../src/styles/fonts/archivo-latin-ext.woff2') format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
+:root {
+  /* ---- Sky and data windows (never glass, never tinted) ---- */
+  --sky: #05070d;
+  --well: #000000;            /* behind every picture */
+  --st-bg: #090d1c;           /* behind every chart */
+  --st-line: #27305a;
+  --st-ink: #eef0f8;
+  --st-ink-2: #aab2d0;
+  --st-ink-3: #7c86ab;
+
+  /* ---- Glass tint and text (Night, the default) ---- */
+  --tint: 11 14 28;
+  --on-glass: #f3f5fb;        /* titles, values, body */
+  --on-glass-2: #c3cadf;      /* supporting text */
+  --on-glass-3: #aab2cf;      /* group labels, scale lettering, hints */
+  --rule: rgb(255 255 255 / .10);
+  --fill-1: rgb(255 255 255 / .07);   /* quiet button, trough */
+  --fill-2: rgb(255 255 255 / .12);   /* hover */
+  --fill-3: rgb(255 255 255 / .18);   /* pressed, chosen segment */
+  --rim-top: rgb(255 255 255 / .30);
+  --rim-low: rgb(255 255 255 / .05);
+
+  /* ---- Working colours ---- */
+  --action: #3f5cf5;          /* "you can press this": fills only */
+  --action-hi: #2f4be0;
+  --on-action: #ffffff;
+  --action-soft: rgb(84 112 255 / .24);
+  --on-action-soft: #c5d0ff;
+  --mark: #ff4a9c;            /* "you are looking here" */
+  --path: #ffb03a;            /* worked out, not observed; simulated outline */
+  --d1: #8f7cff; --d2: #4fa8ff; --d3: #3fd0c0; --d4: #a8d34f; --d5: #f4b740; --d6: #ff7650;
+  --p1: #e6e9f7; --p2: #c3cbea; --p3: #9fabd8; --p4: #8291c9;
+  --good: #6fe0aa;  --good-soft: rgb(80 214 150 / .16);
+  --warn: #ffc670;  --warn-soft: rgb(255 176 58 / .16);
+  --bad:  #ff8a8f;  --bad-soft:  rgb(255 92 102 / .16);
+  --skill: #ffffff;           /* unlocked skills shine white, like a star: no new hue */
+
+  /* ---- Materials: blur / saturate / brightness of the backdrop, tint opacity ---- */
+  --thin-blur: 16px;    --thin-sat: 1.5;    --thin-bri: .55;    --thin-a: .62;
+  --reg-blur: 24px;     --reg-sat: 1.6;     --reg-bri: .50;     --reg-a: .62;
+  --raised-blur: 32px;  --raised-sat: 1.6;  --raised-bri: .45;  --raised-a: .70;
+  --slate-a: .96;       /* slate is solid: no backdrop sampling */
+  --solid-a: .95;       /* every material when glass is off */
+  --grain: .035;
+
+  /* ---- Shadows: key + ambient ---- */
+  --lift-1: 0 1px 1px rgb(0 0 0 / .35), 0 10px 28px -10px rgb(0 0 0 / .6);
+  --lift-2: 0 1px 2px rgb(0 0 0 / .4), 0 22px 48px -16px rgb(0 0 0 / .7);
+
+  /* ---- Type ---- */
+  --font: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --arabic-display: 'Arabic Display', 'Noto Naskh Arabic', serif;  /* one token: the app swaps the face here */
+  --arabic-text: 'Noto Sans Arabic', sans-serif;                  /* Arabic in sentences (open question) */
+
+  /* ---- Radii (concentric: inner = outer - padding) ---- */
+  --r-tag: 8px; --r-ctl: 12px; --r-card: 18px; --r-bar: 24px; --r-sheet: 28px; --r-pill: 999px;
+  --ease: cubic-bezier(.16, 1, .3, 1);
+}
+
+/* Chart glass: the light theme. The v1 printed-chart card, frosted. */
+[data-theme='chart'] {
+  --tint: 246 243 236;
+  --on-glass: #0f1a3c;
+  --on-glass-2: #343f6a;
+  --on-glass-3: #4a5479;
+  --rule: rgb(15 26 60 / .12);
+  --fill-1: rgb(15 26 60 / .06);
+  --fill-2: rgb(15 26 60 / .10);
+  --fill-3: rgb(255 255 255 / .85);
+  --rim-top: rgb(255 255 255 / .85);
+  --rim-low: rgb(255 255 255 / .25);
+  --action: #2740e0; --action-hi: #1a2fc0;
+  --action-soft: #e1e4fa; --on-action-soft: #2740e0;
+  --good: #12754a; --good-soft: #dcefe3;
+  --warn: #8a5200; --warn-soft: #f5e5c4;
+  --bad: #b3262f;  --bad-soft: #f7dedd;
+  --skill: #0f1a3c;
+  --thin-bri: 1.35; --reg-bri: 1.4; --raised-bri: 1.45;
+  --thin-a: .84; --reg-a: .85; --raised-a: .88;
+  --thin-sat: 1.3; --reg-sat: 1.3; --raised-sat: 1.3;
+  --lift-1: 0 1px 1px rgb(0 0 0 / .25), 0 10px 28px -10px rgb(0 0 0 / .55);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font: 400 14px/1.45 var(--font);
+  font-variant-numeric: tabular-nums;
+  color: var(--on-glass);
+  background: var(--sky);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- The three glass materials ---- */
+.glass, .glass-thin, .glass-raised {
+  position: relative;
+  isolation: isolate;
+  background: rgb(var(--tint) / var(--reg-a));
+  -webkit-backdrop-filter: blur(var(--reg-blur)) saturate(var(--reg-sat)) brightness(var(--reg-bri));
+  backdrop-filter: blur(var(--reg-blur)) saturate(var(--reg-sat)) brightness(var(--reg-bri));
+  box-shadow: var(--lift-1);
+}
+.glass-thin {
+  background: rgb(var(--tint) / var(--thin-a));
+  -webkit-backdrop-filter: blur(var(--thin-blur)) saturate(var(--thin-sat)) brightness(var(--thin-bri));
+  backdrop-filter: blur(var(--thin-blur)) saturate(var(--thin-sat)) brightness(var(--thin-bri));
+}
+.glass-raised {
+  background: rgb(var(--tint) / var(--raised-a));
+  -webkit-backdrop-filter: blur(var(--raised-blur)) saturate(var(--raised-sat)) brightness(var(--raised-bri));
+  backdrop-filter: blur(var(--raised-blur)) saturate(var(--raised-sat)) brightness(var(--raised-bri));
+  box-shadow: var(--lift-2);
+}
+.slate {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(180deg, rgb(var(--tint) / var(--slate-a)), rgb(var(--tint) / var(--slate-a))),
+    linear-gradient(180deg, rgb(255 255 255 / .04), transparent 30%);
+  box-shadow: var(--lift-2);
+}
+/* Specular rim: 1px, brighter at the top edge, like light on a glass edge. */
+.glass::after, .glass-thin::after, .glass-raised::after, .slate::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(180deg, var(--rim-top), var(--rim-low) 38%, var(--rim-low) 80%, rgb(255 255 255 / .09));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+  z-index: 2;
+}
+/* Grain: 3.5% noise so the glass reads as a material, not a grey film. */
+.glass::before, .glass-thin::before, .glass-raised::before, .slate::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  opacity: var(--grain);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Solid: glass off (setting, governor, no support, forced colours) */
+[data-glass='solid'] .glass, [data-glass='solid'] .glass-thin, [data-glass='solid'] .glass-raised {
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  background: rgb(var(--tint) / var(--solid-a));
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass, .glass-thin, .glass-raised { background: rgb(var(--tint) / var(--solid-a)); }
+}
+
+/* ---- Shared components ---- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 36px; padding: 0 14px;
+  border: 0; border-radius: var(--r-ctl);
+  font: 500 14px/1 var(--font); color: var(--on-glass);
+  background: var(--fill-1);
+  white-space: nowrap;
+}
+.btn.primary { background: var(--action); color: var(--on-action); box-shadow: inset 0 1px 0 rgb(255 255 255 / .22), 0 6px 18px -6px rgb(63 92 245 / .7); }
+.btn.quiet { background: transparent; }
+.btn.lg { height: 48px; padding: 0 20px; font-size: 16px; border-radius: 14px; }
+.btn.on { background: var(--action-soft); color: var(--on-action-soft); }
+.icon { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.icon-btn { width: 36px; height: 36px; display: inline-grid; place-items: center; border-radius: var(--r-ctl); color: var(--on-glass); }
+.pill { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 999px; font: 500 12px/1 var(--font); }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.neutral { background: var(--fill-2); color: var(--on-glass-2); }
+.pill.skill { background: rgb(255 255 255 / .14); color: var(--skill); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); display: inline-block; }
+.label { font: 600 12px/1.35 var(--font); color: var(--on-glass-3); letter-spacing: .01em; }
+.muted { color: var(--on-glass-2); }
+.faint { color: var(--on-glass-3); }
+.kbd { font: 500 11px/1 var(--font); padding: 3px 6px; border-radius: 6px; background: var(--fill-2); color: var(--on-glass-2); }
+.wordmark { display: flex; align-items: center; gap: 9px; }
+.wordmark .ar { font: 700 30px/1.3 var(--arabic-display); margin-top: -2px; }
+.wordmark .la { font: 600 17px/1 var(--font); letter-spacing: .02em; }
+.seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 13px; background: var(--fill-1); }
+.seg span { height: 32px; padding: 0 12px; display: inline-flex; align-items: center; gap: 7px; border-radius: 10px; font: 500 14px/1 var(--font); color: var(--on-glass-2); }
+.seg span.on { background: var(--fill-3); color: var(--on-glass); box-shadow: 0 1px 3px rgb(0 0 0 / .35), inset 0 1px 0 rgb(255 255 255 / .12); }
+[data-theme='chart'] .seg span.on { box-shadow: 0 1px 3px rgb(15 26 60 / .22); }
+
+/* A data window: opaque, hard pixel edges, never under glass. */
+.well { background: var(--well); border-radius: 10px; overflow: hidden; position: relative; box-shadow: 0 0 0 1px rgb(255 255 255 / .08); }
+.well img.px { image-rendering: pixelated; display: block; width: 100%; height: 100%; object-fit: cover; }
+.badge { position: absolute; background: rgb(9 13 28 / .82); color: var(--st-ink); border-radius: 8px; padding: 6px 9px; font: 500 12px/1.35 var(--font); }
+.sky { position: fixed; inset: 0; background: var(--sky) center / cover no-repeat; }
