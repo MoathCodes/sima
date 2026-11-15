@@ -93,7 +93,9 @@ export const flows: Flow[] = [
       {
         name: 'Click empty sky',
         async run(page, size) {
-          await page.mouse.click(Math.round(size.width * 0.3), Math.round(size.height * 0.3));
+          // Empty sky left of the frame (the frame's place moved with the v2 layout).
+          const left = await page.evaluate(() => document.getElementById('frame')!.getBoundingClientRect().left);
+          await page.mouse.click(Math.round(Math.max(120, left / 2 + 40)), Math.round(size.height * 0.55));
           await page.locator(guide('sky-click')).waitFor();
         },
       },
