@@ -476,10 +476,10 @@ function palette(): { ink: string; amber: string; mark: string; halo: string } {
   const get = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
   font = `500 12px ${get('--font', 'Archivo, sans-serif')}`;
   colours = {
-    ink: get('--st-ink', '#eef0f8'),
+    ink: get('--st-ink', '#f4f4f5'),
     amber: get('--st-accent-2', '#ffb03a'),
     mark: get('--mark', '#ff4a9c'),
-    halo: get('--note-bg', 'rgba(5, 7, 13, 0.82)'),
+    halo: get('--note-bg', 'rgba(10, 10, 12, 0.82)'),
   };
   return colours;
 }
@@ -603,7 +603,7 @@ function chip(ctx: CanvasRenderingContext2D, b: Box, solid: boolean): void {
   const w = b.right - b.left + 7;
   const h = b.bottom - b.top + 2;
   ctx.save();
-  ctx.fillStyle = solid ? 'rgb(11 14 28 / 0.95)' : 'rgb(11 14 28 / 0.82)';
+  ctx.fillStyle = solid ? 'rgb(26 26 29 / 0.97)' : 'rgb(26 26 29 / 0.86)';
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, h / 2);
   ctx.fill();

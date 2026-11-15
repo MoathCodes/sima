@@ -255,7 +255,7 @@ export async function startSky(el: HTMLElement): Promise<void> {
     cooFrame: 'ICRS',
     target: `${cam.ra} ${cam.dec}`,
     fov: cam.fov,
-    backgroundColor: 'rgb(5, 7, 13)',
+    backgroundColor: 'rgb(11, 11, 12)',
     showReticle: false,
     showZoomControl: false,
     showFullscreenControl: false,
@@ -275,7 +275,7 @@ export async function startSky(el: HTMLElement): Promise<void> {
     log: false,
     samp: false,
     inertia: true,
-    gridColor: 'rgb(170, 178, 208)',
+    gridColor: 'rgb(168, 168, 176)',
     gridOpacity: 0.45,
     gridOptions: { enabled: flags.grid, showLabels: true, thickness: 1, labelSize: 12 },
   });
@@ -374,10 +374,10 @@ function readColours(): void {
   colours = {
     mark: get('--mark', '#ff4a9c'),
     amber: get('--st-accent-2', '#ffb03a'),
-    ink: get('--st-ink', '#eef0f8'),
-    ink2: get('--st-ink-2', '#aab2d0'),
-    ink3: get('--st-ink-3', '#7c86ab'),
-    sky: get('--sky', '#05070d'),
+    ink: get('--st-ink', '#f4f4f5'),
+    ink2: get('--st-ink-2', '#a8a8b0'),
+    ink3: get('--st-ink-3', '#7d7d86'),
+    sky: get('--sky', '#0b0b0c'),
     font: '500 12px Archivo, "Helvetica Neue", Arial, sans-serif',
   };
 }
@@ -1469,7 +1469,7 @@ function drawPatch(): void {
   // While loading, the dashes creep round the square, so the wait shows at any zoom.
   ctx.lineDashOffset = loading && !reducedMotion() ? -((performance.now() / 60) % 8) : 0;
   // A dark edge under the line keeps it readable on the bright Milky Way.
-  ctx.strokeStyle = 'rgba(5, 7, 13, 0.6)';
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
   ctx.lineWidth = 4;
   ctx.strokeRect(box.x, box.y, box.width, box.height);
   ctx.strokeStyle = style.stroke;

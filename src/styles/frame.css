@@ -95,9 +95,7 @@ html[data-embed] :is(#frame, #bar, #measure)::after {
 }
 :is(#frame, #bar, #measure, #tools) .btn.primary,
 :is(#frame, #bar) .play-btn {
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.22),
-    0 6px 18px -6px rgb(63 92 245 / 0.7);
+  box-shadow: var(--shadow-primary);
 }
 
 /* ----- The frame card ------------------------------------------------------------------------ */
@@ -1105,7 +1103,7 @@ html[data-layout^='phone'] .fp-chip {
   height: 24px;
   border-radius: 7px;
   background: var(--tint);
-  color: #0b0e1c;
+  color: var(--v2-on-action);
   font: 700 12px/1 var(--font);
 }
 /* A date with no exposure in this detector stays visible as missing (H6). */

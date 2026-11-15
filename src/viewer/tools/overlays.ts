@@ -45,7 +45,7 @@ function active(): boolean {
 function paint(ctx: CanvasRenderingContext2D, view: Readonly<PictureView>): void {
   if (!active() || !view.field) return;
   const L = current().layers;
-  const ink = token('--st-ink', '#eef0f8');
+  const ink = token('--st-ink', '#f4f4f5');
   const amber = token('--st-accent-2', '#ffb03a');
   const mark = token('--mark', '#ff4a9c');
   const bad = token('--bad', '#b3262f');
@@ -179,7 +179,7 @@ function selectedPosition(mjd: number): { ra: number; dec: number } | null {
 function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, colour: string) {
   ctx.font = '500 12px Archivo, sans-serif';
   const w = ctx.measureText(text).width;
-  ctx.fillStyle = token('--badge-bg', 'rgba(9,13,28,.74)');
+  ctx.fillStyle = token('--badge-bg', 'rgba(14,14,16,.84)');
   ctx.fillRect(x - 3, y - 11, w + 6, 15);
   ctx.fillStyle = colour;
   ctx.fillText(text, x, y);
