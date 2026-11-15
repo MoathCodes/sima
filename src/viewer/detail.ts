@@ -30,7 +30,7 @@ import type { SpotResult, StackSet, TargetResult } from './tools/jobs.ts';
 import { allRows, catalogue } from './tools/catalogue.ts';
 import { candidate, search } from './tools/search.ts';
 import { lastView, noiseOf, onPaint } from './tools/view.ts';
-import { download, esc, fileName, num, pill, sig, term, token } from './tools/dom.ts';
+import { download, esc, fileName, hangPopover, num, pill, sig, term, token } from './tools/dom.ts';
 import { drawChart, drawPath, mjdDate, moverPath, type Pt } from './measure/charts.ts';
 import type { Candidate } from '../core/detect.ts';
 import { paintCutout, triplet, tripletReady } from './measure/cutouts.ts';
@@ -231,6 +231,7 @@ function skeleton(p: HTMLElement): void {
       <div class="ms-main">
         <header class="ms-headrow">
           <div class="ms-title"><h2 data-title></h2><p class="ms-kind" data-kind></p></div>
+          <button type="button" class="icon-btn sm" data-do="csv" data-csv aria-label="Download these numbers (CSV)" data-tip="Download these numbers (CSV)" hidden>${icon('download')}</button>
           <button type="button" class="icon-btn sm" data-close aria-label="Close Measure" data-tip="Close Measure (Esc)">${icon('close')}</button>
         </header>
         <div class="ms-headline" data-headline></div>
@@ -238,7 +239,8 @@ function skeleton(p: HTMLElement): void {
           ([key, label]) =>
             `<button type="button" role="tab" data-tab="${key}" aria-selected="false">${label}</button>`,
         ).join('')}</div>
-        <p class="ms-chart-head" data-chart-head></p>
+        <div class="ms-chart-row"><p class="ms-chart-head" data-chart-head></p><button type="button" class="icon-btn xs ms-info" popovertarget="ms-about" aria-label="How to read this" data-tip="How to read this" data-guide="measure-info">${icon('info')}</button></div>
+        <div id="ms-about" class="popover appear frame-pop ms-about" popover role="dialog" aria-label="How to read this" data-overlay="ms-about"></div>
         <div class="window ms-chart" data-guide="chart" data-chartbox>
           <canvas data-chart aria-label="Chart"></canvas>
           <div class="ms-cuts" data-cuts hidden></div>
@@ -256,7 +258,6 @@ function skeleton(p: HTMLElement): void {
       </aside>
       <div class="ms-foot" data-foot>
         <button type="button" class="btn" data-all data-guide="all-numbers" aria-pressed="false"></button>
-        <p class="ms-foot-line" data-all-line></p>
       </div>
       <div class="ms-computer" data-computer>
         <p>Picture tools, several frames and workspaces need a computer.</p>
@@ -265,6 +266,7 @@ function skeleton(p: HTMLElement): void {
       </div>
     </div>`;
   p.querySelector('[data-close]')?.addEventListener('click', () => setMeasureOpen(false));
+  hangPopover(() => p.querySelector<HTMLElement>('.ms-info'), p.querySelector<HTMLElement>('#ms-about')!, 'end', 280);
   p.querySelector('[data-send]')?.addEventListener('click', () => void sendToComputer(p));
   // The chart is drawn at its box's size: draw it again when the box changes size ("Show all
   // the numbers", a window resize), on the next frame so the drawing cannot feed back.
@@ -357,9 +359,8 @@ function render(): void {
   wrap.classList.toggle('ms-all', all && state !== 'none');
   q('[data-all]').textContent = all ? 'Show fewer numbers' : 'Show all the numbers';
   q('[data-all]').setAttribute('aria-pressed', String(all));
-  q('[data-all-line]').textContent = all
-    ? ''
-    : 'More charts, catalogue values, the six detectors and other finds in this patch.';
+  q('[data-all]').dataset.tip = all ? 'Back to one chart' : 'More charts, catalogue values, the six detectors and finds in this patch';
+  q('[data-csv]').hidden = state !== 'measure' || !hasNumbers();
   if (all && state !== 'none') {
     q('[data-stats]').innerHTML = state === 'measure' ? statsHtml() : '';
     renderFound(q('[data-found]'));
@@ -420,38 +421,25 @@ function render(): void {
   p.querySelectorAll<HTMLElement>('[data-tab]').forEach((b) =>
     b.setAttribute('aria-selected', String(b.dataset.tab === tab)),
   );
-  under.innerHTML = underText(tab, h);
+  // How to read the chart: one tap away, not paragraphs on screen (redesign item 1). The calm view
+  // keeps only the notes that offer a next step (`ms-keep`) under the chart; all the numbers keep
+  // every note there, beside the tabs they explain.
+  const notes = document.createElement('template');
+  notes.innerHTML = underText(tab, h);
+  const keep = all ? [...notes.content.children] : [...notes.content.querySelectorAll('.ms-keep')];
+  under.replaceChildren(...keep);
+  const rest = [...notes.content.children].map((n) => n.outerHTML).join('');
   q('[data-chart-head]').innerHTML = chartHead(tab);
-  fitUnder(q('.ms-main'), under);
+  const about = q('#ms-about');
+  const para = [tab === h.chart && h.para ? `<p>${h.para}</p>` : '', all ? '' : rest].join('');
+  q('.ms-info').hidden = !para;
+  if (about.dataset.html !== para) {
+    about.dataset.html = para;
+    about.innerHTML = para;
+    if (!para && about.matches(':popover-open')) about.hidePopover();
+  }
 
   chart();
-}
-
-/**
- * MSR-8: nothing is cut off and nothing scrolls. When the words under the chart do not fit the
- * column, or leave the chart too small to read (all the numbers at 1366), the paragraph that explains how to read the chart folds into a
- * dotted "How to read this chart" whose explanation shows on hover or focus (MSR-4).
- */
-let fitQueued = false;
-
-function fitUnder(main: HTMLElement, under: HTMLElement): void {
-  // Measured in the next drawn frame, with the page's own layout, not forced inside a click
-  // (TLS-8); several renders in one frame measure once.
-  if (fitQueued) return;
-  fitQueued = true;
-  requestAnimationFrame(() => {
-    fitQueued = false;
-    // Fold when the column overflows, or when the words squeeze the chart below a useful size
-    // (two rows of cutouts need about 240 px, a chart about 140 px).
-    const box = main.querySelector<HTMLElement>('[data-chartbox]');
-    const cuts = !!main.querySelector('[data-cuts]:not([hidden])');
-    const small = !!box && !box.hidden && box.clientHeight < (cuts ? 240 : 140);
-    if (main.scrollHeight <= main.clientHeight + 1 && !small) return;
-    const para = under.querySelector<HTMLElement>('.ms-para');
-    if (!para) return;
-    const words = (para.textContent ?? '').replace(/\s+/g, ' ').trim();
-    para.outerHTML = `<p class="ms-note">${term('How to read this chart', words)}</p>`;
-  });
 }
 
 /** The detector in words: "D6, 4.41–5.0 µm". */
@@ -621,7 +609,6 @@ function underText(tab: MeasureTab, h: Headline): string {
   const field = S.field!;
   const sel = S.selected!;
   const curve = curveFor();
-  if (tab === h.chart) parts.push(`<p class="ms-para">${h.para}</p>`);
   if (tab === 'spectrum') {
     parts.push(`<p class="ms-note">Hollow points are under 2σ: too faint to trust on their own. <button type="button" class="link" data-do="all-at-once">${spectrumAll ? 'Build it as the pictures play' : 'Show all at once'}</button></p>`);
   }
@@ -639,7 +626,7 @@ function underText(tab: MeasureTab, h: Headline): string {
       // headline already offers it when it leads with brightness.
       const other = curveDets().filter((d) => d !== S.det);
       if (res.target && (!curve || curve.shown === false) && other.length && h.chart !== 'brightness')
-        parts.push(`<p class="ms-note">Measured in ${other.map((d) => `D${d}`).join(', ')}. ${showDet(other[0]!)}</p>`);
+        parts.push(`<p class="ms-note ms-keep">Measured in ${other.map((d) => `D${d}`).join(', ')}. ${showDet(other[0]!)}</p>`);
     } else {
       const pts = (res.spot?.points ?? []).filter((p) => p.det === S.det && !p.flagged && Number.isFinite(p.flux));
       if (res.spot && pts.length) parts.push(`<p class="ms-note">${plainP(chi2Test(pts.map((p) => p.flux), pts.map((p) => p.err)))}</p>`);
@@ -653,7 +640,7 @@ function underText(tab: MeasureTab, h: Headline): string {
     const t = field.target;
     const other = curveDets().filter((d) => d !== S.det);
     if (t?.period && res.target && !curve?.shown && other.length)
-      parts.push(`<p class="ms-note">Not measured in D${S.det}; measured in ${other.map((d) => `D${d}`).join(', ')}. ${showDet(other[0]!)}</p>`);
+      parts.push(`<p class="ms-note ms-keep">Not measured in D${S.det}; measured in ${other.map((d) => `D${d}`).join(', ')}. ${showDet(other[0]!)}</p>`);
     parts.push(
       t?.period
         ? `<p class="ms-note">Folded on the catalogue period of ${esc(num(t.period, 1))} days${t.periodFrom ? ` (${esc(t.periodFrom)})` : ''}. Each cycle is drawn twice, so it reads across the join.</p>`
@@ -676,11 +663,10 @@ function underText(tab: MeasureTab, h: Headline): string {
   // An empty chart other than the headline's points back to the one that has the measurement.
   if (tab !== h.chart && !h.pending && h.value !== 'Not measured' && emptyTab(tab)) {
     const name = TABS.find(([k]) => k === h.chart)?.[1] ?? '';
-    parts.push(`<p class="ms-note">The measurement is under <button type="button" class="link" data-do="tab" data-to="${h.chart}">${esc(name)}</button>.</p>`);
+    parts.push(`<p class="ms-note ms-keep">The measurement is under <button type="button" class="link" data-do="tab" data-to="${h.chart}">${esc(name)}</button>.</p>`);
   }
-  if (hasNumbers()) parts.push('<p class="ms-note"><button type="button" class="link" data-do="csv">Download these numbers (CSV)</button></p>');
   if (sel.kind !== 'target' && field.target) {
-    parts.push(`<p class="ms-note"><button type="button" class="link" data-do="target">Back to ${esc(field.target.name)}</button> · <button type="button" class="link" data-do="picture">The picture on screen</button></p>`);
+    parts.push(`<p class="ms-note ms-keep"><button type="button" class="link" data-do="target">Back to ${esc(field.target.name)}</button> · <button type="button" class="link" data-do="picture">The picture on screen</button></p>`);
   }
   return parts.join('');
 }

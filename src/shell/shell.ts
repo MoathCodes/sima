@@ -418,7 +418,8 @@ function startTooltips(): void {
   const show = (el: HTMLElement) => {
     hide();
     timer = window.setTimeout(() => {
-      if (!el.isConnected || !el.dataset.tip) return;
+      // A control whose menu or card is open says nothing: its tip would cover what it opened.
+      if (!el.isConnected || !el.dataset.tip || el.getAttribute('aria-expanded') === 'true') return;
       tip.textContent = el.dataset.tip;
       tip.showPopover();
       const r = el.getBoundingClientRect();

@@ -36,6 +36,7 @@ import { SCENARIOS } from '../core/field.ts';
 import { startStrip } from './strip.ts';
 import { onSurround, widening } from './surround.ts';
 import { liveTip, liveWords } from './seed.ts';
+import { hangPopover } from './tools/dom.ts';
 
 const VIEW_NAMES: Record<Mode, [string, IconName, string]> = {
   flip: ['Flip', 'flip', 'Show the dates one after another'],
@@ -152,11 +153,75 @@ export function startFrame(): void {
     ?.addEventListener('click', (e) => {
       if ((e.target as Element | null)?.closest('[data-widen-retry]')) retryWider();
     });
+  startPopovers();
   header();
   views();
   lines();
   cover();
   startStrip();
+}
+
+// ----- Popovers: the field size and "About this picture" ------------------------------------------
+
+/**
+ * Two popovers live in the frame, made once: the field sizes (from the header's "6′" button) and
+ * "About this picture" (from the ⓘ by the source line): the full data line, what the view shows
+ * and the legend of the marks, which the header and the picture keep short (redesign item 1).
+ */
+function startPopovers(): void {
+  const frame = document.getElementById('frame');
+  if (!frame || document.getElementById('frame-fovs')) return;
+  const fovs = document.createElement('div');
+  fovs.id = 'frame-fovs';
+  fovs.className = 'popover appear frame-pop fovs-menu';
+  fovs.popover = 'auto';
+  fovs.setAttribute('role', 'menu');
+  fovs.setAttribute('aria-label', 'Field size');
+  fovs.dataset.overlay = 'frame-fovs';
+  const more = document.createElement('div');
+  more.id = 'frame-more';
+  more.className = 'popover appear frame-pop frame-more';
+  more.popover = 'auto';
+  more.setAttribute('role', 'dialog');
+  more.setAttribute('aria-label', 'About this picture');
+  more.dataset.overlay = 'frame-more';
+  frame.append(fovs, more);
+  hangPopover(() => document.querySelector<HTMLElement>('#frame-head .frame-fov'), fovs, 'end');
+  hangPopover(() => document.querySelector<HTMLElement>('#frame-head .frame-info'), more, 'start', 300);
+  fovs.addEventListener('beforetoggle', (e) => {
+    if ((e as ToggleEvent).newState !== 'open') return;
+    fovs.innerHTML = FOVS.map(
+      (f) =>
+        `<button type="button" class="menu-item" role="menuitemradio" aria-checked="${f === S.fov}" data-fov="${f}" data-guide="fov-${f}">${f}′</button>`,
+    ).join('');
+  });
+  fovs.addEventListener('click', (e) => {
+    const b = (e.target as Element | null)?.closest<HTMLElement>('[data-fov]');
+    if (!b) return;
+    fovs.hidePopover();
+    void setFov(Number(b.dataset.fov) as (typeof FOVS)[number]);
+  });
+  more.addEventListener('beforetoggle', (e) => {
+    if ((e as ToggleEvent).newState === 'open') fillMore();
+  });
+}
+
+/** Fills "About this picture" from the lines the frame keeps for Discover and phones. */
+function fillMore(): void {
+  const more = document.getElementById('frame-more');
+  if (!more) return;
+  const [name] = VIEW_NAMES[S.mode];
+  const legend = document.getElementById('frame-legend');
+  const marks = legend && !legend.hidden ? legend.innerHTML : '';
+  const html = `<p class="fm-line"></p><p class="fm-view"><b>${name}</b> <span></span></p>${marks ? `<div class="lg fm-legend">${marks}</div>` : ''}`;
+  if (more.dataset.html !== html) {
+    more.dataset.html = html;
+    more.innerHTML = html;
+  }
+  const line = more.querySelector('.fm-line');
+  if (line) line.textContent = exif();
+  const view = more.querySelector('.fm-view span');
+  if (view) view.textContent = EXPLAIN[S.mode];
 }
 
 // ----- Header -----------------------------------------------------------------------------------
@@ -180,7 +245,6 @@ function header(): void {
     kind === 'live' && base
       ? { ...base, text: `Real data, ${liveWords(live)}`, tip: liveTip(live) }
       : base;
-  const i = FOVS.indexOf(S.fov);
   // An embedded page shows only the frame, the bar and Measure: hiding the frame would empty it.
   // (main.ts marks <html> before the frame starts; S.embed is set later, by url.ts.)
   const embedded = document.documentElement.hasAttribute('data-embed');
@@ -189,13 +253,11 @@ function header(): void {
   const html = `
     <div class="frame-name">
       <h2 class="frame-title"></h2>
-      <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span>${src?.cls === 'real' ? '<span class="frame-agency"> · NASA SPHEREx</span>' : ''}${named ? `<span class="frame-coords"> · ${formatCoords(S.ra, S.dec)}</span>` : ''}</p>
+      <p class="frame-source ${src?.cls ?? ''}"><span class="frame-dot" aria-hidden="true"></span><span class="term" tabindex="0" data-tip="${src?.tip ?? ''}">${src?.text ?? ''}</span>${src?.cls === 'real' ? '<span class="frame-agency"> · NASA SPHEREx</span>' : ''}<span class="frame-rel"></span>${named ? `<span class="frame-coords"> · ${formatCoords(S.ra, S.dec)}</span>` : ''}${measure && !discover ? `<button type="button" class="icon-btn xs frame-info" popovertarget="frame-more" aria-label="About this picture" data-tip="About this picture" data-guide="frame-info">${icon('info')}</button>` : ''}</p>
       <p class="frame-prov" data-guide="data-line"></p>
     </div>
     <div class="frame-actions">
-      <button class="icon-btn sm" data-fov="-1" aria-label="Smaller field" data-tip="Smaller field (${FOVS[Math.max(0, i - 1)]}′)" data-guide="fov-smaller" ${i <= 0 ? 'disabled' : ''}>${icon('minus')}</button>
-      <span class="frame-fov term" tabindex="0" data-tip="Field size: the frame shows ${S.fov} arcminutes of sky. The wheel over the picture changes it too">${S.fov}′</span>
-      <button class="icon-btn sm" data-fov="1" aria-label="Larger field" data-tip="Larger field (${FOVS[Math.min(FOVS.length - 1, i + 1)]}′)" data-guide="fov-larger" ${i >= FOVS.length - 1 ? 'disabled' : ''}>${icon('plus')}</button>
+      <button type="button" class="btn text frame-fov" popovertarget="frame-fovs" aria-label="Field size: ${S.fov} arcminutes" data-tip="Field size (the wheel over the picture changes it too)" data-guide="fov">${S.fov}′${icon('chevron-down')}</button>
       ${measure ? `<button class="icon-btn sm" data-tools aria-pressed="${S.tools}" aria-label="Picture tools" data-tip="Picture tools" data-guide="tools-button">${icon('sliders')}</button>` : ''}
       ${discover ? '' : `<button class="btn text frame-measure" data-measure aria-pressed="${open}" data-guide="measure" data-tip="${open ? (expert ? 'Close Measure' : 'Back to the simple view') : 'Measure: numbers, charts and all six views'}">${icon('chart')}<span>Measure</span></button>`}
       ${embedded ? '' : `<button class="icon-btn sm" data-hide aria-label="Hide the frame" data-tip="Hide the frame" data-guide="frame-hide">${icon('close')}</button>`}
@@ -211,9 +273,6 @@ function header(): void {
     // One line; the whole name in the tooltip (O-I10).
     title.dataset.tip = S.label;
   }
-  head
-    .querySelectorAll<HTMLButtonElement>('[data-fov]')
-    .forEach((b) => b.addEventListener('click', () => void setFov(nextFov(Number(b.dataset.fov)))));
   head.querySelector('[data-tools]')?.addEventListener('click', () => (S.tools = !S.tools));
   head
     .querySelector('[data-measure]')
@@ -227,19 +286,33 @@ function views(): void {
   const box = document.getElementById('frame-views');
   if (!box) return;
   const off = !S.field || S.groups.length === 0;
+  const list = VIEWS[S.level];
   box.className = `seg frame-views${S.level === 'measure' ? ' six' : ''}`;
   box.setAttribute('role', 'group');
   box.setAttribute('aria-label', 'View');
-  box.innerHTML = VIEWS[S.level]
+  // One pill slides under the chosen view (redesign item 4): equal columns, so its place is the
+  // view's index. Words when the frame is wide enough, icons alone (named in the tooltip) when not.
+  box.style.setProperty('--n', String(list.length));
+  box.style.setProperty('--i', String(Math.max(0, list.indexOf(S.mode))));
+  const html = list
     .map((m) => {
       const [label, name, tip] = VIEW_NAMES[m];
-      return `<button data-mode="${m}" data-guide="view-${m}" aria-pressed="${S.mode === m}" data-tip="${tip}" ${off ? 'disabled' : ''}>${icon(name)}<span>${label}</span></button>`;
+      return `<button data-mode="${m}" data-guide="view-${m}" aria-label="${label}" data-tip="${label}: ${tip.charAt(0).toLowerCase()}${tip.slice(1)}" ${off ? 'disabled' : ''}>${icon(name)}<span>${label}</span></button>`;
     })
     .join('');
+  // Rebuilt only when the set of views changes, so the pill can slide between them.
+  if (box.dataset.html !== html) {
+    box.dataset.html = html;
+    box.innerHTML = `<span class="fv-pill" aria-hidden="true"></span>${html}`;
+    box.querySelectorAll<HTMLElement>('[data-mode]').forEach((b) =>
+      b.addEventListener('click', () => {
+        S.mode = b.dataset.mode as Mode;
+      }),
+    );
+  }
+  box.toggleAttribute('data-none', !list.includes(S.mode));
   box.querySelectorAll<HTMLElement>('[data-mode]').forEach((b) =>
-    b.addEventListener('click', () => {
-      S.mode = b.dataset.mode as Mode;
-    }),
+    b.setAttribute('aria-pressed', String(S.mode === b.dataset.mode)),
   );
 }
 
@@ -249,6 +322,15 @@ function lines(): void {
   // Discover and phones: the full data line under the name (H2; BEGINNER-AND-MOBILE 5.3, 11.4).
   const prov = document.querySelector<HTMLElement>('#frame-head .frame-prov');
   if (prov) prov.textContent = dataLine();
+  // Expert: the release after the source, "Real data · DR1"; the picture's badge gives its date and
+  // wavelength, and "About this picture" the rest (H2 in one short line, redesign item 2).
+  const rel = document.querySelector<HTMLElement>('#frame-head .frame-rel');
+  if (rel) {
+    const r = S.field && !S.field.simulated ? releaseWords(S.field.releases) : '';
+    rel.textContent = r ? ` · ${r}` : '';
+    rel.dataset.tip = r ? `Data release: ${r}` : '';
+  }
+  if (document.getElementById('frame-more')?.matches(':popover-open')) fillMore();
   const ex = document.getElementById('frame-exif');
   if (ex) {
     ex.className = 'frame-exif';
@@ -273,8 +355,9 @@ function lines(): void {
     // fetch's progress bar first and, after a failure, Ask again.
     const w = busy ? null : widening;
     const note = [w?.what ?? stepNote, liveNote].filter(Boolean).join(' · ');
+    // While a new spot loads, the cover over the picture says so: no second line here.
     const text = busy
-      ? 'Loading this spot. The sky keeps working meanwhile.'
+      ? ''
       : note
         ? `${note.replace(/[.…]$/, '')}${note.endsWith('…') ? '…' : '.'}`
         : '';
@@ -296,6 +379,7 @@ function lines(): void {
       if (t) t.textContent = text;
     }
     load.dataset.tip = text;
+    load.toggleAttribute('data-empty', !text && !w);
   }
 }
 
@@ -328,10 +412,10 @@ function cover(): void {
     let box = el.querySelector<HTMLElement>('.cover-busy');
     if (!box) {
       el.innerHTML = `<canvas class="cover-preview" hidden></canvas>
-        <span class="cover-tag window-badge" hidden>Preview from the sky map (all dates averaged)</span>
+        <span class="cover-tag window-badge" hidden>Preview: sky map, all dates averaged</span>
         <div class="cover-busy" role="status" aria-live="polite">
           <p class="cover-what"></p>
-          <p class="cover-more">This can take a few minutes. You can keep exploring the sky meanwhile.</p>
+          <p class="cover-more">Can take a few minutes. The sky still works.</p>
           <div class="cover-bar"><span></span></div>
         </div>`;
       box = el.querySelector<HTMLElement>('.cover-busy');
@@ -388,4 +472,10 @@ function cover(): void {
   );
   el.querySelector('[data-practice]')?.addEventListener('click', () => void loadTarget('warm-up'));
   el.querySelector('[data-retry]')?.addEventListener('click', () => void aimAt(S.ra, S.dec, S.fov));
+}
+
+/** "spherex_dr1" → "SPHEREx DR1"; several releases joined: "SPHEREx DR1 + QR". */
+function releaseWords(releases: readonly string[]): string {
+  const r = [...new Set(releases.map((x) => x.replace(/^spherex_/i, '').toUpperCase()))];
+  return r.length ? `SPHEREx ${r.join(' + ')}` : '';
 }

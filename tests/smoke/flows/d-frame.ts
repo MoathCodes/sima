@@ -4,6 +4,19 @@
  */
 import { guide, keyStep, pressStep, type Flow, type Step, openMeasureStep } from '../smoke.ts';
 
+/** Picks a field size from the frame's field-size menu (the "6′ ▾" button). */
+function fovStep(fov: number, label = `Field ${fov}′`): Step {
+  return {
+    name: label,
+    async run(page) {
+      await page.locator('[data-guide="fov"]').first().click();
+      await page.locator(`[data-guide="fov-${fov}"]`).click();
+      await page.waitForFunction((f) => document.querySelector('.frame-fov')?.textContent === `${f}′`, fov);
+    },
+  };
+}
+
+
 
 /** Fails unless `fn` is true in the page within a few seconds. */
 function expectStep(name: string, fn: string): Step {
@@ -42,7 +55,7 @@ export const flows: Flow[] = [
       ),
       pressStep('view-diff', 'Difference'),
       pressStep('view-flip', 'Flip'),
-      pressStep('fov-larger', 'Larger field (FRM-6)'),
+      fovStep(12, 'Larger field (FRM-6)'),
       expectStep('Field is 12′', `document.querySelector('.frame-fov')?.textContent === '12′'`),
       {
         name: 'Wheel over the picture makes the field smaller',

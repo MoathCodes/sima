@@ -75,7 +75,9 @@ const LAYER_NAMES: Record<SkyLayer, string> = {
 };
 const H1 = 'Average of all dates: moving objects are blurred or shifted here';
 /** Discover's shorter sky note (DESIGN-v2 mockups: "Average of all dates: moving things blur here"). */
-const H1_DISCOVER = 'Average of all dates:';
+const H1_DISCOVER = 'All dates averaged';
+/** Expert's sky note, short (H1); the full sentence is in its tooltip. */
+const H1_SHORT = 'Sky map, all dates averaged';
 
 // ----- Aladin Lite, as much of it as Sima uses --------------------------------------------------
 
@@ -1164,7 +1166,7 @@ function note(): void {
   // Zoomed in past the map's pixels, it is blur: say why, and where the sharp pictures are.
   const coarse =
     fine && channel !== null
-      ? ` · <span>The map's pixels are 13″; the frame shows the sharper single pictures</span>`
+      ? ` · <span class="sky-note-more" tabindex="0" data-tip="The map's pixels are 13″: zoomed in this far it is blur. The frame shows the sharper single pictures." data-tip-pos="above">soft this close</span>`
       : '';
   // The globe's limb glow takes the hue of the detector the map shows (sky.css).
   const det = channel !== null ? detectorOf(channel) : null;
@@ -1175,10 +1177,12 @@ function note(): void {
       const l = CHANNEL_LAM[channel] ?? lam;
       fact = `SPHEREx D${det}, ${bandWords(det)}, ${l.toFixed(2)} µm`;
     }
-    el.innerHTML = `<b>${H1_DISCOVER}</b> moving things blur here · <span class="sky-note-more" tabindex="0" data-tip="${esc(more)}" data-tip-pos="above">${esc(fact)}</span>${coarse}`;
+    el.innerHTML = `<b>${H1_DISCOVER}</b> · <span class="sky-note-more" tabindex="0" data-tip="${esc(`${H1}. ${more}`)}" data-tip-pos="above">${esc(fact)}</span>${coarse}`;
     return;
   }
-  el.innerHTML = `<span>${H1}</span> · <span class="sky-note-more" tabindex="0" data-tip="${esc(more)}" data-tip-pos="above">${esc(fact)}</span>${coarse}`;
+  // One short line (redesign item 2): what the map is and its wavelength; why movers blur, and
+  // the rest, in the tooltip.
+  el.innerHTML = `<span class="sky-note-more" tabindex="0" data-tip="${esc(`${H1}. ${more}`)}" data-tip-pos="above">${H1_SHORT} · ${esc(fact)}</span>${coarse}`;
 }
 
 /**
